@@ -20,6 +20,7 @@
 
 #include <libircclient/libircclient.h>
 #include <libircclient/libirc_rfcnumeric.h>
+#include "libstephen/al.h"
 #include "libstephen/cb.h"
 
 #include "cbot_handlers.h"
@@ -32,7 +33,7 @@
 #define IRC_NICK "cbot"
 #define IRC_USER NULL
 #define IRC_NAME NULL
-#define IRC_CHANNEL "#cwru"
+#define IRC_CHANNEL "#cbot"
 
 void log_event(irc_session_t *session, const char *event,
                const char *origin, const char **params, unsigned int count)
@@ -102,6 +103,8 @@ void run_cbot_irc(void)
   irc_callbacks_t callbacks;
   irc_session_t *session;
   cbot_t *cbot = cbot_create(IRC_NICK, cbot_irc_send);
+  smb_al plugins;
+  al_init(&plugins);
 
   memset(&callbacks, 0, sizeof(callbacks));
 
@@ -131,7 +134,8 @@ void run_cbot_irc(void)
   }
 
   cbot->backend = session;
-  cbot_handlers_register(cbot);
+  al_append(&plugins, (DATA){.data_ptr="greet"});
+  cbot_load_plugins(cbot, "plugin", &plugins);
 
   // Set libircclient to parse nicknames for us.
   irc_option_set(session, LIBIRC_OPTION_STRIPNICKS);
@@ -155,5 +159,6 @@ void run_cbot_irc(void)
     exit(EXIT_FAILURE);
   }
 
+  al_destroy(&plugins);
   exit(EXIT_SUCCESS);
 }

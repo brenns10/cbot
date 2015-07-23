@@ -4,3 +4,4 @@ obj
 GPATH
 GTAGS
 GRTAGS
+*.so

@@ -14,6 +14,7 @@
 *******************************************************************************/
 
 #include <assert.h>
+#include <string.h>
 #include <dlfcn.h>
 
 #include "libstephen/base.h"
@@ -140,9 +141,14 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
   smb_free(wch);
 }
 
-bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *loader)
+/**
+   @brief Private function to load a single plugin.
+ */
+static bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *loader)
 {
   void *plugin_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
+
+  printf("attempting to load function %s from %s\n", loader, filename);
 
   if (plugin_handle == NULL) {
     fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
@@ -158,4 +164,43 @@ bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *loader)
 
   plugin(bot, cbot_register_hear, cbot_register_respond, bot->send);
   return true;
+}
+
+/**
+   @brief Load a list of plugins from a plugin directory.
+ */
+void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_al *names)
+{
+  cbuf name;
+  cbuf loader;
+  smb_status status = SMB_SUCCESS;
+  smb_iter it;
+  char *plugin_name;
+  cb_init(&name, 256);
+  cb_init(&loader, 256);
+
+  it = al_get_iter(names);
+  while (it.has_next(&it)) {
+    plugin_name = it.next(&it, &status).data_ptr;
+    assert(status == SMB_SUCCESS);
+
+    cb_clear(&name);
+    cb_clear(&loader);
+
+    // Construct a filename.
+    cb_concat(&name, plugin_dir);
+    if (plugin_dir[strlen(plugin_dir)-1] != '/') {
+      cb_append(&name, '/');
+    }
+    cb_concat(&name, plugin_name);
+    cb_concat(&name, ".so");
+
+    // Construct the loader name
+    cb_printf(&loader, "%s_load", plugin_name);
+
+    cbot_load_plugin(bot, name.buf, loader.buf);
+  }
+
+  cb_destroy(&name);
+  cb_destroy(&loader);
 }

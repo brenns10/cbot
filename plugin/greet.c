@@ -15,12 +15,15 @@
 
 #include "cbot/cbot.h"
 
-void cbot_hello(cbot_t *bot, const char *channel, const char *user, const char *message)
+static cbot_send_t send;
+
+static void cbot_hello(cbot_t *bot, const char *channel, const char *user, const char *message)
 {
-  cbot_send(bot, channel, "hello, %s!", user);
+  send(bot, channel, "hello, %s!", user);
 }
 
-void cbot_handlers_register(cbot_t *bot)
+void greet_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
 {
-  cbot_register_hear(bot, "(hello|hi),? cbot!?", cbot_hello);
+  send = send_;
+  hear(bot, "(hello|hi),? cbot!?", cbot_hello);
 }
