@@ -169,19 +169,17 @@ static bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *load
 /**
    @brief Load a list of plugins from a plugin directory.
  */
-void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_al *names)
+void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_iter names)
 {
   cbuf name;
   cbuf loader;
   smb_status status = SMB_SUCCESS;
-  smb_iter it;
   char *plugin_name;
   cb_init(&name, 256);
   cb_init(&loader, 256);
 
-  it = al_get_iter(names);
-  while (it.has_next(&it)) {
-    plugin_name = it.next(&it, &status).data_ptr;
+  while (names.has_next(&names)) {
+    plugin_name = names.next(&names, &status).data_ptr;
     assert(status == SMB_SUCCESS);
 
     cb_clear(&name);

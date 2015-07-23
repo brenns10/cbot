@@ -20,7 +20,8 @@
 
 #include <libircclient/libircclient.h>
 #include <libircclient/libirc_rfcnumeric.h>
-#include "libstephen/al.h"
+#include "libstephen/ll.h"
+#include "libstephen/ad.h"
 #include "libstephen/cb.h"
 
 #include "cbot_handlers.h"
@@ -98,13 +99,61 @@ void event_channel(irc_session_t *session, const char *event,
   printf("event done!\n");
 }
 
-void run_cbot_irc(void)
+void help()
+{
+  puts("usage: cbot irc [options] plugins");
+  puts("options:");
+  puts("  --name [name]      set the bot's name");
+  puts("  --host [host]      set the irc server hostname");
+  puts("  --port [port]      set the irc port number");
+  puts("  --chan [chan]      set the irc channel");
+  puts("  --plugin-dir [dir] set the plugin directory");
+  puts("  --help             show this help and exit");
+  puts("plugins:");
+  puts("  list of names of plugins within plugin-dir (don't include \".so\").");
+  exit(EXIT_FAILURE);
+}
+
+void run_cbot_irc(int argc, char *argv[])
 {
   irc_callbacks_t callbacks;
   irc_session_t *session;
-  cbot_t *cbot = cbot_create(IRC_NICK, cbot_irc_send);
-  smb_al plugins;
-  al_init(&plugins);
+  cbot_t *cbot;
+  smb_ad args;
+  char *name = "cbot";
+  char *host = "irc.case.edu";
+  char *port = "6667";
+  char *chan = "#cbot";
+  char *plugin_dir = "plugin";
+  unsigned short port_num;
+  arg_data_init(&args);
+
+  process_args(&args, argc, argv);
+
+  if (check_long_flag(&args, "name")) {
+    name = get_long_flag_parameter(&args, "name");
+  }
+  if (check_long_flag(&args, "host")) {
+    host = get_long_flag_parameter(&args, "host");
+  }
+  if (check_long_flag(&args, "port")) {
+    port = get_long_flag_parameter(&args, "port");
+  }
+  if (check_long_flag(&args, "chan")) {
+    chan = get_long_flag_parameter(&args, "chan");
+  }
+  if (check_long_flag(&args, "plugin-dir")) {
+    plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
+  }
+  if (check_long_flag(&args, "help")) {
+    help();
+  }
+  if (!(name && host && port && chan && plugin_dir)) {
+    help();
+  }
+  sscanf(port, "%uh", &port_num);
+
+  cbot = cbot_create(name, cbot_irc_send);
 
   memset(&callbacks, 0, sizeof(callbacks));
 
@@ -134,8 +183,7 @@ void run_cbot_irc(void)
   }
 
   cbot->backend = session;
-  al_append(&plugins, (DATA){.data_ptr="greet"});
-  cbot_load_plugins(cbot, "plugin", &plugins);
+  cbot_load_plugins(cbot, "plugin", ll_get_iter(args.bare_strings));
 
   // Set libircclient to parse nicknames for us.
   irc_option_set(session, LIBIRC_OPTION_STRIPNICKS);
@@ -146,7 +194,7 @@ void run_cbot_irc(void)
   irc_set_ctx(session, cbot);
 
   // Start the connection process!
-  if (irc_connect(session, IRC_HOST, IRC_PORT, IRC_PASS, IRC_NICK, IRC_USER, IRC_NAME)) {
+  if (irc_connect(session, host, port_num, NULL, name, NULL, NULL)) {
     fprintf(stderr, "cbot: error connecting to IRC - %s\n",
             irc_strerror(irc_errno(session)));
     exit(EXIT_FAILURE);
@@ -159,6 +207,6 @@ void run_cbot_irc(void)
     exit(EXIT_FAILURE);
   }
 
-  al_destroy(&plugins);
+  arg_data_destroy(&args);
   exit(EXIT_SUCCESS);
 }
