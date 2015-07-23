@@ -34,10 +34,14 @@ struct cbot {
   smb_al respond_regex;
   smb_al respond_callback;
 
+  void *backend;
+
   cbot_send_t send;
 };
 
 cbot_t *cbot_create(const char *name, cbot_send_t send);
 void cbot_delete(cbot_t *obj);
+void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
+                         const char *message);
 
 #endif//CBOT_PRIVATE_H

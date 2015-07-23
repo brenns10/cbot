@@ -1,23 +1,21 @@
 /***************************************************************************//**
 
-  @file         main.c
+  @file         cbot_irc.h
 
   @author       Stephen Brennan
 
-  @date         Created Wednesday, 22 July 2015
+  @date         Created Thursday, 23 July 2015
 
-  @brief        A C IRC chat bot!
+  @brief        CBot IRC declarations.
 
   @copyright    Copyright (c) 2015, Stephen Brennan.  Released under the Revised
                 BSD License.  See LICENSE.txt for details.
 
 *******************************************************************************/
 
-#include <stdio.h>
+#ifndef CBOT_IRC_H
+#define CBOT_IRC_H
 
-#include "cbot_irc.h"
+void run_cbot_irc(void);
 
-int main(int argc, char *argv[])
-{
-  run_cbot_irc();
-}
+#endif//CBOT_IRC_H
