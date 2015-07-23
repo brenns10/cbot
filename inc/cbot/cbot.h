@@ -25,6 +25,5 @@ void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback
 void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback);
 
 void cbot_send(cbot_t *bot, const char *dest, char *format, ...);
-void cbot_me(cbot_t *bot, char *format, ...);
 
 #endif//CBOT_H

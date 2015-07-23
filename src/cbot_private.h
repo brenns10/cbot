@@ -35,10 +35,9 @@ struct cbot {
   smb_al respond_callback;
 
   cbot_send_t send;
-  cbot_send_t me;
 };
 
-cbot_t *cbot_create(const char *name, cbot_send_t send, cbot_send_t me);
+cbot_t *cbot_create(const char *name, cbot_send_t send);
 void cbot_delete(cbot_t *obj);
 
 #endif//CBOT_PRIVATE_H
