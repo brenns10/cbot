@@ -57,10 +57,10 @@ TARGET=cbot
 TEST_TARGET=
 # STATIC_LIBS - path to any static libs you need.  you may need to make a rule
 # to generate them from subprojects.
-STATIC_LIBS=
+STATIC_LIBS=libstephen/bin/release/libstephen.a
 # EXTRA_INCLUDES - folders that should also be include directories (say, for
 # static libs?)
-EXTRA_INCLUDES=
+EXTRA_INCLUDES=libstephen/inc
 
 # --- DIRECTORY STRUCTURE: This structure is highly recommended, but you can
 # change it.  The most important thing is that *none* of these directories are
@@ -79,10 +79,10 @@ COVERAGE_DIR=cov
 # --- COMPILATION FLAGS: Things you may want/need to configure, but I've put
 # them at sane defaults.
 CC=gcc
-FLAGS=-Wall -Wextra -pedantic
+FLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter
 INC=-I$(INCLUDE_DIR) -I$(SOURCE_DIR) $(addprefix -I,$(EXTRA_INCLUDES))
 CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
-LFLAGS=$(FLAGS)
+LFLAGS=$(FLAGS) -lircclient -lcrypto -lssl
 
 # --- BUILD CONFIGURATIONS: Feel free to get creative with these if you'd like.
 # The advantage here is that you can update variables (like compile flags) based
@@ -152,6 +152,10 @@ clean_docs:
 
 clean_cov:
 	rm -rf $(COVERAGE_DIR)
+
+# STATIC LIBS: libstephen
+libstephen/bin/release/libstephen.a:
+	make -C libstephen
 
 # RULE TO BUILD YOUR MAIN TARGET HERE: (you may have to edit this, but it it
 # configurable).
