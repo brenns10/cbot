@@ -14,6 +14,9 @@
 *******************************************************************************/
 
 #include "libstephen/base.h"
+#include "libstephen/al.h"
+#include "libstephen/cb.h"
+#include "libstephen/regex.h"
 
 #include "cbot_private.h"
 
@@ -66,4 +69,39 @@ void cbot_send(cbot_t *bot, const char *dest, char *format, ...)
   va_start(va, format);
   bot->send(bot, dest, format, va);
   va_end(va);
+}
+
+static void cbot_register(smb_al *regex_list, smb_al *callback_list,
+                          const char *regex, cbot_callback_t callback)
+{
+  fsm *re;
+  int nchar = mbstowcs(NULL, regex, 0);
+  wchar_t *wregex = smb_new(wchar_t, nchar+1);
+  mbstowcs(wregex, regex, nchar+1);
+  re = regex_parse(wregex);
+  smb_free(wregex);
+  al_append(regex_list, (DATA){.data_ptr=re});
+  al_append(callback_list, (DATA){.data_ptr=callback});
+}
+
+/**
+   @brief Register a callback for a regex that matches any message.
+   @param bot The bot to register with.
+   @param regex The regular expression the message should match.
+   @param callback Callback function to run on a match.
+ */
+void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback)
+{
+  cbot_register(&bot->hear_regex, &bot->hear_callback, regex, callback);
+}
+
+/**
+   @brief Register a callback for a regex that matches messages pointed at cbot.
+   @param bot The bot to register with.
+   @param regex The regular expression the message should match.
+   @param callback Callback function to run on a match.
+ */
+void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
+{
+  cbot_register(&bot->hear_regex, &bot->hear_callback, regex, callback);
 }
