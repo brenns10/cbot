@@ -1,3 +1,6 @@
 dep
 bin
 obj
+GPATH
+GTAGS
+GRTAGS
