@@ -28,13 +28,7 @@
 #include "cbot_private.h"
 #include "cbot_irc.h"
 
-#define IRC_HOST "irc.case.edu"
-#define IRC_PORT 6667
-#define IRC_PASS NULL
-#define IRC_NICK "cbot"
-#define IRC_USER NULL
-#define IRC_NAME NULL
-#define IRC_CHANNEL "#cbot"
+char *chan = "#cbot";
 
 void log_event(irc_session_t *session, const char *event,
                const char *origin, const char **params, unsigned int count)
@@ -70,7 +64,7 @@ void event_join(irc_session_t *session, const char *event,
 void event_connect(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
-  irc_cmd_join(session, IRC_CHANNEL, NULL);
+  irc_cmd_join(session, chan, NULL);
   log_event(session, event, origin, params, count);
 }
 
@@ -123,7 +117,6 @@ void run_cbot_irc(int argc, char *argv[])
   char *name = "cbot";
   char *host = "irc.case.edu";
   char *port = "6667";
-  char *chan = "#cbot";
   char *plugin_dir = "plugin";
   unsigned short port_num;
   arg_data_init(&args);
@@ -151,7 +144,7 @@ void run_cbot_irc(int argc, char *argv[])
   if (!(name && host && port && chan && plugin_dir)) {
     help();
   }
-  sscanf(port, "%uh", &port_num);
+  sscanf(port, "%hu", &port_num);
 
   cbot = cbot_create(name, cbot_irc_send);
 
