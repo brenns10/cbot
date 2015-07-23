@@ -13,6 +13,8 @@
 
 *******************************************************************************/
 
+#include <assert.h>
+
 #include "libstephen/base.h"
 #include "libstephen/al.h"
 #include "libstephen/cb.h"
@@ -104,4 +106,39 @@ void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback
 void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
 {
   cbot_register(&bot->hear_regex, &bot->hear_callback, regex, callback);
+}
+
+/**
+   @brief Take an incoming message and call appropriate callbacks.
+ */
+void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
+                         const char *message)
+{
+  smb_iter re, cb;
+  fsm *f;
+  cbot_callback_t c;
+  smb_status status = SMB_SUCCESS;
+  size_t nchars;
+  wchar_t *wch;
+
+  nchars = mbstowcs(NULL, message, 0);
+  wch = smb_new(wchar_t, nchars + 1);
+  mbstowcs(wch, message, nchars + 1);
+
+  // Handle the "hear" regex
+  re = al_get_iter(&bot->hear_regex);
+  cb = al_get_iter(&bot->hear_callback);
+  while (re.has_next(&re)) {
+    f = re.next(&re, &status).data_ptr;
+    assert(status == SMB_SUCCESS);
+    c = cb.next(&cb, &status).data_ptr;
+    assert(status == SMB_SUCCESS);
+    if (fsm_sim_nondet(f, wch)) {
+      c(bot, channel, user, message);
+    }
+  }
+
+  // TODO - handle the respond regex
+
+  smb_free(wch);
 }
