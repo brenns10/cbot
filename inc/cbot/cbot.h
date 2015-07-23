@@ -20,10 +20,9 @@ struct cbot;
 typedef struct cbot cbot_t;
 
 typedef void (*cbot_callback_t)(cbot_t *bot, const char *channel, const char* user, const char* message);
+typedef void (*cbot_send_t)(cbot_t *bot, const char *dest, char *format, ...);
+typedef void (*cbot_register_t)(cbot_t *bot, const char *regex, cbot_callback_t callback);
 
-void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback);
-void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback);
-
-void cbot_send(cbot_t *bot, const char *dest, char *format, ...);
+typedef void (*cbot_plugin_t)(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send);
 
 #endif//CBOT_H

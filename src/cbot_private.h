@@ -23,8 +23,6 @@
 
 #include "cbot/cbot.h"
 
-typedef void(*cbot_send_t)(cbot_t*, const char*, char*, va_list);
-
 struct cbot {
 
   const char *name;
@@ -43,5 +41,7 @@ cbot_t *cbot_create(const char *name, cbot_send_t send);
 void cbot_delete(cbot_t *obj);
 void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
                          const char *message);
+void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback);
+void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback);
 
 #endif//CBOT_PRIVATE_H

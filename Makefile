@@ -82,7 +82,7 @@ CC=gcc
 FLAGS=-Wall -Wextra -pedantic -Wno-unused-parameter
 INC=-I$(INCLUDE_DIR) -I$(SOURCE_DIR) $(addprefix -I,$(EXTRA_INCLUDES))
 CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
-LFLAGS=$(FLAGS) -lircclient -lcrypto -lssl
+LFLAGS=$(FLAGS) -lircclient -lcrypto -lssl -ldl
 
 # --- BUILD CONFIGURATIONS: Feel free to get creative with these if you'd like.
 # The advantage here is that you can update variables (like compile flags) based

@@ -14,6 +14,7 @@
 *******************************************************************************/
 
 #include <assert.h>
+#include <dlfcn.h>
 
 #include "libstephen/base.h"
 #include "libstephen/al.h"
@@ -67,10 +68,6 @@ void cbot_delete(cbot_t *cbot)
  */
 void cbot_send(cbot_t *bot, const char *dest, char *format, ...)
 {
-  va_list va;
-  va_start(va, format);
-  bot->send(bot, dest, format, va);
-  va_end(va);
 }
 
 static void cbot_register(smb_al *regex_list, smb_al *callback_list,
@@ -141,4 +138,24 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
   // TODO - handle the respond regex
 
   smb_free(wch);
+}
+
+bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *loader)
+{
+  void *plugin_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
+
+  if (plugin_handle == NULL) {
+    fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
+    return false;
+  }
+
+  cbot_plugin_t plugin = dlsym(plugin_handle, loader);
+
+  if (plugin == NULL) {
+    fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
+    return false;
+  }
+
+  plugin(bot, cbot_register_hear, cbot_register_respond, bot->send);
+  return true;
 }
