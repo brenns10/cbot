@@ -32,7 +32,7 @@ cbot_t *cbot_create(const char *name, cbot_send_t send)
   cbot_t *cbot = smb_new(cbot_t, 1);
   cbot->name = name;
   al_init(&cbot->hear_regex);
-  al_init(&cbot->hear_callback)
+  al_init(&cbot->hear_callback);
   al_init(&cbot->respond_regex);
   al_init(&cbot->respond_callback);
   cbot->send = send;
