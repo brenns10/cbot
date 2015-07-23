@@ -25,5 +25,5 @@ static void cbot_hello(cbot_t *bot, const char *channel, const char *user, const
 void greet_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
 {
   send = send_;
-  hear(bot, "(hello|hi),? cbot!?", cbot_hello);
+  hear(bot, "[Hh](ello|i|ey),? +[Cc][Bb]ot!?", cbot_hello);
 }
