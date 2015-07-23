@@ -23,7 +23,7 @@
 
 #include "cbot/cbot.h"
 
-typedef void(*cbot_send_t)(cbot_t*, const char*, va_list);
+typedef void(*cbot_send_t)(cbot_t*, const char*, char*, va_list);
 
 struct cbot {
 
