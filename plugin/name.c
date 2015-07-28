@@ -19,7 +19,7 @@ static cbot_send_t send;
 
 static void name(cbot_t *bot, const char *channel, const char *user, const char *message)
 {
-  send(bot, channel, "My name is CBot.  My source lives at https://github.com/brenns10/cbot\n");
+  send(bot, channel, "My name is CBot.  My source lives at https://github.com/brenns10/cbot");
 }
 
 void name_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
