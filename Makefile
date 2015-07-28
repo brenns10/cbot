@@ -121,10 +121,10 @@ DEPENDENCIES += $(patsubst $(TEST_DIR)/%.c,$(DEPENDENCY_DIR)/$(TEST_DIR)/%.d,$(T
 # --- GLOBAL TARGETS: You can probably adjust and augment these if you'd like.
 .PHONY: all test clean clean_all clean_cov clean_doc plugin
 
+all: $(BINARY_DIR)/$(CFG)/$(TARGET) plugin
+
 plugin:
 	make -C plugin
-
-all: $(BINARY_DIR)/$(CFG)/$(TARGET)
 
 test: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 	valgrind $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
