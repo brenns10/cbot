@@ -146,6 +146,7 @@ cov: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 
 clean:
 	rm -rf $(OBJECT_DIR)/$(CFG)/* $(BINARY_DIR)/$(CFG)/* $(SOURCE_DIR)/*.gch
+	make -C plugin clean
 
 clean_all: clean_cov clean_doc
 	rm -rf $(OBJECT_DIR) $(BINARY_DIR) $(DEPENDENCY_DIR) $(SOURCE_DIR)/*.gch

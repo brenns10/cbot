@@ -10,3 +10,6 @@ all: $(OBJECTS)
 
 %.so: %.c
 	$(CC) $(FLAGS) $(INC) -shared $< -o $@
+
+clean:
+	rm -f $(OBJECTS)
