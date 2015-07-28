@@ -119,7 +119,10 @@ DEPENDENCIES  = $(patsubst $(SOURCE_DIR)/%.c,$(DEPENDENCY_DIR)/$(SOURCE_DIR)/%.d
 DEPENDENCIES += $(patsubst $(TEST_DIR)/%.c,$(DEPENDENCY_DIR)/$(TEST_DIR)/%.d,$(TEST_SOURCES))
 
 # --- GLOBAL TARGETS: You can probably adjust and augment these if you'd like.
-.PHONY: all test clean clean_all clean_cov clean_doc
+.PHONY: all test clean clean_all clean_cov clean_doc plugin
+
+plugin:
+	make -C plugin
 
 all: $(BINARY_DIR)/$(CFG)/$(TARGET)
 
