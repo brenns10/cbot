@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "cbot_irc.h"
 #include "cbot_cli.h"
@@ -32,6 +33,7 @@ static void usage(char *name)
 
 int main(int argc, char *argv[])
 {
+  srand(time(NULL));
   if (argc < 2) {
     usage(argv[0]);
   }

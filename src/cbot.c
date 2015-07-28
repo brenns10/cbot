@@ -103,7 +103,7 @@ void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback
  */
 void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
 {
-  cbot_register(&bot->hear_regex, &bot->hear_callback, regex, callback);
+  cbot_register(&bot->respond_regex, &bot->respond_callback, regex, callback);
 }
 
 /**
@@ -136,7 +136,28 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
     }
   }
 
-  // TODO - handle the respond regex
+  // If the message starts with the bot name, get the rest of it and match it
+  // against the respond patterns and callbacks.
+  nchars = strlen(bot->name);
+  if (strncmp(bot->name, message, nchars) == 0) {
+    message = message + nchars;
+    while (isspace(*message) || ispunct(*message)) {
+      message++;
+      nchars++;
+    }
+
+    re = al_get_iter(&bot->respond_regex);
+    cb = al_get_iter(&bot->respond_callback);
+    while (re.has_next(&re)) {
+      f = re.next(&re, &status).data_ptr;
+      assert(status == SMB_SUCCESS);
+      c = cb.next(&cb, &status).data_ptr;
+      assert(status == SMB_SUCCESS);
+      if (fsm_sim_nondet(f, wch+nchars)) {
+        c(bot, channel, user, message);
+      }
+    }
+  }
 
   smb_free(wch);
 }
