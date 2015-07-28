@@ -35,15 +35,21 @@ The following functionality is currently implemented:
 
 * Plugin handler types:
     * Responding to any channel message.
+    * Responding to messages directed towards CBot (e.g. "cbot help" or "cbot:
+      help");
 * Allowing custom plugins via simple API.
 * Dynamically loading plugins.
-* An IRC backend that can connect to any server and channel.
+* Backends:
+    * An IRC backend that can connect to any server and channel.
+    * Console backend for simpler debugging.
+* Plugins:
+    * Respond to greetings.
+    * Respond to questions about cbot.
+    * Respond to insults.
 
 Remaining to be implemented:
 
 * Plugin handler types:
-    * Responding to messages directed towards CBot (e.g. "cbot help" or "cbot:
-      help");
     * Responding to a user entering the channel.
     * Responding to a user leaving the channel.
     * Responding to invitations.
@@ -51,8 +57,11 @@ Remaining to be implemented:
     * Sending invitations
     * Emoting (e.g. "cbot cries")
     * Getting names of people in the room
-* Console backend for simpler debugging.
-* A core set of plugins.
+* More core plugins.
+* Plugin state (saving & loading).
+    * May require some JSON support from libstephen!
+* Regex capture, if I can implement it in libstephen.
+* Load all plugins in directory, except listed ones (much easier).
 
 
 Building and Running
