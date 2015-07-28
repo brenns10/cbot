@@ -25,7 +25,7 @@ static void cbot_cli_send(cbot_t *bot, const char *dest, char *format, ...)
 {
   va_list va;
   va_start(va, format);
-  printf("[%s] %s:", dest, name);
+  printf("[%s]%s: ", dest, name);
   vprintf(format, va);
   putchar('\n');
   va_end(va);
