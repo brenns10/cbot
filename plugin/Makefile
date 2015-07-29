@@ -8,8 +8,14 @@ OBJECTS=$(patsubst %.c,%.so,$(SOURCES))
 
 all: $(OBJECTS)
 
+help.so: help.c help.h
+
+help.h: help.md help_translate.py
+	./help_translate.py <help.md >help.h
+
 %.so: %.c
 	$(CC) $(FLAGS) $(INC) -shared $< -o $@
 
 clean:
 	rm -f $(OBJECTS)
+	rm -f help.h

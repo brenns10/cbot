@@ -5,3 +5,4 @@ GPATH
 GTAGS
 GRTAGS
 *.so
+plugin/help.h
