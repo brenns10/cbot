@@ -26,7 +26,20 @@ static void sadness(cbot_t *bot, const char *channel, const char *user,
     "hey, robots have feelings too!",
     "I don't like you, %s",
     "that's not what your mom said last night",
-    "http://foaas.com/you/%s/cbot"
+    "http://foaas.com/field/cbot/%s/Bible",
+    "http://foaas.com/you/%s/cbot",
+    "http://foaas.com/yoda/%s/cbot",
+    "http://foaas.com/nugget/%s/cbot",
+    "http://foaas.com/linus/%s/cbot",
+    "http://foaas.com/shakespeare/%s/cbot",
+    "http://foaas.com/donut/%s/cbot",
+    "http://foaas.com/shutup/%s/cbot",
+    "http://foaas.com/family/cbot",
+    "http://foaas.com/cool/cbot",
+    "http://foaas.com/everyone/cbot",
+    "http://foaas.com/fascinating/cbot",
+    "http://foaas.com/flying/cbot",
+    "http://foaas.com/bucket/cbot"
   };
   send(bot, channel, responses[rand()%(sizeof(responses)/sizeof(char*))], user);
 }
