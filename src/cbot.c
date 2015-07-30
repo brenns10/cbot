@@ -80,8 +80,8 @@ static void cbot_register(smb_al *regex_list, smb_al *callback_list,
   mbstowcs(wregex, regex, nchar+1);
   re = regex_parse(wregex);
   smb_free(wregex);
-  al_append(regex_list, (DATA){.data_ptr=re});
-  al_append(callback_list, (DATA){.data_ptr=callback});
+  al_append(regex_list, PTR(re));
+  al_append(callback_list, PTR(callback));
 }
 
 /**
@@ -104,6 +104,56 @@ void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback
 void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
 {
   cbot_register(&bot->respond_regex, &bot->respond_callback, regex, callback);
+}
+
+/**
+   @brief Compare a regex against a message, and if it matches, call a callback.
+
+   This does the plumbing of getting the number of captures in a form that's not
+   a smb_al (because plugin code really shouldn't have to depend on libstephen).
+   It does the regex simulation and everything.
+   @param bot The bot we're working with.
+   @param channel The channel the message came in on.
+   @param user The user that sent the message.
+   @param message The message!
+   @param wmessage The message, in `wchar_t*`.
+   @param f The regex FSM to match against the message.
+   @param c The callback to call if there is a match.
+   @param increment How many characters into the message should we start
+   matching?
+ */
+static void cbot_match_callback(cbot_t *bot, const char *channel,
+                                const char *user, const char *message,
+                                const wchar_t *wmessage, fsm *f,
+                                cbot_callback_t c, size_t increment)
+{
+  int i;
+  size_t *starts = NULL, *ends = NULL, ncaptures = 0;
+  smb_status status = SMB_SUCCESS;
+  smb_al *capture = NULL;
+
+  if (!fsm_sim_nondet_capture(f, wmessage + increment, &capture)) {
+    return;
+  }
+
+  if (capture != NULL) {
+    assert(al_length(capture) % 2 == 0);
+    ncaptures = al_length(capture) / 2;
+    starts = smb_new(int, ncaptures);
+    ends = smb_new(int, ncaptures);
+    for (i = 0; i+1 < al_length(capture); i += 2) {
+      starts[i] = (size_t)al_get(capture, i, &status).data_llint + increment;
+      assert(status == SMB_SUCCESS);
+      ends[i] = (size_t)al_get(capture, i+1, &status).data_llint + increment;
+      assert(status == SMB_SUCCESS);
+    }
+    al_delete(capture);
+    c(bot, channel, user, message, starts, ends, ncaptures);
+    smb_free(starts);
+    smb_free(ends);
+  } else {
+    c(bot, channel, user, message, starts, ends, ncaptures);
+  }
 }
 
 /**
@@ -131,9 +181,7 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
     assert(status == SMB_SUCCESS);
     c = cb.next(&cb, &status).data_ptr;
     assert(status == SMB_SUCCESS);
-    if (fsm_sim_nondet(f, wch)) {
-      c(bot, channel, user, message);
-    }
+    cbot_match_callback(bot, channel, user, message, wch, f, c, 0);
   }
 
   // If the message starts with the bot name, get the rest of it and match it
@@ -153,9 +201,7 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
       assert(status == SMB_SUCCESS);
       c = cb.next(&cb, &status).data_ptr;
       assert(status == SMB_SUCCESS);
-      if (fsm_sim_nondet(f, wch+nchars)) {
-        c(bot, channel, user, message);
-      }
+      cbot_match_callback(bot, channel, user, message, wch, f, c, nchars);
     }
   }
 

@@ -23,7 +23,8 @@ static char *help_lines[] = {
 };
 
 static void help(cbot_t *bot, const char *channel, const char *user,
-                 const char *message)
+                 const char *message, const size_t *starts, const size_t *ends,
+                 size_t ncaptures)
 {
   int i;
   for (i = 0; i < sizeof(help_lines)/sizeof(char*); i++) {

@@ -17,7 +17,9 @@
 
 static cbot_send_t send;
 
-static void name(cbot_t *bot, const char *channel, const char *user, const char *message)
+static void name(cbot_t *bot, const char *channel, const char *user,
+                 const char *message, const size_t *starts, const size_t *ends,
+                 size_t ncaptures)
 {
   send(bot, channel, "My name is CBot.  My source lives at https://github.com/brenns10/cbot");
 }

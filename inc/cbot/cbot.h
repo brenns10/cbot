@@ -16,13 +16,20 @@
 #ifndef CBOT_H
 #define CBOT_H
 
+#include <stddef.h>
+
 struct cbot;
 typedef struct cbot cbot_t;
 
-typedef void (*cbot_callback_t)(cbot_t *bot, const char *channel, const char* user, const char* message);
+typedef void (*cbot_callback_t)(cbot_t *bot, const char *channel,
+                                const char* user, const char* message,
+                                const size_t *starts, const size_t *ends,
+                                size_t nmatches);
 typedef void (*cbot_send_t)(cbot_t *bot, const char *dest, char *format, ...);
-typedef void (*cbot_register_t)(cbot_t *bot, const char *regex, cbot_callback_t callback);
+typedef void (*cbot_register_t)(cbot_t *bot, const char *regex,
+                                cbot_callback_t callback);
 
-typedef void (*cbot_plugin_t)(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send);
+typedef void (*cbot_plugin_t)(cbot_t *bot, cbot_register_t hear,
+                              cbot_register_t respond, cbot_send_t send);
 
 #endif//CBOT_H

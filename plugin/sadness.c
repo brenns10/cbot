@@ -19,7 +19,8 @@
 static cbot_send_t send;
 
 static void sadness(cbot_t *bot, const char *channel, const char *user,
-                    const char *message)
+                    const char *message, const size_t *starts,
+                    const size_t *ends, size_t ncaptures)
 {
   char *responses[] = {
     ":(",
