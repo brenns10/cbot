@@ -21,8 +21,8 @@
 #include "cbot/cbot.h"
 
 typedef struct {
-  char *word;
   int karma;
+  char *word;
 } karma_t;
 
 static cbot_send_t send;
@@ -87,6 +87,17 @@ static void karma_change(cbot_t *bot, const char *channel, const char *message,
 
 }
 
+static int karma_compare(const void *l, const void *r)
+{
+  const karma_t *lhs = l, *rhs = r;
+  return rhs->karma - lhs->karma;
+}
+
+static void karma_sort()
+{
+  qsort(karma, nkarma, sizeof(karma_t), karma_compare);
+}
+
 static void karma_increment(cbot_t *bot, const char *channel, const char *user,
                             const char *message, const size_t *starts,
                             const size_t *ends, size_t ncaptures)
@@ -126,6 +137,18 @@ static void karma_check(cbot_t *bot, const char *channel, const char *user,
   free(word);
 }
 
+#define KARMA_TOP 5
+static void karma_best(cbot_t *bot, const char *channel, const char *user,
+                       const char *message, const size_t *starts,
+                       const size_t *ends, size_t ncaptures)
+{
+  size_t i;
+  karma_sort();
+  for (i = 0; i < (nkarma > KARMA_TOP ? KARMA_TOP : nkarma); i++) {
+    send(bot, channel, "%d. %s (%d karma)", i+1, karma[i].word, karma[i].karma);
+  }
+}
+
 void karma_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
 {
   send = send_;
@@ -134,4 +157,5 @@ void karma_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot
   hear(bot, "(?\\w+)--.*", karma_decrement);
   hear(bot, ".*[^0-9A-Za-z_](?\\w+)--.*", karma_decrement);
   respond(bot, "karma\\s+(?\\w+)", karma_check);
+  respond(bot, "karma(-best)?", karma_best);
 }
