@@ -15,6 +15,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 #include <dlfcn.h>
 
 #include "libstephen/base.h"
@@ -136,11 +137,11 @@ static void cbot_match_callback(cbot_t *bot, const char *channel,
     return;
   }
 
-  if (capture != NULL) {
+  if (capture != NULL && al_length(capture) > 0) {
     assert(al_length(capture) % 2 == 0);
     ncaptures = al_length(capture) / 2;
-    starts = smb_new(int, ncaptures);
-    ends = smb_new(int, ncaptures);
+    starts = smb_new(size_t, ncaptures);
+    ends = smb_new(size_t, ncaptures);
     for (i = 0; i+1 < al_length(capture); i += 2) {
       starts[i] = (size_t)al_get(capture, i, &status).data_llint + increment;
       assert(status == SMB_SUCCESS);
@@ -188,9 +189,7 @@ void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
   // against the respond patterns and callbacks.
   nchars = strlen(bot->name);
   if (strncmp(bot->name, message, nchars) == 0) {
-    message = message + nchars;
-    while (isspace(*message) || ispunct(*message)) {
-      message++;
+    while (isspace(message[nchars]) || ispunct(message[nchars])) {
       nchars++;
     }
 
