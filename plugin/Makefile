@@ -6,6 +6,16 @@ FLAGS=-fPIC
 SOURCES=$(shell find . -type f -name "*.c")
 OBJECTS=$(patsubst %.c,%.so,$(SOURCES))
 
+CFG=release
+ifeq ($(CFG),debug)
+FLAGS += -g -DDEBUG
+endif
+ifneq ($(CFG),debug)
+ifneq ($(CFG),release)
+$(error Bad build configuration.  Choices are debug, release, coverage.)
+endif
+endif
+
 all: $(OBJECTS)
 
 help.so: help.c help.h

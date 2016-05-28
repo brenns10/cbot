@@ -17,11 +17,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <dlfcn.h>
+#include <stdio.h>
 
 #include "libstephen/base.h"
 #include "libstephen/al.h"
 #include "libstephen/cb.h"
-#include "libstephen/regex.h"
+#include "libstephen/re.h"
 
 #include "cbot_private.h"
 
@@ -37,12 +38,20 @@
  */
 cbot_t *cbot_create(const char *name, cbot_send_t send)
 {
+  #define CBOT_INIT_ALLOC 32
   cbot_t *cbot = smb_new(cbot_t, 1);
   cbot->name = name;
-  al_init(&cbot->hear_regex);
-  al_init(&cbot->hear_callback);
-  al_init(&cbot->respond_regex);
-  al_init(&cbot->respond_callback);
+
+  cbot->hear_num = 0;
+  cbot->hear_alloc = CBOT_INIT_ALLOC;
+  cbot->hear_regex = smb_new(Regex, CBOT_INIT_ALLOC);
+  cbot->hear_callback = smb_new(cbot_callback_t, CBOT_INIT_ALLOC);
+
+  cbot->respond_num = 0;
+  cbot->respond_alloc = CBOT_INIT_ALLOC;
+  cbot->respond_regex = smb_new(Regex, CBOT_INIT_ALLOC);
+  cbot->respond_callback = smb_new(cbot_callback_t, CBOT_INIT_ALLOC);
+
   cbot->send = send;
   return cbot;
 }
@@ -53,36 +62,33 @@ cbot_t *cbot_create(const char *name, cbot_send_t send)
  */
 void cbot_delete(cbot_t *cbot)
 {
-  // TODO - free the regexes before deleting them.
-  al_destroy(&cbot->hear_regex);
-  al_destroy(&cbot->hear_callback);
-  al_destroy(&cbot->respond_regex);
-  al_destroy(&cbot->respond_callback);
+  for (int i = 0; i < cbot->hear_num; i++) {
+    free_prog(cbot->hear_regex[i]);
+  }
+  smb_free(cbot->hear_regex);
+  smb_free(cbot->hear_callback);
+
+  for (int i = 0; i < cbot->respond_num; i++) {
+    free_prog(cbot->respond_regex[i]);
+  }
+  smb_free(cbot->respond_regex);
+  smb_free(cbot->respond_callback);
+
   smb_free(cbot);
 }
 
-/**
-   @brief Send a message through the cbot!
-   @param bot The bot to use.
-   @param dest The channel (prefixed with '#') or user (no prefix) to send to.
-   @param format Format string for your message.
-   @param ... Variables for formatting.
- */
-void cbot_send(cbot_t *bot, const char *dest, char *format, ...)
-{
-}
-
-static void cbot_register(smb_al *regex_list, smb_al *callback_list,
+static void cbot_register(Regex **regex_list, cbot_callback_t **callback_list,
+                          int *regex_num, int *regex_alloc,
                           const char *regex, cbot_callback_t callback)
 {
-  fsm *re;
-  int nchar = mbstowcs(NULL, regex, 0);
-  wchar_t *wregex = smb_new(wchar_t, nchar+1);
-  mbstowcs(wregex, regex, nchar+1);
-  re = regex_parse(wregex);
-  smb_free(wregex);
-  al_append(regex_list, PTR(re));
-  al_append(callback_list, PTR(callback));
+  if (*regex_num >= *regex_alloc) {
+    *regex_alloc *= 2;
+    *regex_list = smb_renew(Regex, *regex_list, *regex_alloc);
+    *callback_list = smb_renew(cbot_callback_t, *callback_list, *regex_alloc);
+  }
+  (*regex_list)[*regex_num] = recomp(regex);
+  (*callback_list)[*regex_num] = callback;
+  *regex_num += 1;
 }
 
 /**
@@ -93,7 +99,8 @@ static void cbot_register(smb_al *regex_list, smb_al *callback_list,
  */
 void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback)
 {
-  cbot_register(&bot->hear_regex, &bot->hear_callback, regex, callback);
+  cbot_register(&bot->hear_regex, &bot->hear_callback, &bot->hear_num,
+                &bot->hear_alloc, regex, callback);
 }
 
 /**
@@ -104,7 +111,8 @@ void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback
  */
 void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
 {
-  cbot_register(&bot->respond_regex, &bot->respond_callback, regex, callback);
+  cbot_register(&bot->respond_regex, &bot->respond_callback, &bot->respond_num,
+                &bot->respond_alloc, regex, callback);
 }
 
 /**
@@ -124,31 +132,29 @@ void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callb
    matching?
  */
 static void cbot_match_callback(cbot_t *bot, const char *channel,
-                                const char *user, const char *message,
-                                const wchar_t *wmessage, fsm *f,
+                                const char *user, const char *message, Regex r,
                                 cbot_callback_t c, size_t increment)
 {
   int i;
-  size_t *starts = NULL, *ends = NULL, ncaptures = 0;
-  smb_status status = SMB_SUCCESS;
-  smb_al *capture = NULL;
+  size_t *saves = NULL, *starts = NULL, *ends = NULL;
+  ssize_t  ncaptures;
 
-  if (!fsm_sim_nondet_capture(f, wmessage + increment, &capture)) {
+  ssize_t match = execute(r, message + increment, &saves);
+  if (match == -1) {
+    free(saves);
     return;
   }
 
-  if (capture != NULL && al_length(capture) > 0) {
-    assert(al_length(capture) % 2 == 0);
-    ncaptures = al_length(capture) / 2;
+  ncaptures = numsaves(r);
+
+  if (ncaptures != 0) {
     starts = smb_new(size_t, ncaptures);
     ends = smb_new(size_t, ncaptures);
-    for (i = 0; i+1 < al_length(capture); i += 2) {
-      starts[i] = (size_t)al_get(capture, i, &status).data_llint + increment;
-      assert(status == SMB_SUCCESS);
-      ends[i] = (size_t)al_get(capture, i+1, &status).data_llint + increment;
-      assert(status == SMB_SUCCESS);
+    for (i = 0; i < ncaptures/2; i += 2) {
+      starts[i] = saves[i*2] + increment;
+      ends[i] = saves[i*2+1] + increment;
     }
-    al_delete(capture);
+    free(saves);
     c(bot, channel, user, message, starts, ends, ncaptures);
     smb_free(starts);
     smb_free(ends);
@@ -163,48 +169,27 @@ static void cbot_match_callback(cbot_t *bot, const char *channel,
 void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
                          const char *message)
 {
-  smb_iter re, cb;
-  fsm *f;
-  cbot_callback_t c;
-  smb_status status = SMB_SUCCESS;
-  size_t nchars;
-  wchar_t *wch;
-
-  nchars = mbstowcs(NULL, message, 0);
-  wch = smb_new(wchar_t, nchars + 1);
-  mbstowcs(wch, message, nchars + 1);
+  size_t increment;
 
   // Handle the "hear" regex
-  re = al_get_iter(&bot->hear_regex);
-  cb = al_get_iter(&bot->hear_callback);
-  while (re.has_next(&re)) {
-    f = re.next(&re, &status).data_ptr;
-    assert(status == SMB_SUCCESS);
-    c = cb.next(&cb, &status).data_ptr;
-    assert(status == SMB_SUCCESS);
-    cbot_match_callback(bot, channel, user, message, wch, f, c, 0);
+  for (int i = 0; i < bot->hear_num; i++) {
+    cbot_match_callback(bot, channel, user, message, bot->hear_regex[i],
+                        bot->hear_callback[i], 0);
   }
 
   // If the message starts with the bot name, get the rest of it and match it
   // against the respond patterns and callbacks.
-  nchars = strlen(bot->name);
-  if (strncmp(bot->name, message, nchars) == 0) {
-    while (isspace(message[nchars]) || ispunct(message[nchars])) {
-      nchars++;
+  increment = strlen(bot->name);
+  if (strncmp(bot->name, message, increment) == 0) {
+    while (isspace(message[increment]) || ispunct(message[increment])) {
+      increment++;
     }
 
-    re = al_get_iter(&bot->respond_regex);
-    cb = al_get_iter(&bot->respond_callback);
-    while (re.has_next(&re)) {
-      f = re.next(&re, &status).data_ptr;
-      assert(status == SMB_SUCCESS);
-      c = cb.next(&cb, &status).data_ptr;
-      assert(status == SMB_SUCCESS);
-      cbot_match_callback(bot, channel, user, message, wch, f, c, nchars);
+    for (int i = 0; i < bot->respond_num; i++) {
+      cbot_match_callback(bot, channel, user, message, bot->respond_regex[i],
+                          bot->respond_callback[i], increment);
     }
   }
-
-  smb_free(wch);
 }
 
 /**

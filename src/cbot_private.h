@@ -18,8 +18,8 @@
 
 #include <stdarg.h>
 
-#include "libstephen/al.h"
-#include "libstephen/ht.h"
+#include "libstephen/re.h"
+#include "libstephen/list.h"
 
 #include "cbot/cbot.h"
 
@@ -27,10 +27,14 @@ struct cbot {
 
   const char *name;
 
-  smb_al hear_regex;
-  smb_al hear_callback;
-  smb_al respond_regex;
-  smb_al respond_callback;
+  Regex *hear_regex;
+  cbot_callback_t *hear_callback;
+  int hear_num;
+  int hear_alloc;
+  Regex *respond_regex;
+  cbot_callback_t *respond_callback;
+  int respond_num;
+  int respond_alloc;
 
   void *backend;
 

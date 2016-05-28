@@ -152,12 +152,10 @@ static void karma_best(cbot_t *bot, const char *channel, const char *user,
 void karma_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
 {
   send = send_;
-  #define KARMA_WORD "^ \\t\\n"
-  #define NOT_KARMA_WORD " \\t\\n"
-  hear(bot, "(?[" KARMA_WORD "]+)\\+\\+.*", karma_increment);
-  hear(bot, ".*[" NOT_KARMA_WORD "](?[" KARMA_WORD "]+)\\+\\+.*", karma_increment);
-  hear(bot, "(?[" KARMA_WORD "]+)--.*", karma_decrement);
-  hear(bot, ".*[" NOT_KARMA_WORD "](?[" KARMA_WORD "]+)--.*", karma_decrement);
-  respond(bot, "karma\\s+(?\\w+)", karma_check);
-  respond(bot, "karma(-best)?", karma_best);
+  #define KARMA_WORD "^ \t\n"
+  #define NOT_KARMA_WORD " \t\n"
+  hear(bot, ".*?([" KARMA_WORD "]+)\\+\\+.*?", karma_increment);
+  hear(bot, ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
+  respond(bot, "karma", karma_best);
+  respond(bot, "karma\\s+([" KARMA_WORD "]+)", karma_check);
 }
