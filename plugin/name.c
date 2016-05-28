@@ -27,5 +27,5 @@ static void name(cbot_t *bot, const char *channel, const char *user,
 void name_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
 {
   send = send_;
-  hear(bot, "([wW]ho|[wW]hat) +([iI]s|[aA]re +[yY]ou,?) +[cC][bB]ot\\??", name);
+  hear(bot, "([wW]ho|[wW]hat|[wW][tT][fF]) +([iI]s|[aA]re +[yY]ou,?) +[cC][bB]ot\\??", name);
 }
