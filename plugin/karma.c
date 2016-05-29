@@ -74,16 +74,15 @@ static char *get_word(const char *message, size_t start, size_t end)
   return word;
 }
 
-static void karma_change(cbot_t *bot, const char *channel, const char *message,
-                         size_t start, size_t end, int change)
+static void karma_change(cbot_event_t event, cbot_actions_t actions, size_t cap_idx, int change)
 {
   char *word;
   size_t index;
-  word = get_word(message, start, end);
+  word = get_word(event.message, event.capture_starts[cap_idx],
+                  event.capture_ends[cap_idx]);
   index = find_or_create_karma(word);
   karma[index].karma += change;
-  send(bot, channel, "%s now has %d karma", karma[index].word, karma[index].karma);
-
+  actions.send(event.bot, event.channel, "%s now has %d karma", karma[index].word, karma[index].karma);
 }
 
 static int karma_compare(const void *l, const void *r)
@@ -102,8 +101,7 @@ static void karma_increment(cbot_event_t event, cbot_actions_t actions)
   if (event.num_captures < 1) {
     return;
   }
-  karma_change(event.bot, event.channel, event.message,
-               event.capture_starts[0], event.capture_ends[0], 1);
+  karma_change(event, actions, 0, 1);
 }
 
 static void karma_decrement(cbot_event_t event, cbot_actions_t actions)
@@ -111,25 +109,7 @@ static void karma_decrement(cbot_event_t event, cbot_actions_t actions)
   if (event.num_captures < 1) {
     return;
   }
-  karma_change(event.bot, event.channel, event.message,
-               event.capture_starts[0], event.capture_ends[0], -1);
-}
-
-static void karma_check(cbot_event_t event, cbot_actions_t actions)
-{
-  char *word;
-  ssize_t index;
-  if (event.num_captures < 1) {
-    return;
-  }
-  word = get_word(event.message, event.capture_starts[0], event.capture_ends[0]);
-  index = find_karma(word);
-  if (index < 0) {
-    actions.send(event.bot, event.channel, "%s has no karma yet", word);
-  } else {
-    actions.send(event.bot, event.channel, "%s has %d karma", word, karma[index].karma);
-  }
-  free(word);
+  karma_change(event, actions, 0, -1);
 }
 
 #define KARMA_TOP 5
@@ -143,6 +123,30 @@ static void karma_best(cbot_event_t event, cbot_actions_t actions)
   }
 }
 
+static void karma_check(cbot_event_t event, cbot_actions_t actions)
+{
+  char *word;
+  ssize_t index;
+  if (event.num_captures < 1) {
+    // Not sure how this could happen, but sure :P
+    return;
+  }
+  if (event.capture_starts[0] == 0 && event.capture_ends[0] == 0) {
+    // Nothing was captured, so the user just said "karma".
+    // Show them the top 5.
+    karma_best(event, actions);
+    return;
+  }
+  word = get_word(event.message, event.capture_starts[1], event.capture_ends[1]);
+  index = find_karma(word);
+  if (index < 0) {
+    actions.send(event.bot, event.channel, "%s has no karma yet", word);
+  } else {
+    actions.send(event.bot, event.channel, "%s has %d karma", word, karma[index].karma);
+  }
+  free(word);
+}
+
 void karma_load(cbot_t *bot, cbot_register_t registrar)
 {
   #define KARMA_WORD "^ \t\n"
@@ -153,6 +157,5 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
   registrar(bot, CBOT_CHANNEL_HEAR,
             ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
 
-  registrar(bot, CBOT_CHANNEL_MSG, "karma", karma_best);
-  registrar(bot, CBOT_CHANNEL_MSG, "karma\\s+([" KARMA_WORD "]+)", karma_check);
+  registrar(bot, CBOT_CHANNEL_MSG, "karma(\\s+([" KARMA_WORD "]+))?", karma_check);
 }
