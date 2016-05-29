@@ -21,11 +21,21 @@
 
 char *name = "cbot";
 
-static void cbot_cli_send(cbot_t *bot, const char *dest, char *format, ...)
+static void cbot_cli_send(const cbot_t *bot, const char *dest, const char *format, ...)
 {
   va_list va;
   va_start(va, format);
   printf("[%s]%s: ", dest, name);
+  vprintf(format, va);
+  putchar('\n');
+  va_end(va);
+}
+
+static void cbot_cli_me(const cbot_t *bot, const char *dest, const char *format, ...)
+{
+  va_list va;
+  va_start(va, format);
+  printf("[%s]%s ", dest, name);
   vprintf(format, va);
   putchar('\n');
   va_end(va);
@@ -66,6 +76,7 @@ void run_cbot_cli(int argc, char **argv)
 
   bot = cbot_create("cbot");
   bot->actions.send = cbot_cli_send;
+  bot->actions.me = cbot_cli_me;
   cbot_load_plugins(bot, plugin_dir, ll_get_iter(args.bare_strings));
   while (!feof(stdin)) {
     printf("> ");

@@ -68,7 +68,7 @@ void event_connect(irc_session_t *session, const char *event,
   log_event(session, event, origin, params, count);
 }
 
-void cbot_irc_send(cbot_t *cbot, const char *dest, char *format, ...)
+void cbot_irc_send(const cbot_t *cbot, const char *dest, const char *format, ...)
 {
   va_list va;
   cbuf cb;
@@ -77,6 +77,19 @@ void cbot_irc_send(cbot_t *cbot, const char *dest, char *format, ...)
   cb_init(&cb, 1024);
   cb_vprintf(&cb, format, va);
   irc_cmd_msg(session, dest, cb.buf);
+  cb_destroy(&cb);
+  va_end(va);
+}
+
+void cbot_irc_me(const cbot_t *cbot, const char *dest, const char *format, ...)
+{
+  va_list va;
+  cbuf cb;
+  irc_session_t *session = cbot->backend;
+  va_start(va, format);
+  cb_init(&cb, 1024);
+  cb_vprintf(&cb, format, va);
+  irc_cmd_me(session, dest, cb.buf);
   cb_destroy(&cb);
   va_end(va);
 }
@@ -148,6 +161,7 @@ void run_cbot_irc(int argc, char *argv[])
 
   cbot = cbot_create(name);
   cbot->actions.send = cbot_irc_send;
+  cbot->actions.me = cbot_irc_me;
 
   memset(&callbacks, 0, sizeof(callbacks));
 

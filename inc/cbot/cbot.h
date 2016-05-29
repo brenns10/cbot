@@ -56,7 +56,8 @@ typedef struct {
  */
 typedef struct {
 
-  void (*send)(cbot_t *bot, const char *dest, char *format, ...);
+  void (*send)(const cbot_t *bot, const char *dest, const char *format, ...);
+  void (*me)(const cbot_t *bot, const char *dest, const char *format, ...);
 
 } cbot_actions_t;
 
