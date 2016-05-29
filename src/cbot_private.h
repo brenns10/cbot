@@ -23,30 +23,32 @@
 
 #include "cbot/cbot.h"
 
+typedef struct {
+  Regex *regex;
+  cbot_handler_t *handler;
+  size_t num;
+  size_t alloc;
+} cbot_handler_list_t;
+
 struct cbot {
 
   const char *name;
 
-  Regex *hear_regex;
-  cbot_callback_t *hear_callback;
-  int hear_num;
-  int hear_alloc;
-  Regex *respond_regex;
-  cbot_callback_t *respond_callback;
-  int respond_num;
-  int respond_alloc;
+  cbot_handler_list_t hear;
+  cbot_handler_list_t msg;
 
   void *backend;
 
-  cbot_send_t send;
+  cbot_actions_t actions;
 };
 
-cbot_t *cbot_create(const char *name, cbot_send_t send);
+cbot_t *cbot_create(const char *name);
 void cbot_delete(cbot_t *obj);
-void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
-                         const char *message);
-void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback);
-void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback);
+void cbot_handle_event(cbot_event_t event);
+void cbot_handle_channel_message(cbot_t *bot, const char *channel,
+                                 const char *user, const char *message);
+void cbot_register(cbot_t *bot, cbot_event_type_t type, const char *regex,
+                   cbot_handler_t handler);
 void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_iter names);
 
 #endif//CBOT_PRIVATE_H

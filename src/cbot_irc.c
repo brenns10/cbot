@@ -87,7 +87,7 @@ void event_channel(irc_session_t *session, const char *event,
   log_event(session, event, origin, params, count);
   if (count >= 2 && params[1] != NULL) {
     printf("sending to cbot\n");
-    cbot_handle_message(irc_get_ctx(session), params[0], origin, params[1]);
+    cbot_handle_channel_message(irc_get_ctx(session), params[0], origin, params[1]);
     printf("handled by cbot\n");
   }
   printf("event done!\n");
@@ -146,7 +146,8 @@ void run_cbot_irc(int argc, char *argv[])
   }
   sscanf(port, "%hu", &port_num);
 
-  cbot = cbot_create(name, cbot_irc_send);
+  cbot = cbot_create(name);
+  cbot->actions.send = cbot_irc_send;
 
   memset(&callbacks, 0, sizeof(callbacks));
 

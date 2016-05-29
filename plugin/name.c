@@ -15,17 +15,15 @@
 
 #include "cbot/cbot.h"
 
-static cbot_send_t send;
 
-static void name(cbot_t *bot, const char *channel, const char *user,
-                 const char *message, const size_t *starts, const size_t *ends,
-                 size_t ncaptures)
+static void name(cbot_event_t event, cbot_actions_t actions)
 {
-  send(bot, channel, "My name is CBot.  My source lives at https://github.com/brenns10/cbot");
+  actions.send(event.bot, event.channel, "My name is CBot.  My source lives at https://github.com/brenns10/cbot");
 }
 
-void name_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
+void name_load(cbot_t *bot, cbot_register_t registrar)
 {
-  send = send_;
-  hear(bot, "([wW]ho|[wW]hat|[wW][tT][fF]) +([iI]s|[aA]re +[yY]ou,?) +[cC][bB]ot\\??", name);
+  registrar(bot, CBOT_CHANNEL_HEAR,
+            "([wW]ho|[wW]hat|[wW][tT][fF]) +([iI]s|[aA]re +[yY]ou,?) +[cC][bB]ot\\??",
+            name);
 }

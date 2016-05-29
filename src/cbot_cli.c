@@ -64,12 +64,13 @@ void run_cbot_cli(int argc, char **argv)
     help();
   }
 
-  bot = cbot_create("cbot", cbot_cli_send);
+  bot = cbot_create("cbot");
+  bot->actions.send = cbot_cli_send;
   cbot_load_plugins(bot, plugin_dir, ll_get_iter(args.bare_strings));
   while (!feof(stdin)) {
     printf("> ");
     line = read_line(stdin);
-    cbot_handle_message(bot, "stdin", "shell", line);
+    cbot_handle_channel_message(bot, "stdin", "shell", line);
     smb_free(line);
   }
 

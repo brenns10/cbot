@@ -16,25 +16,20 @@
 #include <stdlib.h>
 #include "cbot/cbot.h"
 
-static cbot_send_t send;
 
 static char *help_lines[] = {
 #include "help.h"
 };
 
-static void help(cbot_t *bot, const char *channel, const char *user,
-                 const char *message, const size_t *starts, const size_t *ends,
-                 size_t ncaptures)
+static void help(cbot_event_t event, cbot_actions_t actions)
 {
   int i;
   for (i = 0; i < sizeof(help_lines)/sizeof(char*); i++) {
-    send(bot, user, help_lines[i]);
+    actions.send(event.bot, event.username, help_lines[i]);
   }
 }
 
-void help_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond,
-               cbot_send_t send_)
+void help_load(cbot_t *bot, cbot_register_t registrar)
 {
-  send = send_;
-  respond(bot, "[Hh][Ee][Ll][Pp].*", help);
+  registrar(bot, CBOT_CHANNEL_MSG, "[Hh][Ee][Ll][Pp].*", help);
 }

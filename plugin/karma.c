@@ -25,7 +25,6 @@ typedef struct {
   char *word;
 } karma_t;
 
-static cbot_send_t send;
 static karma_t *karma = NULL;
 static size_t karma_alloc = 128;
 static size_t nkarma = 0;
@@ -98,64 +97,62 @@ static void karma_sort()
   qsort(karma, nkarma, sizeof(karma_t), karma_compare);
 }
 
-static void karma_increment(cbot_t *bot, const char *channel, const char *user,
-                            const char *message, const size_t *starts,
-                            const size_t *ends, size_t ncaptures)
+static void karma_increment(cbot_event_t event, cbot_actions_t actions)
 {
-  if (ncaptures < 1) {
+  if (event.num_captures < 1) {
     return;
   }
-  karma_change(bot, channel, message, starts[0], ends[0], 1);
+  karma_change(event.bot, event.channel, event.message,
+               event.capture_starts[0], event.capture_ends[0], 1);
 }
 
-static void karma_decrement(cbot_t *bot, const char *channel, const char *user,
-                            const char *message, const size_t *starts,
-                            const size_t *ends, size_t ncaptures)
+static void karma_decrement(cbot_event_t event, cbot_actions_t actions)
 {
-  if (ncaptures < 1) {
+  if (event.num_captures < 1) {
     return;
   }
-  karma_change(bot, channel, message, starts[0], ends[0], -1);
+  karma_change(event.bot, event.channel, event.message,
+               event.capture_starts[0], event.capture_ends[0], -1);
 }
 
-static void karma_check(cbot_t *bot, const char *channel, const char *user,
-                        const char *message, const size_t *starts,
-                        const size_t *ends, size_t ncaptures)
+static void karma_check(cbot_event_t event, cbot_actions_t actions)
 {
   char *word;
   ssize_t index;
-  if (ncaptures < 1) {
+  if (event.num_captures < 1) {
     return;
   }
-  word = get_word(message, starts[0], ends[0]);
+  word = get_word(event.message, event.capture_starts[0], event.capture_ends[0]);
   index = find_karma(word);
   if (index < 0) {
-    send(bot, channel, "%s has no karma yet", word);
+    actions.send(event.bot, event.channel, "%s has no karma yet", word);
   } else {
-    send(bot, channel, "%s has %d karma", word, karma[index].karma);
+    actions.send(event.bot, event.channel, "%s has %d karma", word, karma[index].karma);
   }
   free(word);
 }
 
 #define KARMA_TOP 5
-static void karma_best(cbot_t *bot, const char *channel, const char *user,
-                       const char *message, const size_t *starts,
-                       const size_t *ends, size_t ncaptures)
+static void karma_best(cbot_event_t event, cbot_actions_t actions)
 {
   size_t i;
   karma_sort();
   for (i = 0; i < (nkarma > KARMA_TOP ? KARMA_TOP : nkarma); i++) {
-    send(bot, channel, "%d. %s (%d karma)", i+1, karma[i].word, karma[i].karma);
+    actions.send(event.bot, event.channel, "%d. %s (%d karma)", i+1,
+                 karma[i].word, karma[i].karma);
   }
 }
 
-void karma_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
+void karma_load(cbot_t *bot, cbot_register_t registrar)
 {
-  send = send_;
   #define KARMA_WORD "^ \t\n"
   #define NOT_KARMA_WORD " \t\n"
-  hear(bot, ".*?([" KARMA_WORD "]+)\\+\\+.*?", karma_increment);
-  hear(bot, ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
-  respond(bot, "karma", karma_best);
-  respond(bot, "karma\\s+([" KARMA_WORD "]+)", karma_check);
+  registrar(bot, CBOT_CHANNEL_HEAR,
+            ".*?([" KARMA_WORD "]+)\\+\\+.*?",
+            karma_increment);
+  registrar(bot, CBOT_CHANNEL_HEAR,
+            ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
+
+  registrar(bot, CBOT_CHANNEL_MSG, "karma", karma_best);
+  registrar(bot, CBOT_CHANNEL_MSG, "karma\\s+([" KARMA_WORD "]+)", karma_check);
 }

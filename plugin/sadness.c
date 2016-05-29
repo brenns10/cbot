@@ -16,11 +16,7 @@
 #include <stdlib.h>
 #include "cbot/cbot.h"
 
-static cbot_send_t send;
-
-static void sadness(cbot_t *bot, const char *channel, const char *user,
-                    const char *message, const size_t *starts,
-                    const size_t *ends, size_t ncaptures)
+static void sadness(cbot_event_t event, cbot_actions_t actions)
 {
   char *responses[] = {
     ":(",
@@ -42,14 +38,16 @@ static void sadness(cbot_t *bot, const char *channel, const char *user,
     "http://foaas.com/flying/cbot",
     "http://foaas.com/bucket/cbot"
   };
-  send(bot, channel, responses[rand()%(sizeof(responses)/sizeof(char*))], user);
+  actions.send(event.bot, event.channel,
+               responses[rand()%(sizeof(responses)/sizeof(char*))],
+               event.username);
 }
 
-void sadness_load(cbot_t *bot, cbot_register_t hear, cbot_register_t respond, cbot_send_t send_)
+void sadness_load(cbot_t *bot, cbot_register_t registrar)
 {
-  send = send_;
-  respond(bot, "([Yy]ou +[Ss]uck[!.]?|"
-          "[Ss]ucks[!.]?|"
-          "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
-          "[Ss]hut [Uu]p[!.]?)", sadness);
+  registrar(bot, CBOT_CHANNEL_MSG,
+            "([Yy]ou +[Ss]uck[!.]?|"
+            "[Ss]ucks[!.]?|"
+            "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
+            "[Ss]hut [Uu]p[!.]?)", sadness);
 }

@@ -26,6 +26,23 @@
 
 #include "cbot_private.h"
 
+void cbot_init_handler_list(cbot_handler_list_t *list, size_t init_alloc)
+{
+  list->regex = smb_new(Regex, init_alloc);
+  list->handler = smb_new(cbot_handler_t, init_alloc);
+  list->num = 0;
+  list->alloc = init_alloc;
+}
+
+void cbot_free_handler_list(cbot_handler_list_t *list)
+{
+  for (size_t i = 0; i < list->num; i++) {
+    free_prog(list->regex[i]);
+  }
+  smb_free(list->regex);
+  smb_free(list->handler);
+}
+
 /**
    @brief Create a cbot instance.
 
@@ -36,23 +53,13 @@
    @param send The "send" function.
    @return A new cbot instance.
  */
-cbot_t *cbot_create(const char *name, cbot_send_t send)
+cbot_t *cbot_create(const char *name)
 {
   #define CBOT_INIT_ALLOC 32
   cbot_t *cbot = smb_new(cbot_t, 1);
   cbot->name = name;
-
-  cbot->hear_num = 0;
-  cbot->hear_alloc = CBOT_INIT_ALLOC;
-  cbot->hear_regex = smb_new(Regex, CBOT_INIT_ALLOC);
-  cbot->hear_callback = smb_new(cbot_callback_t, CBOT_INIT_ALLOC);
-
-  cbot->respond_num = 0;
-  cbot->respond_alloc = CBOT_INIT_ALLOC;
-  cbot->respond_regex = smb_new(Regex, CBOT_INIT_ALLOC);
-  cbot->respond_callback = smb_new(cbot_callback_t, CBOT_INIT_ALLOC);
-
-  cbot->send = send;
+  cbot_init_handler_list(&cbot->hear, CBOT_INIT_ALLOC);
+  cbot_init_handler_list(&cbot->msg, CBOT_INIT_ALLOC);
   return cbot;
 }
 
@@ -62,134 +69,141 @@ cbot_t *cbot_create(const char *name, cbot_send_t send)
  */
 void cbot_delete(cbot_t *cbot)
 {
-  for (int i = 0; i < cbot->hear_num; i++) {
-    free_prog(cbot->hear_regex[i]);
-  }
-  smb_free(cbot->hear_regex);
-  smb_free(cbot->hear_callback);
-
-  for (int i = 0; i < cbot->respond_num; i++) {
-    free_prog(cbot->respond_regex[i]);
-  }
-  smb_free(cbot->respond_regex);
-  smb_free(cbot->respond_callback);
-
+  cbot_free_handler_list(&cbot->hear);
+  cbot_free_handler_list(&cbot->msg);
   smb_free(cbot);
 }
 
-static void cbot_register(Regex **regex_list, cbot_callback_t **callback_list,
-                          int *regex_num, int *regex_alloc,
-                          const char *regex, cbot_callback_t callback)
+static void cbot_add_to_handler_list(cbot_handler_list_t *list,
+                                     const char *regex,
+                                     cbot_handler_t handler)
 {
-  if (*regex_num >= *regex_alloc) {
-    *regex_alloc *= 2;
-    *regex_list = smb_renew(Regex, *regex_list, *regex_alloc);
-    *callback_list = smb_renew(cbot_callback_t, *callback_list, *regex_alloc);
+  if (list->num >= list->alloc) {
+    list->alloc *= 2;
+    list->regex = smb_renew(Regex, list->regex, list->alloc);
+    list->handler = smb_renew(cbot_handler_t, list->handler, list->alloc);
   }
-  (*regex_list)[*regex_num] = recomp(regex);
-  (*callback_list)[*regex_num] = callback;
-  *regex_num += 1;
+  list->regex[list->num] = recomp(regex);
+  list->handler[list->num] = handler;
+  list->num++;
 }
 
-/**
-   @brief Register a callback for a regex that matches any message.
-   @param bot The bot to register with.
-   @param regex The regular expression the message should match.
-   @param callback Callback function to run on a match.
- */
-void cbot_register_hear(cbot_t *bot, const char *regex, cbot_callback_t callback)
+static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot, cbot_event_type_t type)
 {
-  cbot_register(&bot->hear_regex, &bot->hear_callback, &bot->hear_num,
-                &bot->hear_alloc, regex, callback);
+  switch (type) {
+  case CBOT_CHANNEL_MSG:
+    return &bot->msg;
+    break;
+  case CBOT_CHANNEL_HEAR:
+    return &bot->hear;
+    break;
+  }
 }
 
 /**
-   @brief Register a callback for a regex that matches messages pointed at cbot.
-   @param bot The bot to register with.
-   @param regex The regular expression the message should match.
-   @param callback Callback function to run on a match.
+   Register an event handler for CBot!
+
+   @param bot The bot instance to register into.
+   @param type The type of event to register a handler for.
+   @param regex Regex to match for the event.
+   @param handler Handler to register.
  */
-void cbot_register_respond(cbot_t *bot, const char *regex, cbot_callback_t callback)
+void cbot_register(cbot_t *bot, cbot_event_type_t type,
+                          const char *regex, cbot_handler_t handler)
 {
-  cbot_register(&bot->respond_regex, &bot->respond_callback, &bot->respond_num,
-                &bot->respond_alloc, regex, callback);
+  cbot_add_to_handler_list(cbot_list_for_event(bot, type), regex, handler);
 }
 
 /**
-   @brief Compare a regex against a message, and if it matches, call a callback.
+   Dispatch an event for CBot.
 
-   This does the plumbing of getting the number of captures in a form that's not
-   a smb_al (because plugin code really shouldn't have to depend on libstephen).
-   It does the regex simulation and everything.
+   This goes through the correct handler list, looks for a matching handler, and
+   calls the event handler. It doesn't terminate after the first event, because
+   more than one plugin may want to see the event. So plugins have to make sure
+   they don't get duplicate events accidentally.
+
    @param bot The bot we're working with.
-   @param channel The channel the message came in on.
-   @param user The user that sent the message.
-   @param message The message!
-   @param wmessage The message, in `wchar_t*`.
-   @param f The regex FSM to match against the message.
-   @param c The callback to call if there is a match.
-   @param increment How many characters into the message should we start
-   matching?
+   @param event The event to dispatch.
  */
-static void cbot_match_callback(cbot_t *bot, const char *channel,
-                                const char *user, const char *message, Regex r,
-                                cbot_callback_t c, size_t increment)
+static void cbot_send_event(cbot_t *bot, cbot_event_t event)
 {
-  int i;
-  size_t *saves = NULL, *starts = NULL, *ends = NULL;
-  ssize_t  ncaptures;
+  cbot_handler_list_t *list = cbot_list_for_event(bot, event.type);
 
-  ssize_t match = execute(r, message + increment, &saves);
-  if (match == -1) {
-    free(saves);
-    return;
-  }
+  for (size_t i = 0; i < list->num; i++) {
+    size_t *saves = NULL, *starts = NULL, *ends = NULL;
+    ssize_t  ncaptures;
+    Regex regex = list->regex[i];
+    cbot_handler_t handler = list->handler[i];
 
-  ncaptures = numsaves(r);
-
-  if (ncaptures != 0) {
-    starts = smb_new(size_t, ncaptures);
-    ends = smb_new(size_t, ncaptures);
-    for (i = 0; i < ncaptures/2; i += 2) {
-      starts[i] = saves[i*2] + increment;
-      ends[i] = saves[i*2+1] + increment;
+    // Check for regex match.
+    ssize_t match = execute(regex, event.message, &saves);
+    if (match == -1) {
+      free(saves);
+      continue;
     }
-    free(saves);
-    c(bot, channel, user, message, starts, ends, ncaptures);
-    smb_free(starts);
-    smb_free(ends);
-  } else {
-    c(bot, channel, user, message, starts, ends, ncaptures);
+
+    // Figure out how many captures we have.
+    ncaptures = numsaves(regex);
+
+    if (ncaptures != 0) {
+      // If we have any, we need to split them into two lists.
+      starts = smb_new(size_t, ncaptures);
+      ends = smb_new(size_t, ncaptures);
+      for (i = 0; i < ncaptures/2; i += 2) {
+        starts[i] = saves[i*2];
+        ends[i] = saves[i*2+1];
+      }
+      free(saves);
+      handler(event, bot->actions);
+      smb_free(starts);
+      smb_free(ends);
+    } else {
+      // Otherwise, just call the handler.
+      handler(event, bot->actions);
+    }
   }
 }
 
 /**
-   @brief Take an incoming message and call appropriate callbacks.
+   @brief Helper function that handles channel messages.
+
+   CBot has the concept of messages directed AT the bot versus messages said in
+   a channel, but not specifically targeted at the bot. IRC doesn't have this
+   separation, so we have to separate out the two cases and then call the
+   appropriate handlers.
+
+   @param bot The bot we're operating on.
+   @param channel The channel this message came in.
+   @param user The user who said it.
+   @param message The message itself.
  */
-void cbot_handle_message(cbot_t *bot, const char *channel, const char *user,
-                         const char *message)
+void cbot_handle_channel_message(cbot_t *bot, const char *channel,
+                                 const char *user, const char *message)
 {
-  size_t increment;
+  size_t increment = strlen(bot->name);
+  cbot_event_t event;
 
-  // Handle the "hear" regex
-  for (int i = 0; i < bot->hear_num; i++) {
-    cbot_match_callback(bot, channel, user, message, bot->hear_regex[i],
-                        bot->hear_callback[i], 0);
-  }
+  event.bot = bot;
+  event.channel = channel;
+  event.username = user;
+  event.message = message;
+  event.num_captures = 0;
 
-  // If the message starts with the bot name, get the rest of it and match it
-  // against the respond patterns and callbacks.
-  increment = strlen(bot->name);
+  // Check if the message starts with the bot's name.
   if (strncmp(bot->name, message, increment) == 0) {
+    // If so, skip whitespace and punctuation until the rest of the message.
     while (isspace(message[increment]) || ispunct(message[increment])) {
       increment++;
     }
 
-    for (int i = 0; i < bot->respond_num; i++) {
-      cbot_match_callback(bot, channel, user, message, bot->respond_regex[i],
-                          bot->respond_callback[i], increment);
-    }
+    // Adjust the message and say this was a MSG event.
+    event.message += increment;
+    event.type = CBOT_CHANNEL_MSG;
+  } else {
+    event.type = CBOT_CHANNEL_HEAR;
   }
+
+  cbot_send_event(bot, event);
 }
 
 /**
@@ -213,7 +227,7 @@ static bool cbot_load_plugin(cbot_t *bot, const char *filename, const char *load
     return false;
   }
 
-  plugin(bot, cbot_register_hear, cbot_register_respond, bot->send);
+  plugin(bot, cbot_register);
   return true;
 }
 
