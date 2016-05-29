@@ -17,7 +17,7 @@
 
 static void emote(cbot_event_t event, cbot_actions_t actions)
 {
-  actions.me(event.bot, event.channel, "laughs");
+  actions.me(event.bot, event.channel, event.cap[0]);
 }
 
 void emote_load(cbot_t *bot, cbot_register_t registrar)

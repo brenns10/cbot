@@ -60,26 +60,21 @@ static size_t find_or_create_karma(char *word)
   return idx;
 }
 
-static char *get_word(const char *message, size_t start, size_t end)
+static char *get_word(const char *word)
 {
-  char *word;
-  size_t length;
-
-  assert(start <= end);
-  length = (size_t)(end - start + 1);
-
-  word = malloc(length);
-  strncpy(word, message + start, length);
-  word[length-1] = '\0';
-  return word;
+  char *newword;
+  size_t length = strlen(word);
+  newword = malloc(length + 1);
+  strncpy(newword, word, length + 1);
+  newword[length] = '\0';
+  return newword;
 }
 
 static void karma_change(cbot_event_t event, cbot_actions_t actions, size_t cap_idx, int change)
 {
   char *word;
   size_t index;
-  word = get_word(event.message, event.capture_starts[cap_idx],
-                  event.capture_ends[cap_idx]);
+  word = get_word(event.cap[cap_idx]); // copy word
   index = find_or_create_karma(word);
   karma[index].karma += change;
   actions.send(event.bot, event.channel, "%s now has %d karma", karma[index].word, karma[index].karma);
@@ -98,7 +93,8 @@ static void karma_sort()
 
 static void karma_increment(cbot_event_t event, cbot_actions_t actions)
 {
-  if (event.num_captures < 1) {
+  printf("ncap: %d\n", event.ncap);
+  if (event.ncap < 1) {
     return;
   }
   karma_change(event, actions, 0, 1);
@@ -106,7 +102,7 @@ static void karma_increment(cbot_event_t event, cbot_actions_t actions)
 
 static void karma_decrement(cbot_event_t event, cbot_actions_t actions)
 {
-  if (event.num_captures < 1) {
+  if (event.ncap < 1) {
     return;
   }
   karma_change(event, actions, 0, -1);
@@ -127,17 +123,17 @@ static void karma_check(cbot_event_t event, cbot_actions_t actions)
 {
   char *word;
   ssize_t index;
-  if (event.num_captures < 1) {
+  if (event.ncap < 1) {
     // Not sure how this could happen, but sure :P
     return;
   }
-  if (event.capture_starts[0] == 0 && event.capture_ends[0] == 0) {
+  if (strcmp(event.cap[0], "") == 0) {
     // Nothing was captured, so the user just said "karma".
     // Show them the top 5.
     karma_best(event, actions);
     return;
   }
-  word = get_word(event.message, event.capture_starts[1], event.capture_ends[1]);
+  word = get_word(event.cap[1]);
   index = find_karma(word);
   if (index < 0) {
     actions.send(event.bot, event.channel, "%s has no karma yet", word);

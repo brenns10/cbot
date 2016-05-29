@@ -45,9 +45,8 @@ typedef struct {
   const char *username;
   const char *message;
 
-  size_t num_captures;
-  const size_t *capture_starts;
-  const size_t *capture_ends;
+  size_t ncap;
+  const char *const *cap;
 
 } cbot_event_t;
 

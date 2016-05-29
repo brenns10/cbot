@@ -130,7 +130,8 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
   cbot_handler_list_t *list = cbot_list_for_event(bot, event.type);
 
   for (size_t i = 0; i < list->num; i++) {
-    size_t *saves = NULL, *starts = NULL, *ends = NULL;
+    size_t *saves = NULL;
+    ssize_t nsave;
     Regex regex = list->regex[i];
     cbot_handler_t handler = list->handler[i];
 
@@ -141,23 +142,16 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
       continue;
     }
 
-    // Figure out how many captures we have.
-    event.num_captures = numsaves(regex);
+    // Figure out how many save slots we have.
+    nsave = numsaves(regex);
 
-    if (event.num_captures != 0) {
-      // If we have any, we need to split them into two lists.
-      starts = smb_new(size_t, event.num_captures);
-      ends = smb_new(size_t, event.num_captures);
-      for (size_t j = 0; j < event.num_captures/2; j++) {
-        starts[j] = saves[j*2];
-        ends[j] = saves[j*2+1];
-      }
-      free(saves);
-      event.capture_starts = starts;
-      event.capture_ends = ends;
+    if (nsave != 0) {
+      Captures c = recap(event.message, saves, nsave);
+      event.ncap = c.n;
+      // Apply some more strict const-requirements!
+      event.cap = (const char * const *) c.cap;
       handler(event, bot->actions);
-      smb_free(starts);
-      smb_free(ends);
+      recapfree(c);
     } else {
       // Otherwise, just call the handler.
       handler(event, bot->actions);
@@ -188,7 +182,7 @@ void cbot_handle_channel_message(cbot_t *bot, const char *channel,
   event.channel = channel;
   event.username = user;
   event.message = message;
-  event.num_captures = 0;
+  event.ncap = 0;
 
   // Check if the message starts with the bot's name.
   if (strncmp(bot->name, message, increment) == 0) {
