@@ -148,9 +148,9 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
       // If we have any, we need to split them into two lists.
       starts = smb_new(size_t, event.num_captures);
       ends = smb_new(size_t, event.num_captures);
-      for (i = 0; i < event.num_captures/2; i++) {
-        starts[i] = saves[i*2];
-        ends[i] = saves[i*2+1];
+      for (size_t j = 0; j < event.num_captures/2; j++) {
+        starts[j] = saves[j*2];
+        ends[j] = saves[j*2+1];
       }
       free(saves);
       event.capture_starts = starts;
