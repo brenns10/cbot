@@ -131,7 +131,6 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
 
   for (size_t i = 0; i < list->num; i++) {
     size_t *saves = NULL, *starts = NULL, *ends = NULL;
-    ssize_t  ncaptures;
     Regex regex = list->regex[i];
     cbot_handler_t handler = list->handler[i];
 
@@ -143,17 +142,19 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
     }
 
     // Figure out how many captures we have.
-    ncaptures = numsaves(regex);
+    event.num_captures = numsaves(regex);
 
-    if (ncaptures != 0) {
+    if (event.num_captures != 0) {
       // If we have any, we need to split them into two lists.
-      starts = smb_new(size_t, ncaptures);
-      ends = smb_new(size_t, ncaptures);
-      for (i = 0; i < ncaptures/2; i += 2) {
+      starts = smb_new(size_t, event.num_captures);
+      ends = smb_new(size_t, event.num_captures);
+      for (i = 0; i < event.num_captures/2; i += 2) {
         starts[i] = saves[i*2];
         ends[i] = saves[i*2+1];
       }
       free(saves);
+      event.capture_starts = starts;
+      event.capture_ends = ends;
       handler(event, bot->actions);
       smb_free(starts);
       smb_free(ends);
