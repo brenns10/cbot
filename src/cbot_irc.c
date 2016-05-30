@@ -52,12 +52,6 @@ void event_numeric(irc_session_t *session, unsigned int event,
   log_event(session, buf, origin, params, count);
 }
 
-void event_join(irc_session_t *session, const char *event,
-                const char *origin, const char **params, unsigned int count)
-{
-  log_event(session, event, origin, params, count);
-}
-
 /*
   Run once we are connected to the server.
  */
@@ -99,11 +93,63 @@ void event_channel(irc_session_t *session, const char *event,
 {
   log_event(session, event, origin, params, count);
   if (count >= 2 && params[1] != NULL) {
-    printf("sending to cbot\n");
     cbot_handle_channel_message(irc_get_ctx(session), params[0], origin, params[1]);
-    printf("handled by cbot\n");
+    printf("Event handled by CBot.\n");
   }
-  printf("event done!\n");
+}
+
+void event_action(irc_session_t *session, const char *event,
+                  const char *origin, const char **params, unsigned int count)
+{
+  log_event(session, event, origin, params, count);
+  cbot_t *bot = irc_get_ctx(session);
+  cbot_event_t ircevent = {
+    .bot = bot,
+    .type = CBOT_CHANNEL_ACTION,
+    .channel = params[0],
+    .username = origin,
+    .message = params[1],
+    .ncap = 0,
+    .cap = NULL
+  };
+  cbot_handle_event(bot, ircevent);
+  printf("Event handled by CBot.\n");
+}
+
+void event_join(irc_session_t *session, const char *event,
+                const char *origin, const char **params, unsigned int count)
+{
+  log_event(session, event, origin, params, count);
+  cbot_t *bot = irc_get_ctx(session);
+  cbot_event_t ircevent = {
+    .bot = bot,
+    .type = CBOT_JOIN,
+    .channel = params[0],
+    .username = origin,
+    .message = NULL,
+    .ncap = 0,
+    .cap = NULL
+  };
+  cbot_handle_event(bot, ircevent);
+  printf("Event handled by CBot.\n");
+}
+
+void event_part(irc_session_t *session, const char *event,
+                const char *origin, const char **params, unsigned int count)
+{
+  log_event(session, event, origin, params, count);
+  cbot_t *bot = irc_get_ctx(session);
+  cbot_event_t ircevent = {
+    .bot = bot,
+    .type = CBOT_PART,
+    .channel = params[0],
+    .username = origin,
+    .message = NULL,
+    .ncap = 0,
+    .cap = NULL
+  };
+  cbot_handle_event(bot, ircevent);
+  printf("Event handled by CBot.\n");
 }
 
 void help()
@@ -169,7 +215,7 @@ void run_cbot_irc(int argc, char *argv[])
   callbacks.event_join = event_join;
   callbacks.event_nick = log_event;
   callbacks.event_quit = log_event;
-  callbacks.event_part = log_event;
+  callbacks.event_part = event_part;
   callbacks.event_mode = log_event;
   callbacks.event_topic = log_event;
   callbacks.event_kick = log_event;

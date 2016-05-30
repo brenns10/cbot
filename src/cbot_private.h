@@ -34,8 +34,7 @@ struct cbot {
 
   const char *name;
 
-  cbot_handler_list_t hear;
-  cbot_handler_list_t msg;
+  cbot_handler_list_t hlists[_CBOT_NUM_EVENT_TYPES_];
 
   void *backend;
 
@@ -44,7 +43,7 @@ struct cbot {
 
 cbot_t *cbot_create(const char *name);
 void cbot_delete(cbot_t *obj);
-void cbot_handle_event(cbot_event_t event);
+void cbot_handle_event(cbot_t *bot, cbot_event_t event);
 void cbot_handle_channel_message(cbot_t *bot, const char *channel,
                                  const char *user, const char *message);
 void cbot_register(cbot_t *bot, cbot_event_type_t type, const char *regex,

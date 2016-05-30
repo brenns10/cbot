@@ -70,7 +70,8 @@ static char *get_word(const char *word)
   return newword;
 }
 
-static void karma_change(cbot_event_t event, cbot_actions_t actions, size_t cap_idx, int change)
+static void karma_change(cbot_event_t event, cbot_actions_t actions,
+                         size_t cap_idx, int change)
 {
   char *word;
   size_t index;
@@ -93,7 +94,6 @@ static void karma_sort()
 
 static void karma_increment(cbot_event_t event, cbot_actions_t actions)
 {
-  printf("ncap: %d\n", event.ncap);
   if (event.ncap < 1) {
     return;
   }
@@ -152,6 +152,6 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
             karma_increment);
   registrar(bot, CBOT_CHANNEL_HEAR,
             ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
-
-  registrar(bot, CBOT_CHANNEL_MSG, "karma(\\s+([" KARMA_WORD "]+))?", karma_check);
+  registrar(bot, CBOT_CHANNEL_MSG, "karma(\\s+([" KARMA_WORD "]+))?",
+            karma_check);
 }

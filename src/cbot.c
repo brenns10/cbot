@@ -58,8 +58,9 @@ cbot_t *cbot_create(const char *name)
   #define CBOT_INIT_ALLOC 32
   cbot_t *cbot = smb_new(cbot_t, 1);
   cbot->name = name;
-  cbot_init_handler_list(&cbot->hear, CBOT_INIT_ALLOC);
-  cbot_init_handler_list(&cbot->msg, CBOT_INIT_ALLOC);
+  for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
+    cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
+  }
   return cbot;
 }
 
@@ -69,8 +70,9 @@ cbot_t *cbot_create(const char *name)
  */
 void cbot_delete(cbot_t *cbot)
 {
-  cbot_free_handler_list(&cbot->hear);
-  cbot_free_handler_list(&cbot->msg);
+  for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
+    cbot_free_handler_list(&cbot->hlists[i]);
+  }
   smb_free(cbot);
 }
 
@@ -88,16 +90,10 @@ static void cbot_add_to_handler_list(cbot_handler_list_t *list,
   list->num++;
 }
 
-static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot, cbot_event_type_t type)
+static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot,
+                                                cbot_event_type_t type)
 {
-  switch (type) {
-  case CBOT_CHANNEL_MSG:
-    return &bot->msg;
-    break;
-  case CBOT_CHANNEL_HEAR:
-    return &bot->hear;
-    break;
-  }
+  return &bot->hlists[type];
 }
 
 /**
@@ -125,7 +121,7 @@ void cbot_register(cbot_t *bot, cbot_event_type_t type,
    @param bot The bot we're working with.
    @param event The event to dispatch.
  */
-static void cbot_send_event(cbot_t *bot, cbot_event_t event)
+void cbot_handle_event(cbot_t *bot, cbot_event_t event)
 {
   cbot_handler_list_t *list = cbot_list_for_event(bot, event.type);
 
@@ -134,6 +130,12 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
     ssize_t nsave;
     Regex regex = list->regex[i];
     cbot_handler_t handler = list->handler[i];
+
+    // There can be no matching here, so ignore and just send.
+    if (event.message == NULL) {
+      handler(event, bot->actions);
+      continue;
+    }
 
     // Check for regex match.
     ssize_t match = execute(regex, event.message, &saves);
@@ -150,11 +152,11 @@ static void cbot_send_event(cbot_t *bot, cbot_event_t event)
       event.ncap = c.n;
       // Apply some more strict const-requirements!
       event.cap = (const char * const *) c.cap;
-      handler(event, bot->actions);
+      handler(event, event.bot->actions);
       recapfree(c);
     } else {
       // Otherwise, just call the handler.
-      handler(event, bot->actions);
+      handler(event, event.bot->actions);
     }
   }
 }
@@ -198,7 +200,7 @@ void cbot_handle_channel_message(cbot_t *bot, const char *channel,
     event.type = CBOT_CHANNEL_HEAR;
   }
 
-  cbot_send_event(bot, event);
+  cbot_handle_event(bot, event);
 }
 
 /**

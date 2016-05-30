@@ -27,9 +27,18 @@ typedef struct cbot cbot_t;
 typedef enum {
 
   /* CBot hears a message in a channel (not addressed to it) */
-  CBOT_CHANNEL_HEAR,
+  CBOT_CHANNEL_HEAR = 0,
   /* CBot has a message in a channel addressed to it. */
   CBOT_CHANNEL_MSG,
+  /* CBot hears an action message. */
+  CBOT_CHANNEL_ACTION,
+
+  /* A user joins a channel (no regex matching here). */
+  CBOT_JOIN,
+  /* A user leaves a channel. */
+  CBOT_PART,
+
+  _CBOT_NUM_EVENT_TYPES_
 
 } cbot_event_type_t;
 
@@ -85,9 +94,7 @@ typedef void (*cbot_handler_t)(cbot_event_t event,
    @param handler Event handler function.
  */
 typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event,
-                                const char *regex,
-                                cbot_handler_t handler);
-
+                                const char *regex, cbot_handler_t handler);
 
 /**
    Main plugin loader function.

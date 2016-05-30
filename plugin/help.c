@@ -23,7 +23,7 @@ static char *help_lines[] = {
 
 static void help(cbot_event_t event, cbot_actions_t actions)
 {
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(help_lines)/sizeof(char*); i++) {
     actions.send(event.bot, event.username, help_lines[i]);
   }
