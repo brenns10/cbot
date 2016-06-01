@@ -3,121 +3,115 @@ cbot
 
 CBot is an IRC chatbot written entirely in C!
 
+Features
+--------
 
-Motivation
-----------
+* Plugin based architecture: all bot features are implemented as dynamically
+  loaded plugins.
+* Plugins handle events that they match based on regular expression (which is my
+  own regex implementation!)
+* Plugins can perform the following actions:
+  * Send to a channel or user.
+  * Send an "action" message (`/me does something`)
+* Plugins can handle the following events:
+  * Normal channel message.
+  * Normal channel message, but addressed to CBot.
+  * Action message in a channel.
+  * User joining and leaving a channel.
 
-On the [CWRU IRC Server](http://irc.case.edu), we have a silly little chatbot
-named [Lulu](https://github.com/cwruacm/lulu).  Lulu is our own, customized
-version of [Hubot](https://hubot.github.com/), GitHub's chatbot.  Unfortunately,
-Hubot is written in in Coffeescript.  I don't like Coffeescript (for reasons
-that aren't really relevent here), and figured that it would be really fun to
-implement my own chatbot in a language I do like (Python and C being the two big
-choices).  Looking for a challenge, I went with C.
+Future Work
+-----------
 
+* Handle/send invitations to channels.
+* Handle kick messages.  Maybe kick people?
+* Be able to send messages.
+* Be able to join/leave channels.
+* Provide list of users in a channel.
+* Allow plugins to keep state.
 
-Plan
-----
+Plugin List
+-----------
 
-CBot will be an easily extensible chatbot that duplicates some of Hubot's basic
-functionality.  You will be able to implement CBot extensions by writing them in
-C and creating a shared object file out of them.  Then, you will be able to load
-them by providing CBot with the plugin filenames at runtime.
-
-CBot will have an IRC backend as well as a console backend in order to allow
-easier testing.
-
-
-Current State
--------------
-
-The following functionality is currently implemented:
-
-* Plugin handler types:
-    * Responding to any channel message.
-    * Responding to messages directed towards CBot (e.g. "cbot help" or "cbot:
-      help");
-* Allowing custom plugins via simple API.
-* Dynamically loading plugins.
-* Backends:
-    * An IRC backend that can connect to any server and channel.
-    * Console backend for simpler debugging.
-* Plugins:
-    * Respond to greetings.
-    * Respond to questions about cbot.
-    * Respond to insults.
-
-Remaining to be implemented:
-
-* Plugin handler types:
-    * Responding to a user entering the channel.
-    * Responding to a user leaving the channel.
-    * Responding to invitations.
-* IRC actions:
-    * Sending invitations
-    * Emoting (e.g. "cbot cries")
-    * Getting names of people in the room
-* More core plugins.
-* Plugin state (saving & loading).
-    * May require some JSON support from libstephen!
-* Regex capture, if I can implement it in libstephen.
-* Load all plugins in directory, except listed ones (much easier).
-
+- name: Responds to questions about CBot with a link to the github.
+- help: An outdated command listing.
+- karma: Tracks the karma of various words.
+- greet: Say hi back to people, as well as greet when they enter a channel, and
+  say bad things when they leave.
+- sadness: Responds to some forms of insult with odd comebacks.
+- emote: CBot will echo what you said in an ACTION (`/me`) message.
 
 Building and Running
 --------------------
 
-The only part of CBot that I don't implement myself is the IRC protocol - that
-complexity would be unjustified.  Instead, I use the `libircclient` library,
-which has proved to be excellent so far.  On Arch Linux, the package is
-`libircclient`.  For Ubuntu, I would guess you need to run `sudo apt-get install
-libircclient-devel`, but I haven't tried it myself.
+Dependencies:
+- `libircclient`: On Arch Linux, the package is `libircclient`. For Ubuntu, I
+  would guess you need to run `sudo apt-get install libircclient-devel`, but I
+  haven't tried it myself.
+- `libstephen`: Simply run `git submodule init` and `git submodule update` in
+  the repository root. Any time the `libstephen` version is updated, you'll
+  probably need to run `git submodule update` again.
 
-In addition, you'll need to get my
-[`libstephen`](https://github.com/brenns10/libstephen) library, which provides
-the fundamental data structures and regular expression implementation that I use
-in this project.  In order to do so, run `git submodule init` and `git submodule
-update` in the repository root.  Any time the `libstephen` version is updated,
-you'll probably need to run `git submodule update` again.
+Compiling: just run `make`.
 
-Finally, you should simply need to run `make` to build CBot.  The compiled
-binary will be under `bin/release/cbot`.  You'll need to run `bin/release/cbot
-irc` to activate the IRC backend.  Check `bin/release/cbot irc --help` for
-argument information.
+Running: run `bin/release/cbot` with the following arguments:
+1. Either `cli` or `irc`, depending on whether you want to run locally or on a
+   real IRC server.
+2. If you chose the `irc` backend, you must specify:
+   - `--host [hostname]` - the IRC server host
+   - `--port [port]` - the IRC server port
+   - `--chan [chan]` - channel to join on startup
+3. Regardless of your backend, you can specify:
+   - `--name [name]` - a name for the bot (other than cbot)
+   - `--plugin-dir [dir]` - tell the program where your plugins reside
+4. Finally, provide a list of plugins to load. See the list above. Note that you
+   should provide the names without the `.so` extension.
 
-Plugins are specified on the command line.  You'll need to compile plugins in
-the `plugin` directory - just change directory into there and run `make`.
-Then, you can specify plugins by name on the command line.
+Plugin API
+----------
 
-So, to just run CBot on CWRU's IRC with the greeting plugin, you should do this:
+Here's a brief rundown of how to write a plugin:
 
-    bin/release/cbot irc greeting
-
-
-Contributing Plugins
---------------------
-
-CBot is nearly at the point where writing plugins is possible.  See the
-`plugin/` directory for example plugins to get you started.  The rules are:
-
-* The plugin name should be a valid C identifier.  The code should be
-  `plugin_name.c`, and it will be compiled to `plugin_name.so`.
-* The plugin should define only one public symbol - `plugin_name_load()`.  This
-  should be a function of type `cbot_plugin_t` (see
-  [`inc/cbot/cbot.h`](inc/cbot/cbot.h)).  It must always be the plugin name,
-  followed by `_load`.
-* The load function will use its arguments (the `cbot_t` pointer and the
-  function pointers) to register all its callbacks.
-* The regular expression syntax is from libstephen.  It supports basic suffixes
-  like `*`, `?`, and `+`, character classes, subexpressions via `()`, OR via
-  `|`, and some built in character classes like `\w`, `\d`.  There is no
-  capturing, which will probably hamper regular expression matching.  Do not use
-  `^` or `$` to indicate line beginnings or endings.
-* The regular expressions must match the *whole message*, not just a part of it.
-
-If you've written a plugin you think is cool, you can submit a PR and I'll check
-it out.
-
+- Create `[somename].c`.
+- Inside, write a function `void [somename]_load(cbot_t *bot, cbot_register_t
+  registrar)`. For now, leave it blank. Make sure to also `#include
+  "cbot/cbot.h"` at the top.
+- Now, create a handler function. This is the heart of a plugin. It handles an
+  *event* by taking some *action* on it. So, it will have the following
+  signature: `void give_me_a_name(cbot_event_t event, cbot_actions_t actions)`.
+- The event argument is a struct with:
+  - `const cbot_t* bot` - a pointer to the bot
+  - `cbot_event_type_t type` - the type of event (described later)
+  - `const char *channel` - the channel name associated with the event
+  - `const char *username` - the username associated with the event
+  - `size_t ncap` - the number of captured strings from your regex
+  - `const char *const *cap` - an array of captured strings
+- The action argument has two functions in it:
+  - `send`, which has signature `void send(const cbot_t *bot, const char *dest,
+    const char *format, ...)`. It is like `printf` in that it accepts a format
+    string and a variable number of arguments. It can send to a channel or a
+    user.
+  - `me`, which has the same signature as `send`. Its only difference is that it
+    sends an "action" or `/me` message.
+- After you've written your handler function (or at least declared it), go back
+  to your `[somename]_load` function. Put the following function call in it:
+  
+      ```
+      registrar(bot, CBOT_CHANNEL_MSG, "regex here", emote);
+      ```
+  
+- The argument `CBOT_CHANNEL_MSG` tells cbot that this handles a message
+  directed at cbot (i.e. prefixed by `cbot`) in a channel. You can handle the
+  following additional events:
+  - `CBOT_CHANNEL_HEAR`: any message in the channel, not explicitly directed at
+    cbot.
+  - `CBOT_CHANNEL_ACTION`: an action message in a channel
+  - `CBOT_JOIN`: a person joining a channel (could be CBot itself)!
+  - `CBOT_PART`: a person leaving a channel
+- The regex is used to match messages you will handle. You can capture strings
+  using parentheses, and these strings will be passed to your handler in the
+  event struct.
+- Put the C file in the `plugins/` directory, and use the makefile to build!
+  Tada!
 
 License
 -------
