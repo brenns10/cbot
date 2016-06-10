@@ -18,8 +18,13 @@
 #include <stdarg.h>
 #include <string.h>
 
+#ifdef LIBIRCCLIENT_LOCAL
+#include "libircclient.h"
+#include "libirc_rfcnumeric.h"
+#else
 #include <libircclient/libircclient.h>
 #include <libircclient/libirc_rfcnumeric.h>
+#endif
 #include "libstephen/ll.h"
 #include "libstephen/ad.h"
 #include "libstephen/cb.h"
@@ -177,6 +182,7 @@ void run_cbot_irc(int argc, char *argv[])
   char *host = "irc.case.edu";
   char *port = "6667";
   char *plugin_dir = "plugin";
+  char *password = NULL;
   unsigned short port_num;
   arg_data_init(&args);
 
@@ -199,6 +205,9 @@ void run_cbot_irc(int argc, char *argv[])
   }
   if (check_long_flag(&args, "help")) {
     help();
+  }
+  if (check_long_flag(&args, "password")) {
+    password = get_long_flag_parameter(&args, "password");
   }
   if (!(name && host && port && chan && plugin_dir)) {
     help();
@@ -248,7 +257,7 @@ void run_cbot_irc(int argc, char *argv[])
   irc_set_ctx(session, cbot);
 
   // Start the connection process!
-  if (irc_connect(session, host, port_num, NULL, name, NULL, NULL)) {
+  if (irc_connect(session, host, port_num, password, name, name, NULL)) {
     fprintf(stderr, "cbot: error connecting to IRC - %s\n",
             irc_strerror(irc_errno(session)));
     exit(EXIT_FAILURE);
