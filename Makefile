@@ -82,17 +82,19 @@ CC=gcc
 FLAGS=-Wall -Wextra -Wno-unused-parameter
 INC=-I$(INCLUDE_DIR) -I$(SOURCE_DIR) $(addprefix -I,$(EXTRA_INCLUDES))
 CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
-LFLAGS=$(FLAGS) -lcrypto -lssl -ldl
-
+LFLAGS=$(FLAGS)
 # Special libircclient related stuff.
 ifneq ($(LIBIRCCLIENT_LOCAL),)
 URL = http://downloads.sourceforge.net/project/libircclient/libircclient/1.9/libircclient-1.9.tar.gz
 STATIC_LIBS += libircclient-1.9/src/libircclient.a
 EXTRA_INCLUDES +=  libircclient-1.9/include
 CFLAGS += -DLIBIRCCLIENT_LOCAL
+LD=
 else
-LFLAGS = -lircclient $(LFLAGS)
+LD=-lircclient
 endif
+LD += -lcrypto -lssl -ldl
+
 
 # --- BUILD CONFIGURATIONS: Feel free to get creative with these if you'd like.
 # The advantage here is that you can update variables (like compile flags) based
@@ -191,16 +193,16 @@ ifeq ($(PROJECT_TYPE),staticlib)
 	ar rcs $@ $^
 endif
 ifeq ($(PROJECT_TYPE),dynamiclib)
-	$(CC) -shared $(LFLAGS) $^ -o $@
+	$(CC) $(LFLAGS) -shared  $^ -o $@ $(LD)
 endif
 ifeq ($(PROJECT_TYPE),executable)
-	$(CC) $^ -o $@ $(LFLAGS)
+	$(CC) $(LFLAGS) $^ -o $@ $(LD)
 endif
 
 # RULE TO BULID YOUR TEST TARGET HERE: (it's assumed that it's an executable)
 $(BINARY_DIR)/$(CFG)/$(TEST_TARGET): $(filter-out $(OBJECT_MAIN),$(OBJECTS)) $(TEST_OBJECTS) $(STATIC_LIBS)
 	$(DIR_GUARD)
-	$(CC) $^ -o $@ $(LFLAGS)
+	$(CC) $(LFLAGS) $^ -o $@
 
 # --- Generic Compilation Command
 $(OBJECT_DIR)/$(CFG)/%.o: %.c
