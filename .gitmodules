@@ -1,3 +1,3 @@
 [submodule "libstephen"]
 	path = libstephen
-	url = git@github.com:brenns10/libstephen.git
+	url = https://github.com/brenns10/libstephen.git

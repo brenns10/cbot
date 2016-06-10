@@ -82,7 +82,17 @@ CC=gcc
 FLAGS=-Wall -Wextra -Wno-unused-parameter
 INC=-I$(INCLUDE_DIR) -I$(SOURCE_DIR) $(addprefix -I,$(EXTRA_INCLUDES))
 CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
-LFLAGS=$(FLAGS) -lircclient -lcrypto -lssl -ldl
+LFLAGS=$(FLAGS) -lcrypto -lssl -ldl
+
+# Special libircclient related stuff.
+ifneq ($(LIBIRCCLIENT_LOCAL),)
+URL = http://downloads.sourceforge.net/project/libircclient/libircclient/1.9/libircclient-1.9.tar.gz
+STATIC_LIBS += libircclient-1.9/src/libircclient.a
+EXTRA_INCLUDES +=  libircclient-1.9/include
+CFLAGS += -DLIBIRCCLIENT_LOCAL
+else
+LFLAGS = -lircclient $(LFLAGS)
+endif
 
 # --- BUILD CONFIGURATIONS: Feel free to get creative with these if you'd like.
 # The advantage here is that you can update variables (like compile flags) based
@@ -161,6 +171,18 @@ clean_cov:
 libstephen/bin/release/libstephen.a:
 	make -C libstephen
 
+# STATIC LIBS: libircclient (if asked)
+libircclient-1.9/src/libircclient.a libircclient-1.9/include/libircclient.h:
+	wget $(URL)
+	tar xzf libircclient-1.9.tar.gz
+	rm libircclient-1.9.tar.gz
+	cd libircclient-1.9 && ./configure --enable-openssl
+	make -C libircclient-1.9
+
+ifneq ($(LIBIRCCLIENT_LOCAL),)
+$(SOURCES): libircclient-1.9/include/libircclient.h
+endif
+
 # RULE TO BUILD YOUR MAIN TARGET HERE: (you may have to edit this, but it it
 # configurable).
 $(BINARY_DIR)/$(CFG)/$(TARGET): $(OBJECTS) $(STATIC_LIBS)
@@ -172,13 +194,13 @@ ifeq ($(PROJECT_TYPE),dynamiclib)
 	$(CC) -shared $(LFLAGS) $^ -o $@
 endif
 ifeq ($(PROJECT_TYPE),executable)
-	$(CC) $(LFLAGS) $^ -o $@
+	$(CC) $^ -o $@ $(LFLAGS)
 endif
 
 # RULE TO BULID YOUR TEST TARGET HERE: (it's assumed that it's an executable)
 $(BINARY_DIR)/$(CFG)/$(TEST_TARGET): $(filter-out $(OBJECT_MAIN),$(OBJECTS)) $(TEST_OBJECTS) $(STATIC_LIBS)
 	$(DIR_GUARD)
-	$(CC) $(LFLAGS) $^ -o $@
+	$(CC) $^ -o $@ $(LFLAGS)
 
 # --- Generic Compilation Command
 $(OBJECT_DIR)/$(CFG)/%.o: %.c

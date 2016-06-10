@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 """
 Take a document on stdin and format it into an array of C string lines.
 """
