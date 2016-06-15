@@ -26,10 +26,8 @@ typedef struct cbot cbot_t;
  */
 typedef enum {
 
-  /* CBot hears a message in a channel (not addressed to it) */
-  CBOT_CHANNEL_HEAR = 0,
-  /* CBot has a message in a channel addressed to it. */
-  CBOT_CHANNEL_MSG,
+  /* A message in a channel. */
+  CBOT_CHANNEL_MSG = 0,
   /* CBot hears an action message. */
   CBOT_CHANNEL_ACTION,
 
@@ -48,14 +46,12 @@ typedef enum {
 typedef struct {
 
   const cbot_t *bot;
+  const char *name;
 
   cbot_event_type_t type;
   const char *channel;
   const char *username;
   const char *message;
-
-  size_t ncap;
-  const char *const *cap;
 
 } cbot_event_t;
 
@@ -64,8 +60,32 @@ typedef struct {
  */
 typedef struct {
 
+  /**
+     Send a message to a destination.
+     @param bot The bot provided in the event struct.
+     @param dest Either a channel name or a user name.
+     @param format Format string for your message.
+     @param ... Arguments to the format string.
+   */
   void (*send)(const cbot_t *bot, const char *dest, const char *format, ...);
+  /**
+     Send a "me" (action) message to a destination.
+     @param bot The bot provided in the event struct.
+     @param dest Either a channel name or a user name.
+     @param format Format string for your message. No need to include the bot's
+       name or "/me".
+     @param ... Arguments to the format string.
+   */
   void (*me)(const cbot_t *bot, const char *dest, const char *format, ...);
+  /**
+     Return whether or not a message is addressed to the bot. When the message
+     is not addressed to the bot, returns 0. Otherwise, returns the first index
+     of the "rest" of the message.
+     @param message Message (or arbitrary string).
+     @param bot The bot the message might be addressed to.
+     @returns 0 when not addressed, otherwise index of rest of string.
+   */
+  int (*addressed)(const char *message, const cbot_t *bot);
 
 } cbot_actions_t;
 
@@ -93,8 +113,7 @@ typedef void (*cbot_handler_t)(cbot_event_t event,
    @param regex Regex to match on the event text (mostly for messages).
    @param handler Event handler function.
  */
-typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event,
-                                const char *regex, cbot_handler_t handler);
+typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event, cbot_handler_t handler);
 
 /**
    Main plugin loader function.

@@ -24,7 +24,6 @@
 #include "cbot/cbot.h"
 
 typedef struct {
-  Regex *regex;
   cbot_handler_t *handler;
   size_t num;
   size_t alloc;
@@ -46,8 +45,7 @@ void cbot_delete(cbot_t *obj);
 void cbot_handle_event(cbot_t *bot, cbot_event_t event);
 void cbot_handle_channel_message(cbot_t *bot, const char *channel,
                                  const char *user, const char *message);
-void cbot_register(cbot_t *bot, cbot_event_type_t type, const char *regex,
-                   cbot_handler_t handler);
+void cbot_register(cbot_t *bot, cbot_event_type_t type, cbot_handler_t handler);
 void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_iter names);
 
 #endif//CBOT_PRIVATE_H

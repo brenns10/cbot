@@ -15,7 +15,6 @@ Features
   * Send an "action" message (`/me does something`)
 * Plugins can handle the following events:
   * Normal channel message.
-  * Normal channel message, but addressed to CBot.
   * Action message in a channel.
   * User joining and leaving a channel.
 
@@ -46,7 +45,9 @@ Building and Running
 Dependencies:
 - `libircclient`: On Arch Linux, the package is `libircclient`. For Ubuntu, I
   would guess you need to run `sudo apt-get install libircclient-devel`, but I
-  haven't tried it myself.
+  haven't tried it myself. You can also statically link to libircclient, by
+  simply passing `LIBIRCCLIENT_LOCAL=yes` as an argument to `make`, which will
+  download, build, and link libircclient into CBot correctly.
 - `libstephen`: Simply run `git submodule init` and `git submodule update` in
   the repository root. Any time the `libstephen` version is updated, you'll
   probably need to run `git submodule update` again.
@@ -83,8 +84,6 @@ Here's a brief rundown of how to write a plugin:
   - `cbot_event_type_t type` - the type of event (described later)
   - `const char *channel` - the channel name associated with the event
   - `const char *username` - the username associated with the event
-  - `size_t ncap` - the number of captured strings from your regex
-  - `const char *const *cap` - an array of captured strings
 - The action argument has two functions in it:
   - `send`, which has signature `void send(const cbot_t *bot, const char *dest,
     const char *format, ...)`. It is like `printf` in that it accepts a format
@@ -96,20 +95,15 @@ Here's a brief rundown of how to write a plugin:
   to your `[somename]_load` function. Put the following function call in it:
   
       ```
-      registrar(bot, CBOT_CHANNEL_MSG, "regex here", emote);
+      registrar(bot, CBOT_CHANNEL_MSG, give_me_a_name);
       ```
   
-- The argument `CBOT_CHANNEL_MSG` tells cbot that this handles a message
-  directed at cbot (i.e. prefixed by `cbot`) in a channel. You can handle the
-  following additional events:
-  - `CBOT_CHANNEL_HEAR`: any message in the channel, not explicitly directed at
-    cbot.
+- The argument `CBOT_CHANNEL_MSG` tells cbot that this handles a message in a
+  channel. You can handle the following additional events:
   - `CBOT_CHANNEL_ACTION`: an action message in a channel
   - `CBOT_JOIN`: a person joining a channel (could be CBot itself)!
   - `CBOT_PART`: a person leaving a channel
-- The regex is used to match messages you will handle. You can capture strings
-  using parentheses, and these strings will be passed to your handler in the
-  event struct.
+- The `give_me_a_name` function will be called for every channel message.
 - Put the C file in the `plugins/` directory, and use the makefile to build!
   Tada!
 

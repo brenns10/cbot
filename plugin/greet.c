@@ -15,22 +15,20 @@
 
 #include <string.h>
 
+#include "libstephen/re.h"
 #include "cbot/cbot.h"
+
+Regex greeting;
 
 static void cbot_hello(cbot_event_t event, cbot_actions_t actions)
 {
+  if (reexec(greeting, event.message, NULL) == -1)
+    return;
   actions.send(event.bot, event.channel, "hello, %s!", event.username);
-}
-
-static void cbot_goodbye(cbot_event_t event, cbot_actions_t actions)
-{
-  actions.send(event.bot, event.channel, "good riddance!");
 }
 
 void greet_load(cbot_t *bot, cbot_register_t registrar)
 {
-  registrar(bot, CBOT_CHANNEL_HEAR,
-            "[Hh](ello|i|ey),? +[Cc][Bb]ot!?", cbot_hello);
-  registrar(bot, CBOT_JOIN, "h", cbot_hello);
-  registrar(bot, CBOT_PART, "h", cbot_goodbye);
+  greeting = recomp("[Hh](ello|i|ey),? +[Cc][Bb]ot!?");
+  registrar(bot, CBOT_CHANNEL_MSG, cbot_hello);
 }

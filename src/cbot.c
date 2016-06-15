@@ -22,13 +22,23 @@
 #include "libstephen/base.h"
 #include "libstephen/al.h"
 #include "libstephen/cb.h"
-#include "libstephen/re.h"
 
 #include "cbot_private.h"
 
+static int cbot_addressed(const char *message, const cbot_t *bot)
+{
+  int increment = strlen(bot->name);
+  if (strncmp(bot->name, message, increment) == 0) {
+    while(isspace(message[increment]) || ispunct(message[increment])) {
+      increment++;
+    }
+    return increment;
+  }
+  return 0;
+}
+
 void cbot_init_handler_list(cbot_handler_list_t *list, size_t init_alloc)
 {
-  list->regex = smb_new(Regex, init_alloc);
   list->handler = smb_new(cbot_handler_t, init_alloc);
   list->num = 0;
   list->alloc = init_alloc;
@@ -36,10 +46,6 @@ void cbot_init_handler_list(cbot_handler_list_t *list, size_t init_alloc)
 
 void cbot_free_handler_list(cbot_handler_list_t *list)
 {
-  for (size_t i = 0; i < list->num; i++) {
-    free_prog(list->regex[i]);
-  }
-  smb_free(list->regex);
   smb_free(list->handler);
 }
 
@@ -61,6 +67,7 @@ cbot_t *cbot_create(const char *name)
   for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
     cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
   }
+  cbot->actions.addressed = cbot_addressed;
   return cbot;
 }
 
@@ -77,15 +84,12 @@ void cbot_delete(cbot_t *cbot)
 }
 
 static void cbot_add_to_handler_list(cbot_handler_list_t *list,
-                                     const char *regex,
                                      cbot_handler_t handler)
 {
   if (list->num >= list->alloc) {
     list->alloc *= 2;
-    list->regex = smb_renew(Regex, list->regex, list->alloc);
     list->handler = smb_renew(cbot_handler_t, list->handler, list->alloc);
   }
-  list->regex[list->num] = recomp(regex);
   list->handler[list->num] = handler;
   list->num++;
 }
@@ -101,13 +105,11 @@ static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot,
 
    @param bot The bot instance to register into.
    @param type The type of event to register a handler for.
-   @param regex Regex to match for the event.
    @param handler Handler to register.
  */
-void cbot_register(cbot_t *bot, cbot_event_type_t type,
-                          const char *regex, cbot_handler_t handler)
+void cbot_register(cbot_t *bot, cbot_event_type_t type, cbot_handler_t handler)
 {
-  cbot_add_to_handler_list(cbot_list_for_event(bot, type), regex, handler);
+  cbot_add_to_handler_list(cbot_list_for_event(bot, type), handler);
 }
 
 /**
@@ -126,38 +128,8 @@ void cbot_handle_event(cbot_t *bot, cbot_event_t event)
   cbot_handler_list_t *list = cbot_list_for_event(bot, event.type);
 
   for (size_t i = 0; i < list->num; i++) {
-    size_t *saves = NULL;
-    ssize_t nsave;
-    Regex regex = list->regex[i];
     cbot_handler_t handler = list->handler[i];
-
-    // There can be no matching here, so ignore and just send.
-    if (event.message == NULL) {
-      handler(event, bot->actions);
-      continue;
-    }
-
-    // Check for regex match.
-    ssize_t match = execute(regex, event.message, &saves);
-    if (match == -1) {
-      free(saves);
-      continue;
-    }
-
-    // Figure out how many save slots we have.
-    nsave = numsaves(regex);
-
-    if (nsave != 0) {
-      Captures c = recap(event.message, saves, nsave);
-      event.ncap = c.n;
-      // Apply some more strict const-requirements!
-      event.cap = (const char * const *) c.cap;
-      handler(event, event.bot->actions);
-      recapfree(c);
-    } else {
-      // Otherwise, just call the handler.
-      handler(event, event.bot->actions);
-    }
+    handler(event, event.bot->actions);
   }
 }
 
@@ -177,28 +149,13 @@ void cbot_handle_event(cbot_t *bot, cbot_event_t event)
 void cbot_handle_channel_message(cbot_t *bot, const char *channel,
                                  const char *user, const char *message)
 {
-  size_t increment = strlen(bot->name);
   cbot_event_t event;
 
   event.bot = bot;
+  event.type = CBOT_CHANNEL_MSG;
   event.channel = channel;
   event.username = user;
   event.message = message;
-  event.ncap = 0;
-
-  // Check if the message starts with the bot's name.
-  if (strncmp(bot->name, message, increment) == 0) {
-    // If so, skip whitespace and punctuation until the rest of the message.
-    while (isspace(message[increment]) || ispunct(message[increment])) {
-      increment++;
-    }
-
-    // Adjust the message and say this was a MSG event.
-    event.message += increment;
-    event.type = CBOT_CHANNEL_MSG;
-  } else {
-    event.type = CBOT_CHANNEL_HEAR;
-  }
 
   cbot_handle_event(bot, event);
 }

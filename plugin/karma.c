@@ -18,18 +18,49 @@
 #include <string.h>
 #include <assert.h>
 
+#include "libstephen/re.h"
 #include "cbot/cbot.h"
 
+/**
+   A type representing a single karma entry, which is a word, number pair.
+ */
 typedef struct {
   int karma;
   char *word;
 } karma_t;
 
+/**
+   Pointer to the karma array.
+ */
 static karma_t *karma = NULL;
+/**
+   Number of karma allocated.
+ */
 static size_t karma_alloc = 128;
+/**
+   Number of karma in the array.
+ */
 static size_t nkarma = 0;
 
-static ssize_t find_karma(char *word)
+/**
+   A regex which matches karma increments and decrements.
+   - capture 0: the word
+   - capture 1: the operation (++ or --)
+ */
+static Regex augment;
+/**
+   A regex which matches the karma command, including its optional argument.
+   - capture 0: space plus capture 1
+   - capture 1: the word being "asked" about, or empty string
+ */
+static Regex check;
+
+/**
+   @brief Return the index of a word in the karma array, or -1.
+   @param word The word to look up.
+   @returns The word's index, or -1 if it is not present in the array.
+ */
+static ssize_t find_karma(const char *word)
 {
   size_t i;
   for (i = 0; i < nkarma; i++) {
@@ -40,7 +71,32 @@ static ssize_t find_karma(char *word)
   return -1;
 }
 
-static size_t find_or_create_karma(char *word)
+/**
+   @brief Copy a string.
+   @param word The word to copy.
+   @returns A newly allocated copy of the string.
+ */
+static char *copy_string(const char *word)
+{
+  char *newword;
+  size_t length = strlen(word);
+  newword = malloc(length + 1);
+  strncpy(newword, word, length + 1);
+  newword[length] = '\0';
+  return newword;
+}
+
+/**
+   @brief Return the index of any word in the karma array.
+
+   This function will locate an existing word in the karma array and return its
+   index. If the word doesn't exist, it will copy it, add it to the karma array,
+   set its karma to zero, and return its index.
+
+   @param word Word to find karma of.  Never modified.
+   @returns Index of the word in the karma array.
+ */
+static size_t find_or_create_karma(const char *word)
 {
   ssize_t idx;
   if (karma == NULL) {
@@ -53,32 +109,20 @@ static size_t find_or_create_karma(char *word)
       karma = realloc(karma, karma_alloc * sizeof(karma_t));
     }
     idx = nkarma++;
-    karma[idx] = (karma_t) {.word=word, .karma=0};
-  } else {
-    free(word);
+    karma[idx] = (karma_t) {.word=copy_string(word), .karma=0};
   }
   return idx;
 }
 
-static char *get_word(const char *word)
-{
-  char *newword;
-  size_t length = strlen(word);
-  newword = malloc(length + 1);
-  strncpy(newword, word, length + 1);
-  newword[length] = '\0';
-  return newword;
-}
+/*
+  These functions are for sorting karma entries using C's built in qsort!
+ */
 
-static void karma_change(cbot_event_t event, cbot_actions_t actions,
-                         size_t cap_idx, int change)
+static void karma_change(const char *word, int change)
 {
-  char *word;
   size_t index;
-  word = get_word(event.cap[cap_idx]); // copy word
   index = find_or_create_karma(word);
   karma[index].karma += change;
-  actions.send(event.bot, event.channel, "%s now has %d karma", karma[index].word, karma[index].karma);
 }
 
 static int karma_compare(const void *l, const void *r)
@@ -92,23 +136,16 @@ static void karma_sort()
   qsort(karma, nkarma, sizeof(karma_t), karma_compare);
 }
 
-static void karma_increment(cbot_event_t event, cbot_actions_t actions)
-{
-  if (event.ncap < 1) {
-    return;
-  }
-  karma_change(event, actions, 0, 1);
-}
-
-static void karma_decrement(cbot_event_t event, cbot_actions_t actions)
-{
-  if (event.ncap < 1) {
-    return;
-  }
-  karma_change(event, actions, 0, -1);
-}
-
+/**
+   How many words to print karma of?
+ */
 #define KARMA_TOP 5
+
+/**
+   @brief Print the top KARMA_BEST words.
+   @param event The event we're responding to.
+   @param actions Actions available to us.
+ */
 static void karma_best(cbot_event_t event, cbot_actions_t actions)
 {
   size_t i;
@@ -119,39 +156,77 @@ static void karma_best(cbot_event_t event, cbot_actions_t actions)
   }
 }
 
-static void karma_check(cbot_event_t event, cbot_actions_t actions)
+/**
+   @brief Lookup a word's karma and send it in a message to the event origin.
+   @param word The word to look up karma for.
+   @param event The event we're responding to.
+   @param actions Actions given to us by bot.
+ */
+static void karma_check(const char *word, cbot_event_t event, cbot_actions_t actions)
 {
-  char *word;
   ssize_t index;
-  if (event.ncap < 1) {
-    // Not sure how this could happen, but sure :P
-    return;
-  }
-  if (strcmp(event.cap[0], "") == 0) {
-    // Nothing was captured, so the user just said "karma".
-    // Show them the top 5.
+
+  // An empty capture means we should list out the best karma.
+  if (strcmp(word, "") == 0) {
     karma_best(event, actions);
     return;
   }
-  word = get_word(event.cap[1]);
+
   index = find_karma(word);
   if (index < 0) {
     actions.send(event.bot, event.channel, "%s has no karma yet", word);
   } else {
     actions.send(event.bot, event.channel, "%s has %d karma", word, karma[index].karma);
   }
-  free(word);
 }
 
+/**
+   @brief The karma plugin's single handler.
+
+   This function receives an IRC message event and handles the "check",
+   "increment", and "decrement" operations that are available.
+
+   @param event Information for the event.
+   @param actions Actions the plugin may take.
+ */
+static void karma_handler(cbot_event_t event, cbot_actions_t actions)
+{
+  size_t *rawcap;
+  Captures captures;
+  int increment = actions.addressed(event.message, event.bot);
+
+  if (increment && reexec(check, event.message + increment, &rawcap) != -1) {
+    // When the message is addressed to the bot and matches the karma check
+    // regular expression.
+
+    // Execute the karma check operation, using the second regex capture.
+    captures = recap(event.message + increment, rawcap, renumsaves(check));
+    karma_check(captures.cap[1], event, actions);
+    recapfree(captures);
+  } else if (reexec(augment, event.message, &rawcap) != -1) {
+    // Otherwise, when the message matches the "augment" regular expression, we
+    // update the karma.
+    captures = recap(event.message, rawcap, renumsaves(check));
+    increment = strcmp(captures.cap[1], "++") == 0 ? 1 : -1;
+    karma_change(captures.cap[0], increment);
+    recapfree(captures);
+  }
+}
+
+/**
+   @brief Plugin loader function.
+
+   Compiles necessary regular expressions and registers a single handle function
+   to handle any incoming channel messages.
+
+   @param bot Bot we're loading into.
+   @param registrar Function to call to register handlers.
+ */
 void karma_load(cbot_t *bot, cbot_register_t registrar)
 {
   #define KARMA_WORD "^ \t\n"
   #define NOT_KARMA_WORD " \t\n"
-  registrar(bot, CBOT_CHANNEL_HEAR,
-            ".*?([" KARMA_WORD "]+)\\+\\+.*?",
-            karma_increment);
-  registrar(bot, CBOT_CHANNEL_HEAR,
-            ".*?([" KARMA_WORD "]+)--.*?", karma_decrement);
-  registrar(bot, CBOT_CHANNEL_MSG, "karma(\\s+([" KARMA_WORD "]+))?",
-            karma_check);
+  augment = recomp(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
+  check = recomp("karma(\\s+([" KARMA_WORD "]+))?");
+  registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
 }
