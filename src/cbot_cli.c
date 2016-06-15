@@ -55,7 +55,7 @@ static void help(void)
 
 void run_cbot_cli(int argc, char **argv)
 {
-  char *line, *plugin_dir="plugin";
+  char *line, *plugin_dir="bin/release/plugin";
   cbot_t *bot;
   smb_ad args;
   arg_data_init(&args);

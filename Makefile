@@ -57,7 +57,7 @@ TARGET=cbot
 TEST_TARGET=
 # STATIC_LIBS - path to any static libs you need.  you may need to make a rule
 # to generate them from subprojects.
-STATIC_LIBS=libstephen/bin/release/libstephen.a
+STATIC_LIBS=libstephen/bin/release/libstephen.so
 # EXTRA_INCLUDES - folders that should also be include directories (say, for
 # static libs?)
 EXTRA_INCLUDES=libstephen/inc
@@ -69,6 +69,7 @@ EXTRA_INCLUDES=libstephen/inc
 # finicky beast.
 SOURCE_DIR=src
 TEST_DIR=test
+PLUGIN_DIR=plugin
 INCLUDE_DIR=inc
 OBJECT_DIR=obj
 BINARY_DIR=bin
@@ -83,6 +84,7 @@ FLAGS=-Wall -Wextra -Wno-unused-parameter
 INC=-I$(INCLUDE_DIR) -I$(SOURCE_DIR) $(addprefix -I,$(EXTRA_INCLUDES))
 CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
 LFLAGS=$(FLAGS)
+PLUGIN_FLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -shared
 # Special libircclient related stuff.
 ifneq ($(LIBIRCCLIENT_LOCAL),)
 URL = http://downloads.sourceforge.net/project/libircclient/libircclient/1.9/libircclient-1.9.tar.gz
@@ -94,7 +96,6 @@ else
 LD=-lircclient
 endif
 LD += -lcrypto -lssl -ldl
-
 
 # --- BUILD CONFIGURATIONS: Feel free to get creative with these if you'd like.
 # The advantage here is that you can update variables (like compile flags) based
@@ -127,16 +128,17 @@ OBJECTS=$(patsubst $(SOURCE_DIR)/%.c,$(OBJECT_DIR)/$(CFG)/$(SOURCE_DIR)/%.o,$(SO
 TEST_SOURCES=$(shell find $(TEST_DIR) -type f -name "*.c")
 TEST_OBJECTS=$(patsubst $(TEST_DIR)/%.c,$(OBJECT_DIR)/$(CFG)/$(TEST_DIR)/%.o,$(TEST_SOURCES))
 
+PLUGIN_SOURCES=$(shell find $(PLUGIN_DIR) -type f -name "*.c")
+PLUGIN_OBJECTS=$(patsubst $(PLUGIN_DIR)/%.c,$(BINARY_DIR)/$(CFG)/$(PLUGIN_DIR)/%.so,$(PLUGIN_SOURCES))
+
 DEPENDENCIES  = $(patsubst $(SOURCE_DIR)/%.c,$(DEPENDENCY_DIR)/$(SOURCE_DIR)/%.d,$(SOURCES))
 DEPENDENCIES += $(patsubst $(TEST_DIR)/%.c,$(DEPENDENCY_DIR)/$(TEST_DIR)/%.d,$(TEST_SOURCES))
+DEPENDENCIES += $(patsubst $(PLUGIN_DIR)/%.c,$(DEPENDENCY_DIR)/$(PLUGIN_DIR)/%.d,$(PLUGIN_SOURCES))
 
 # --- GLOBAL TARGETS: You can probably adjust and augment these if you'd like.
 .PHONY: all test clean clean_all clean_cov clean_doc plugin
 
-all: $(BINARY_DIR)/$(CFG)/$(TARGET) plugin
-
-plugin:
-	make -C plugin
+all: $(BINARY_DIR)/$(CFG)/$(TARGET) $(PLUGIN_OBJECTS)
 
 test: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 	valgrind $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
@@ -158,10 +160,13 @@ cov: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 
 clean:
 	rm -rf $(OBJECT_DIR)/$(CFG)/* $(BINARY_DIR)/$(CFG)/* $(SOURCE_DIR)/*.gch
-	make -C plugin clean
+	make -C libstephen clean
+	rm -rf libircclient-1.9
+	rm -f plugin/help.h
 
 clean_all: clean_cov clean_doc
 	rm -rf $(OBJECT_DIR) $(BINARY_DIR) $(DEPENDENCY_DIR) $(SOURCE_DIR)/*.gch
+	rm -rf libircclient-1.9.tar.gz
 
 clean_docs:
 	rm -rf $(DOCUMENTATION_DIR)
@@ -170,15 +175,18 @@ clean_cov:
 	rm -rf $(COVERAGE_DIR)
 
 # STATIC LIBS: libstephen
-libstephen/bin/release/libstephen.a:
-	make -C libstephen
+libstephen/bin/release/libstephen.so:
+	make PROJECT_TYPE=dynamiclib TARGET=libstephen.so -C libstephen
 
 # STATIC LIBS: libircclient (if asked)
-libircclient-1.9/src/libircclient.a libircclient-1.9/include/libircclient.h:
-	wget $(URL)
+libircclient-1.9.tar.gz:
+	curl -L -o libircclient-1.9.tar.gz $(URL)
+
+libircclient-1.9/config.status: libircclient-1.9.tar.gz
 	tar xzf libircclient-1.9.tar.gz
-	rm libircclient-1.9.tar.gz
 	cd libircclient-1.9 && ./configure --enable-openssl
+
+libircclient-1.9/src/libircclient.a libircclient-1.9/include/libircclient.h: libircclient-1.9/config.status
 	make -C libircclient-1.9
 
 ifneq ($(LIBIRCCLIENT_LOCAL),)
@@ -209,10 +217,20 @@ $(OBJECT_DIR)/$(CFG)/%.o: %.c
 	$(DIR_GUARD)
 	$(CC) $(CFLAGS) $< -o $@
 
+# --- Plugin compilation command.
+$(BINARY_DIR)/$(CFG)/%.so: %.c
+	$(DIR_GUARD)
+	$(CC) $(PLUGIN_FLAGS) $< -o $@ libstephen/bin/release/libstephen.so
+
 # --- Automatic Dependency Generation
 $(DEPENDENCY_DIR)/%.d: %.c
 	$(DIR_GUARD)
 	$(CC) $(CFLAGS) -MM $< | sed -e 's!\(.*\)\.o:!$@ $(OBJECT_DIR)/$$(CFG)/$(<D)/\1.o:!' > $@
+
+$(BINARY_DIR)/$(CFG)/$(PLUGIN_DIR)/help.so: plugin/help.h
+
+plugin/help.h: plugin/help.md plugin/help_translate.py
+	plugin/help_translate.py <plugin/help.md >plugin/help.h
 
 # --- Include Generated Dependencies
 ifneq "$(MAKECMDGOALS)" "clean_all"

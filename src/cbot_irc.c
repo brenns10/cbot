@@ -114,8 +114,6 @@ void event_action(irc_session_t *session, const char *event,
     .channel = params[0],
     .username = origin,
     .message = params[1],
-    .ncap = 0,
-    .cap = NULL
   };
   cbot_handle_event(bot, ircevent);
   printf("Event handled by CBot.\n");
@@ -132,8 +130,6 @@ void event_join(irc_session_t *session, const char *event,
     .channel = params[0],
     .username = origin,
     .message = NULL,
-    .ncap = 0,
-    .cap = NULL
   };
   cbot_handle_event(bot, ircevent);
   printf("Event handled by CBot.\n");
@@ -150,8 +146,6 @@ void event_part(irc_session_t *session, const char *event,
     .channel = params[0],
     .username = origin,
     .message = NULL,
-    .ncap = 0,
-    .cap = NULL
   };
   cbot_handle_event(bot, ircevent);
   printf("Event handled by CBot.\n");
@@ -181,7 +175,7 @@ void run_cbot_irc(int argc, char *argv[])
   char *name = "cbot";
   char *host = "irc.case.edu";
   char *port = "6667";
-  char *plugin_dir = "plugin";
+  char *plugin_dir = "bin/release/plugin";
   char *password = NULL;
   unsigned short port_num;
   arg_data_init(&args);
