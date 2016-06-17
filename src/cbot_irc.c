@@ -240,7 +240,7 @@ void run_cbot_irc(int argc, char *argv[])
   }
 
   cbot->backend = session;
-  cbot_load_plugins(cbot, "plugin", ll_get_iter(args.bare_strings));
+  cbot_load_plugins(cbot, plugin_dir, ll_get_iter(args.bare_strings));
 
   // Set libircclient to parse nicknames for us.
   irc_option_set(session, LIBIRC_OPTION_STRIPNICKS);
