@@ -50,6 +50,12 @@ static void cbot_cli_op(const cbot_t *bot, const char *channel, const char *pers
   printf("[%s~CMD]%s: /op %s\n", channel, name, person);
 }
 
+static void cbot_cli_join(const cbot_t *bot, const char *channel, const char *password)
+{
+  (void)bot; // unused
+  printf("[%s~CMD]%s: /join %s\n", channel, name, channel);
+}
+
 static void help(void)
 {
   puts("usage: cbot cli [options] plugins");
@@ -95,6 +101,7 @@ void run_cbot_cli(int argc, char **argv)
   bot->actions.send = cbot_cli_send;
   bot->actions.me = cbot_cli_me;
   bot->actions.op = cbot_cli_op;
+  bot->actions.join = cbot_cli_join;
 
   // Set the hash in the bot.
   void *decoded = base64_decode(hash, 20);

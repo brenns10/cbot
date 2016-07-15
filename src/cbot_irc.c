@@ -103,6 +103,12 @@ void cbot_irc_op(const cbot_t *cbot, const char *channel, const char *person)
   cb_destroy(&cb);
 }
 
+void cbot_irc_join(const cbot_t *cbot, const char *channel, const char *password)
+{
+  irc_session_t *session = cbot->backend;
+  irc_cmd_join(session, channel, password);
+}
+
 void event_channel(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
@@ -227,6 +233,7 @@ void run_cbot_irc(int argc, char *argv[])
   cbot->actions.send = cbot_irc_send;
   cbot->actions.me = cbot_irc_me;
   cbot->actions.op = cbot_irc_op;
+  cbot->actions.join = cbot_irc_join;
 
   // Set the hash in the bot.
   void *decoded = base64_decode(hash, 20);

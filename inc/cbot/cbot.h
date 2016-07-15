@@ -102,6 +102,13 @@ typedef struct {
      @param nick Nickname of person to make op.
    */
   void (*op)(const cbot_t *bot, const char *channel, const char *message);
+  /**
+     Join a channel.
+     @param bot Bot instance.
+     @param channel Channel to join.
+     @param password Password for channel, or NULL if there's none.
+   */
+  void (*join)(const cbot_t *bot, const char *channel, const char *password);
 
 } cbot_actions_t;
 

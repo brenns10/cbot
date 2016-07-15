@@ -18,13 +18,17 @@
 
 #define HASH "([A-Za-z0-9+=/]+)"
 
-#define NCMD 1
+#define NCMD 2
 
 Regex commands[NCMD];
 void (*handlers[NCMD])(cbot_event_t, cbot_actions_t, Captures);
 
 static void op_handler(cbot_event_t event, cbot_actions_t actions, Captures c) {
   actions.op(event.bot, event.channel, c.cap[0]);
+}
+
+static void join_handler(cbot_event_t event, cbot_actions_t actions, Captures c) {
+  actions.join(event.bot, c.cap[0], NULL);
 }
 
 static void handler(cbot_event_t event, cbot_actions_t actions)
@@ -54,8 +58,11 @@ static void handler(cbot_event_t event, cbot_actions_t actions)
 void ircctl_load(cbot_t *bot, cbot_register_t registrar)
 {
   //commands[0] = recomp("join +(.*) " HASH);
-  commands[0] = recomp("op +(.*) " HASH);
+  commands[0] = recomp("op +(.*) +" HASH);
   handlers[0] = op_handler;
+
+  commands[1] = recomp("join +(.*) +" HASH);
+  handlers[1] = join_handler;
   //invite = recomp(" invite +(.*) +(.*) " HASH);
   registrar(bot, CBOT_CHANNEL_MSG, handler);
 }
