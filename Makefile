@@ -139,6 +139,7 @@ DEPENDENCIES += $(patsubst $(PLUGIN_DIR)/%.c,$(DEPENDENCY_DIR)/$(PLUGIN_DIR)/%.d
 .PHONY: all test clean clean_all clean_cov clean_doc plugin
 
 all: $(BINARY_DIR)/$(CFG)/$(TARGET) $(PLUGIN_OBJECTS)
+plugin: $(PLUGIN_OBJECTS)
 
 test: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 	valgrind $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)

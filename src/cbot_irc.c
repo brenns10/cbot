@@ -155,6 +155,7 @@ void help()
 {
   puts("usage: cbot irc [options] plugins");
   puts("options:");
+  puts("  --hash HASH        set the hash chain tip (required)");
   puts("  --name [name]      set the bot's name");
   puts("  --host [host]      set the irc server hostname");
   puts("  --port [port]      set the irc port number");
@@ -177,6 +178,7 @@ void run_cbot_irc(int argc, char *argv[])
   char *port = "6667";
   char *plugin_dir = "bin/release/plugin";
   char *password = NULL;
+  char *hash = NULL;
   unsigned short port_num;
   arg_data_init(&args);
 
@@ -197,13 +199,16 @@ void run_cbot_irc(int argc, char *argv[])
   if (check_long_flag(&args, "plugin-dir")) {
     plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
   }
+  if (check_long_flag(&args, "hash")) {
+    hash = get_long_flag_parameter(&args, "hash");
+  }
   if (check_long_flag(&args, "help")) {
     help();
   }
   if (check_long_flag(&args, "password")) {
     password = get_long_flag_parameter(&args, "password");
   }
-  if (!(name && host && port && chan && plugin_dir)) {
+  if (!(name && host && port && chan && plugin_dir && hash)) {
     help();
   }
   sscanf(port, "%hu", &port_num);
@@ -211,6 +216,11 @@ void run_cbot_irc(int argc, char *argv[])
   cbot = cbot_create(name);
   cbot->actions.send = cbot_irc_send;
   cbot->actions.me = cbot_irc_me;
+
+  // Set the hash in the bot.
+  void *decoded = base64_decode(hash, 20);
+  memcpy(cbot->hash, decoded, 20);
+  free(decoded);
 
   memset(&callbacks, 0, sizeof(callbacks));
 

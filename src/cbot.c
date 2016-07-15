@@ -19,6 +19,8 @@
 #include <dlfcn.h>
 #include <stdio.h>
 
+#include <openssl/evp.h>
+
 #include "libstephen/base.h"
 #include "libstephen/al.h"
 #include "libstephen/cb.h"
@@ -68,6 +70,8 @@ cbot_t *cbot_create(const char *name)
     cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
   }
   cbot->actions.addressed = cbot_addressed;
+  cbot->actions.is_authorized = cbot_is_authorized;
+  OpenSSL_add_all_digests();
   return cbot;
 }
 
@@ -81,6 +85,7 @@ void cbot_delete(cbot_t *cbot)
     cbot_free_handler_list(&cbot->hlists[i]);
   }
   smb_free(cbot);
+  EVP_cleanup();
 }
 
 static void cbot_add_to_handler_list(cbot_handler_list_t *list,

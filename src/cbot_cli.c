@@ -14,6 +14,7 @@
 *******************************************************************************/
 
 #include <stdio.h>
+#include <string.h>
 
 #include "cbot_private.h"
 #include "libstephen/ad.h"
@@ -45,6 +46,7 @@ static void help(void)
 {
   puts("usage: cbot cli [options] plugins");
   puts("options:");
+  puts("  --hash HASH        set the hash chain tip (required)");
   puts("  --name [name]      set the bot's name");
   puts("  --plugin-dir [dir] set the plugin directory");
   puts("  --help             show this help and exit");
@@ -56,6 +58,7 @@ static void help(void)
 void run_cbot_cli(int argc, char **argv)
 {
   char *line, *plugin_dir="bin/release/plugin";
+  char *hash = NULL;
   cbot_t *bot;
   smb_ad args;
   arg_data_init(&args);
@@ -67,16 +70,28 @@ void run_cbot_cli(int argc, char **argv)
   if (check_long_flag(&args, "plugin-dir")) {
     plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
   }
+  if (check_long_flag(&args, "hash")) {
+    hash = get_long_flag_parameter(&args, "hash");
+  }
   if (check_long_flag(&args, "help")) {
     help();
   }
   if (!(name && plugin_dir)) {
     help();
   }
+  if (!hash) {
+    help();
+  }
 
   bot = cbot_create("cbot");
   bot->actions.send = cbot_cli_send;
   bot->actions.me = cbot_cli_me;
+
+  // Set the hash in the bot.
+  void *decoded = base64_decode(hash, 20);
+  memcpy(bot->hash, decoded, 20);
+  free(decoded);
+
   cbot_load_plugins(bot, plugin_dir, ll_get_iter(args.bare_strings));
   while (!feof(stdin)) {
     printf("> ");

@@ -45,7 +45,7 @@ typedef enum {
  */
 typedef struct {
 
-  const cbot_t *bot;
+  cbot_t *bot;
   const char *name;
 
   cbot_event_type_t type;
@@ -86,6 +86,15 @@ typedef struct {
      @returns 0 when not addressed, otherwise index of rest of string.
    */
   int (*addressed)(const cbot_t *bot, const char *message);
+  /**
+     Determines whether the beginning of the message contains a hash that
+     matches the bot's current hash in the chain. If not, returns 0. If so,
+     returns the index of the beginning of the rest of the message.
+     @param bot The bot to check the authorization of.
+     @param message The message to check for the SHA in.
+     @returns The index of the beginning of the rest of the message.
+  */
+  int (*is_authorized)(cbot_t *bot, const char *message);
 
 } cbot_actions_t;
 
@@ -128,5 +137,7 @@ typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event, cbot_handl
    @param registrar Function to call to register each plugin.
  */
 typedef void (*cbot_plugin_t)(cbot_t *bot, cbot_register_t registrar);
+
+void *base64_decode(const char *str, int explen);
 
 #endif//CBOT_H

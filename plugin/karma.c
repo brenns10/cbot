@@ -54,6 +54,13 @@ static Regex augment;
    - capture 1: the word being "asked" about, or empty string
  */
 static Regex check;
+/**
+   A regex for admin set command
+   - capture 0: hash
+   - capture 1: the word
+   - capture 2: the number
+ */
+static Regex set;
 
 /**
    @brief Return the index of a word in the karma array, or -1.
@@ -210,6 +217,13 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
     increment = strcmp(captures.cap[1], "++") == 0 ? 1 : -1;
     karma_change(captures.cap[0], increment);
     recapfree(captures);
+  } else if (increment && reexec(set, event.message + increment, &rawcap) != -1) {
+    captures = recap(event.message + increment, rawcap, renumsaves(set));
+    if (actions.is_authorized(event.bot, captures.cap[0])) {
+      int index = find_or_create_karma(captures.cap[1]);
+      karma[index].karma = atoi(captures.cap[2]);
+    }
+    recapfree(captures);
   }
 }
 
@@ -228,5 +242,6 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
   #define NOT_KARMA_WORD " \t\n"
   augment = recomp(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
   check = recomp("karma(\\s+([" KARMA_WORD "]+))?");
+  set = recomp("([A-Za-z0-9+/=]+) +set +([" KARMA_WORD "]+) +(-?\\d+)");
   registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
 }
