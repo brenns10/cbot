@@ -85,7 +85,7 @@ typedef struct {
      @param bot The bot the message might be addressed to.
      @returns 0 when not addressed, otherwise index of rest of string.
    */
-  int (*addressed)(const char *message, const cbot_t *bot);
+  int (*addressed)(const cbot_t *bot, const char *message);
 
 } cbot_actions_t;
 

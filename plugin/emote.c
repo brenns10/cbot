@@ -21,7 +21,7 @@ Regex r;
 static void emote(cbot_event_t event, cbot_actions_t actions)
 {
   size_t *captures = NULL;
-  int incr = actions.addressed(event.message, event.bot);
+  int incr = actions.addressed(event.bot, event.message);
 
   if (!incr)
     return;

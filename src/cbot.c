@@ -25,7 +25,7 @@
 
 #include "cbot_private.h"
 
-static int cbot_addressed(const char *message, const cbot_t *bot)
+static int cbot_addressed(const cbot_t *bot, const char *message)
 {
   int increment = strlen(bot->name);
   if (strncmp(bot->name, message, increment) == 0) {

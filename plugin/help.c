@@ -27,7 +27,7 @@ static char *help_lines[] = {
 static void help(cbot_event_t event, cbot_actions_t actions)
 {
   // Make sure the message is addressed to the bot.
-  int increment = actions.addressed(event.message, event.bot);
+  int increment = actions.addressed(event.bot, event.message);
   if (!increment)
     return;
 

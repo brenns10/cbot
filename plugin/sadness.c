@@ -42,7 +42,7 @@ char *responses[] = {
 
 static void sadness(cbot_event_t event, cbot_actions_t actions)
 {
-  int incr = actions.addressed(event.message, event.bot);
+  int incr = actions.addressed(event.bot, event.message);
   if (!incr)
     return;
 

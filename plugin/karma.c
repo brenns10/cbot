@@ -193,7 +193,7 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
 {
   size_t *rawcap;
   Captures captures;
-  int increment = actions.addressed(event.message, event.bot);
+  int increment = actions.addressed(event.bot, event.message);
 
   if (increment && reexec(check, event.message + increment, &rawcap) != -1) {
     // When the message is addressed to the bot and matches the karma check
