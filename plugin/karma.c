@@ -211,17 +211,21 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
     karma_check(captures.cap[1], event, actions);
     recapfree(captures);
   } else if (reexec(augment, event.message, &rawcap) != -1) {
-    // Otherwise, when the message matches the "augment" regular expression, we
-    // update the karma.
+    // Or, when the message matches the "augment" regular expression, we update
+    // the karma.
     captures = recap(event.message, rawcap, renumsaves(check));
     increment = strcmp(captures.cap[1], "++") == 0 ? 1 : -1;
     karma_change(captures.cap[0], increment);
     recapfree(captures);
   } else if (increment && reexec(set, event.message + increment, &rawcap) != -1) {
+    // Or, when the message is addressed to the bot and the command is to
+    // set-karma, we will attempt to auth the command and execute it.
     captures = recap(event.message + increment, rawcap, renumsaves(set));
-    if (actions.is_authorized(event.bot, captures.cap[0])) {
-      int index = find_or_create_karma(captures.cap[1]);
-      karma[index].karma = atoi(captures.cap[2]);
+    if (actions.is_authorized(event.bot, captures.cap[2])) {
+      int index = find_or_create_karma(captures.cap[0]);
+      karma[index].karma = atoi(captures.cap[1]);
+    } else {
+      actions.send(event.bot, event.channel, "sorry, you're not authorized to do that!");
     }
     recapfree(captures);
   }
@@ -242,6 +246,6 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
   #define NOT_KARMA_WORD " \t\n"
   augment = recomp(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
   check = recomp("karma(\\s+([" KARMA_WORD "]+))?");
-  set = recomp("([A-Za-z0-9+/=]+) +set +([" KARMA_WORD "]+) +(-?\\d+)");
+  set = recomp("set-karma +([" KARMA_WORD "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
   registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
 }
