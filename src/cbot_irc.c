@@ -93,6 +93,16 @@ void cbot_irc_me(const cbot_t *cbot, const char *dest, const char *format, ...)
   va_end(va);
 }
 
+void cbot_irc_op(const cbot_t *cbot, const char *channel, const char *person)
+{
+  irc_session_t *session = cbot->backend;
+  cbuf cb;
+  cb_init(&cb, 256);
+  cb_printf(&cb, "+o %s", person);
+  irc_cmd_channel_mode(session, channel, cb.buf);
+  cb_destroy(&cb);
+}
+
 void event_channel(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
@@ -216,6 +226,7 @@ void run_cbot_irc(int argc, char *argv[])
   cbot = cbot_create(name);
   cbot->actions.send = cbot_irc_send;
   cbot->actions.me = cbot_irc_me;
+  cbot->actions.op = cbot_irc_op;
 
   // Set the hash in the bot.
   void *decoded = base64_decode(hash, 20);

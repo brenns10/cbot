@@ -24,6 +24,7 @@ char *name = "cbot";
 
 static void cbot_cli_send(const cbot_t *bot, const char *dest, const char *format, ...)
 {
+  (void)bot; // unused
   va_list va;
   va_start(va, format);
   printf("[%s]%s: ", dest, name);
@@ -34,12 +35,19 @@ static void cbot_cli_send(const cbot_t *bot, const char *dest, const char *forma
 
 static void cbot_cli_me(const cbot_t *bot, const char *dest, const char *format, ...)
 {
+  (void)bot; // unused
   va_list va;
   va_start(va, format);
   printf("[%s]%s ", dest, name);
   vprintf(format, va);
   putchar('\n');
   va_end(va);
+}
+
+static void cbot_cli_op(const cbot_t *bot, const char *channel, const char *person)
+{
+  (void)bot; // unused
+  printf("[%s~CMD]%s: /op %s\n", channel, name, person);
 }
 
 static void help(void)
@@ -86,6 +94,7 @@ void run_cbot_cli(int argc, char **argv)
   bot = cbot_create("cbot");
   bot->actions.send = cbot_cli_send;
   bot->actions.me = cbot_cli_me;
+  bot->actions.op = cbot_cli_op;
 
   // Set the hash in the bot.
   void *decoded = base64_decode(hash, 20);

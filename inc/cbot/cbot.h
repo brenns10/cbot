@@ -95,6 +95,13 @@ typedef struct {
      @returns The index of the beginning of the rest of the message.
   */
   int (*is_authorized)(cbot_t *bot, const char *message);
+  /**
+     Give operator privileges to a user.
+     @param bot Bot instance.
+     @param channel Channel to give op of.
+     @param nick Nickname of person to make op.
+   */
+  void (*op)(const cbot_t *bot, const char *channel, const char *message);
 
 } cbot_actions_t;
 
