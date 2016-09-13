@@ -27,7 +27,6 @@ char *responses[] = {
   "http://foaas.com/shutup/%s/cbot",
   "http://foaas.com/cool/cbot",
   "http://foaas.com/fascinating/cbot",
-  "http://foaas.com/thumbs/This%20guy/cbot",
   "http://foaas.com/single/cbot",
   "http://foaas.com/pulp/C/cbot",
   "http://foaas.com/horse/cbot",
