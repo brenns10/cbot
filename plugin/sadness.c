@@ -21,23 +21,21 @@
 Regex r;
 char *responses[] = {
   ":(",
-  "hey, robots have feelings too!",
   "I don't like you, %s",
-  "that's not what your mom said last night",
   "http://foaas.com/field/cbot/%s/Bible",
-  "http://foaas.com/you/%s/cbot",
   "http://foaas.com/yoda/%s/cbot",
-  "http://foaas.com/nugget/%s/cbot",
-  "http://foaas.com/linus/%s/cbot",
-  "http://foaas.com/shakespeare/%s/cbot",
-  "http://foaas.com/donut/%s/cbot",
   "http://foaas.com/shutup/%s/cbot",
-  "http://foaas.com/family/cbot",
   "http://foaas.com/cool/cbot",
-  "http://foaas.com/everyone/cbot",
   "http://foaas.com/fascinating/cbot",
-  "http://foaas.com/flying/cbot",
-  "http://foaas.com/bucket/cbot"
+  "http://foaas.com/thumbs/This%20guy/cbot",
+  "http://foaas.com/single/cbot",
+  "http://foaas.com/pulp/C/cbot",
+  "http://foaas.com/horse/cbot",
+  "http://foaas.com/too/cbot",
+  "http://foaas.com/outside/%s/cbot",
+  "http://foaas.com/thanks/cbot",
+  "http://foaas.com/madison/%s/cbot",
+  "http://foaas.com/flying/cbot"
 };
 
 static void sadness(cbot_event_t event, cbot_actions_t actions)
