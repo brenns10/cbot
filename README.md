@@ -52,9 +52,8 @@ Dependencies:
   the repository root. Any time the `libstephen` version is updated, you'll
   probably need to run `git submodule update` again.
 
-Compiling: just run `make`.
+Compiling: just run `make`.  Running: run `bin/release/cbot` with the following arguments:
 
-Running: run `bin/release/cbot` with the following arguments:
 1. Either `cli` or `irc`, depending on whether you want to run locally or on a
    real IRC server.
 2. If you chose the `irc` backend, you must specify:
