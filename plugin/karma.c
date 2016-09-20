@@ -61,6 +61,10 @@ static Regex check;
    - capture 2: the number
  */
 static Regex set;
+/**
+  A regex for forgetting a person
+ */
+static Regex forget;
 
 /**
    @brief Return the index of a word in the karma array, or -1.
@@ -119,6 +123,27 @@ static size_t find_or_create_karma(const char *word)
     karma[idx] = (karma_t) {.word=copy_string(word), .karma=0};
   }
   return idx;
+}
+
+/**
+   @brief Removes a word from the karma array if it exists
+
+   @param word Word to find and delete
+   @returns 1 if deleted, zero if not
+ */
+static size_t delete_if_exists(const char *word)
+{
+  ssize_t idx;
+  if (karma == NULL) {
+    karma = calloc(karma_alloc, sizeof(karma_t));
+  }
+  idx = find_karma(word);
+  if (idx >= 0) {
+    free(karma[idx].word);
+    karma[idx] = karma[--nkarma];
+    return 1;
+  }
+  return 0;
 }
 
 /*
@@ -228,6 +253,8 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
       actions.send(event.bot, event.channel, "sorry, you're not authorized to do that!");
     }
     recapfree(captures);
+  } else if (increment && reexec(forget, event.message + increment, NULL) != -1) {
+    delete_if_exists(event.username);
   }
 }
 
@@ -247,5 +274,6 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
   augment = recomp(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
   check = recomp("karma(\\s+([" KARMA_WORD "]+))?");
   set = recomp("set-karma +([" KARMA_WORD "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
+  forget = recomp("forget-me");
   registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
 }
