@@ -133,7 +133,7 @@ static size_t find_or_create_karma(const char *word)
  */
 static size_t delete_if_exists(const char *word)
 {
-  ssize_t idx
+  ssize_t idx;
   if (karma == NULL) {
     karma = calloc(karma_alloc, sizeof(karma_t));
   }
