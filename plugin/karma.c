@@ -141,7 +141,9 @@ static size_t delete_if_exists(const char *word)
   if (idx >= 0) {
     free(karma[idx].word);
     karma[idx] = karma[--nkarma];
+    return 1;
   }
+  return 0;
 }
 
 /*
