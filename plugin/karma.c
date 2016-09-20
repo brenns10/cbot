@@ -251,7 +251,7 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
       actions.send(event.bot, event.channel, "sorry, you're not authorized to do that!");
     }
     recapfree(captures);
-  } else if (reexec(forget, event.messae, NULL) != -1) {
+  } else if (reexec(forget, event.message, NULL) != -1) {
     delete_if_exists(event.username);
   }
 }
