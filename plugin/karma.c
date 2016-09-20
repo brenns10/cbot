@@ -63,7 +63,6 @@ static Regex check;
 static Regex set;
 /**
   A regex for forgetting a person
-  - capture 0: forget-me
  */
 static Regex forget;
 
@@ -273,6 +272,6 @@ void karma_load(cbot_t *bot, cbot_register_t registrar)
   augment = recomp(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
   check = recomp("karma(\\s+([" KARMA_WORD "]+))?");
   set = recomp("set-karma +([" KARMA_WORD "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
-  forget = recomp("(forget-me)");
+  forget = recomp("forget-me");
   registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
 }
