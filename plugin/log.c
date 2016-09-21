@@ -64,8 +64,6 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
   clock_gettime(CLOCK_REALTIME, &now);
   tm = localtime(&now.tv_sec);
   time_float = now.tv_sec + now.tv_nsec / NSEC_PER_SEC;
-  printf("%ld\n", now.tv_nsec);
-  printf("%f\n", time_float);
 
   /*
     Create filename and open it.
