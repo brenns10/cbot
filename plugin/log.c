@@ -69,7 +69,7 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
     Create filename and open it.
   */
   cb_init(&filename, 40);
-  cb_printf(&filename, "%s-%04d-%04d-%02d.log", event.channel,
+  cb_printf(&filename, "%s-%04d-%02d-%02d.log", event.channel,
             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
   f = fopen(filename.buf, "a");
 
