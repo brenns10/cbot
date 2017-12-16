@@ -170,13 +170,15 @@ void event_part(irc_session_t *session, const char *event,
 void help()
 {
   puts("usage: cbot irc [options] plugins");
-  puts("options:");
+  puts("required flags:");
   puts("  --hash HASH        set the hash chain tip (required)");
+  puts("  --plugin-dir [dir] set the plugin directory");
   puts("  --name [name]      set the bot's name");
+  puts("optional flags:");
   puts("  --host [host]      set the irc server hostname");
+  puts("  --password [pass]  set the irc server password");
   puts("  --port [port]      set the irc port number");
   puts("  --chan [chan]      set the irc channel");
-  puts("  --plugin-dir [dir] set the plugin directory");
   puts("  --help             show this help and exit");
   puts("plugins:");
   puts("  list of names of plugins within plugin-dir (don't include \".so\").");
