@@ -7,5 +7,6 @@ GRTAGS
 *.so
 plugin/help.h
 libircclient-1.9
-launch.sh
+run.sh
+hash.txt
 libircclient-1.9.tar.gz
