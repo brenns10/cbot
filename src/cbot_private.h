@@ -1,47 +1,35 @@
-/***************************************************************************//**
-
-  @file         cbot_private.h
-
-  @author       Stephen Brennan
-
-  @date         Created Wednesday, 22 July 2015
-
-  @brief        Declarations for CBot (implementation details).
-
-  @copyright    Copyright (c) 2015, Stephen Brennan.  Released under the Revised
-                BSD License.  See LICENSE.txt for details.
-
-*******************************************************************************/
+/**
+ * cbot_private.h
+ */
 
 #ifndef CBOT_PRIVATE_H
 #define CBOT_PRIVATE_H
 
-#include <stdarg.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
-#include "libstephen/re.h"
 #include "libstephen/list.h"
+#include "libstephen/re.h"
 
 #include "cbot/cbot.h"
 
 typedef struct {
-  cbot_handler_t *handler;
-  size_t num;
-  size_t alloc;
+	cbot_handler_t *handler;
+	size_t num;
+	size_t alloc;
 } cbot_handler_list_t;
 
 struct cbot {
 
-  const char *name;
+	const char *name;
 
-  cbot_handler_list_t hlists[_CBOT_NUM_EVENT_TYPES_];
+	cbot_handler_list_t hlists[_CBOT_NUM_EVENT_TYPES_];
 
-  void *backend;
+	void *backend;
 
-  cbot_actions_t actions;
+	cbot_actions_t actions;
 
-  uint8_t hash[20];
-
+	uint8_t hash[20];
 };
 
 cbot_t *cbot_create(const char *name);
@@ -54,4 +42,4 @@ void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_iter names);
 
 int cbot_is_authorized(cbot_t *cbot, const char *message);
 
-#endif//CBOT_PRIVATE_H
+#endif // CBOT_PRIVATE_H
