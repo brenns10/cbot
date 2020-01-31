@@ -5,3 +5,4 @@ CBot Help
 - "cbot sucks" (and other insult variants) - CBot will respond with a poorly
   constructed insult.
 - "cbot help" - Directly message this help text.
+- "cbot magic8 [A QUESTION]" - cbot gives you answers
