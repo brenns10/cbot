@@ -188,6 +188,7 @@ $(LIBIRCCLIENT_TAR):
 
 $(LIBIRCCLIENT_DIR)/config.status: $(LIBIRCCLIENT_TAR)
 	tar xzf $(LIBIRCCLIENT_TAR)
+	patch $(LIBIRCCLIENT_DIR)/src/ssl.c patch-libircclient-1.10
 	cd $(LIBIRCCLIENT_DIR) && ./configure --enable-openssl
 
 $(LIBIRCCLIENT_DIR)/src/libircclient.a $(LIBIRCCLIENT_DIR)/include/libircclient.h: $(LIBIRCCLIENT_DIR)/config.status
