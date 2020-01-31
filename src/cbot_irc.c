@@ -23,6 +23,7 @@
 #include "cbot_private.h"
 
 char *chan = "#cbot";
+char *chanpass = NULL;
 
 void log_event(irc_session_t *session, const char *event, const char *origin,
                const char **params, unsigned int count)
@@ -53,7 +54,7 @@ void event_numeric(irc_session_t *session, unsigned int event,
 void event_connect(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
-	irc_cmd_join(session, chan, NULL);
+	irc_cmd_join(session, chan, chanpass);
 	log_event(session, event, origin, params, count);
 }
 
@@ -172,6 +173,7 @@ void help()
 	puts("  --password [pass]  set the irc server password");
 	puts("  --port [port]      set the irc port number");
 	puts("  --chan [chan]      set the irc channel");
+	puts("  --chanpass [pw]    set the channel password");
 	puts("  --help             show this help and exit");
 	puts("plugins:");
 	puts("  list of names of plugins within plugin-dir (don't include "
@@ -207,6 +209,9 @@ void run_cbot_irc(int argc, char *argv[])
 	}
 	if (check_long_flag(&args, "chan")) {
 		chan = get_long_flag_parameter(&args, "chan");
+	}
+	if (check_long_flag(&args, "chanpass")) {
+		chan = get_long_flag_parameter(&args, "chanpass");
 	}
 	if (check_long_flag(&args, "plugin-dir")) {
 		plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
