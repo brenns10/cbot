@@ -86,10 +86,13 @@ CFLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -c
 LFLAGS=$(FLAGS)
 PLUGIN_FLAGS=$(FLAGS) -std=c99 -fPIC $(INC) -shared
 # Special libircclient related stuff.
+LIBIRCCLIENT_VER=1.10
+LIBIRCCLIENT_DIR=libircclient-$(LIBIRCCLIENT_VER)
+LIBIRCCLIENT_TAR=$(LIBIRCCLIENT_DIR).tar.gz
 ifneq ($(LIBIRCCLIENT_LOCAL),)
-URL = http://downloads.sourceforge.net/project/libircclient/libircclient/1.9/libircclient-1.9.tar.gz
-STATIC_LIBS += libircclient-1.9/src/libircclient.a
-EXTRA_INCLUDES +=  libircclient-1.9/include
+URL = http://downloads.sourceforge.net/project/libircclient/libircclient/$(LIBIRCCLIENT_VER)/$(LIBIRCCLIENT_TAR)
+STATIC_LIBS += $(LIBIRCCLIENT_DIR)/src/libircclient.a
+EXTRA_INCLUDES +=  $(LIBIRCCLIENT_DIR)/include
 CFLAGS += -DLIBIRCCLIENT_LOCAL
 LD=
 else
@@ -125,8 +128,8 @@ OBJECT_MAIN=$(OBJECT_DIR)/$(CFG)/$(SOURCE_DIR)/$(patsubst %.c,%.o,$(PROJECT_MAIN
 SOURCES=$(shell find $(SOURCE_DIR) -type f -name "*.c")
 OBJECTS=$(patsubst $(SOURCE_DIR)/%.c,$(OBJECT_DIR)/$(CFG)/$(SOURCE_DIR)/%.o,$(SOURCES))
 
-TEST_SOURCES=$(shell find $(TEST_DIR) -type f -name "*.c")
-TEST_OBJECTS=$(patsubst $(TEST_DIR)/%.c,$(OBJECT_DIR)/$(CFG)/$(TEST_DIR)/%.o,$(TEST_SOURCES))
+TEST_SOURCES="" #$(shell find $(TEST_DIR) -type f -name "*.c")
+TEST_OBJECTS="" #$(patsubst $(TEST_DIR)/%.c,$(OBJECT_DIR)/$(CFG)/$(TEST_DIR)/%.o,$(TEST_SOURCES))
 
 PLUGIN_SOURCES=$(shell find $(PLUGIN_DIR) -type f -name "*.c")
 PLUGIN_OBJECTS=$(patsubst $(PLUGIN_DIR)/%.c,$(BINARY_DIR)/$(CFG)/$(PLUGIN_DIR)/%.so,$(PLUGIN_SOURCES))
@@ -162,12 +165,12 @@ cov: $(BINARY_DIR)/$(CFG)/$(TEST_TARGET)
 clean:
 	rm -rf $(OBJECT_DIR)/$(CFG)/* $(BINARY_DIR)/$(CFG)/* $(SOURCE_DIR)/*.gch
 	make -C libstephen clean
-	rm -rf libircclient-1.9
+	rm -rf $(LIBIRCCLIENT_DIR)
 	rm -f plugin/help.h
 
 clean_all: clean_cov clean_doc
 	rm -rf $(OBJECT_DIR) $(BINARY_DIR) $(DEPENDENCY_DIR) $(SOURCE_DIR)/*.gch
-	rm -rf libircclient-1.9.tar.gz
+	rm -rf $(LIBIRCCLIENT_TAR)
 
 clean_docs:
 	rm -rf $(DOCUMENTATION_DIR)
@@ -180,18 +183,18 @@ libstephen/bin/release/libstephen.so:
 	make PROJECT_TYPE=dynamiclib TARGET=libstephen.so -C libstephen
 
 # STATIC LIBS: libircclient (if asked)
-libircclient-1.9.tar.gz:
-	curl -L -o libircclient-1.9.tar.gz $(URL)
+$(LIBIRCCLIENT_TAR):
+	curl -L -o $(LIBIRCCLIENT_TAR) $(URL)
 
-libircclient-1.9/config.status: libircclient-1.9.tar.gz
-	tar xzf libircclient-1.9.tar.gz
-	cd libircclient-1.9 && ./configure --enable-openssl
+$(LIBIRCCLIENT_DIR)/config.status: $(LIBIRCCLIENT_TAR)
+	tar xzf $(LIBIRCCLIENT_TAR)
+	cd $(LIBIRCCLIENT_DIR) && ./configure --enable-openssl
 
-libircclient-1.9/src/libircclient.a libircclient-1.9/include/libircclient.h: libircclient-1.9/config.status
-	make -C libircclient-1.9
+$(LIBIRCCLIENT_DIR)/src/libircclient.a $(LIBIRCCLIENT_DIR)/include/libircclient.h: $(LIBIRCCLIENT_DIR)/config.status
+	make -C $(LIBIRCCLIENT_DIR)
 
 ifneq ($(LIBIRCCLIENT_LOCAL),)
-$(SOURCES): libircclient-1.9/include/libircclient.h
+$(SOURCES): $(LIBIRCCLIENT_DIR)/include/libircclient.h
 endif
 
 # RULE TO BUILD YOUR MAIN TARGET HERE: (you may have to edit this, but it it

@@ -6,7 +6,6 @@ GTAGS
 GRTAGS
 *.so
 plugin/help.h
-libircclient-1.9
+libircclient-*
 run.sh
 hash.txt
-libircclient-1.9.tar.gz
