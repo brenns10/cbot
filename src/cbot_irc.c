@@ -211,7 +211,7 @@ void run_cbot_irc(int argc, char *argv[])
 		chan = get_long_flag_parameter(&args, "chan");
 	}
 	if (check_long_flag(&args, "chanpass")) {
-		chan = get_long_flag_parameter(&args, "chanpass");
+		chanpass = get_long_flag_parameter(&args, "chanpass");
 	}
 	if (check_long_flag(&args, "plugin-dir")) {
 		plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
