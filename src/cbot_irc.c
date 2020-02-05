@@ -7,13 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef LIBIRCCLIENT_LOCAL
 #include "libirc_rfcnumeric.h"
 #include "libircclient.h"
-#else
-#include <libircclient/libirc_rfcnumeric.h>
-#include <libircclient/libircclient.h>
-#endif
+
 #include "libstephen/ad.h"
 #include "libstephen/cb.h"
 #include "libstephen/ll.h"
