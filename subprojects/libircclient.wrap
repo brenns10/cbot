@@ -1,0 +1,10 @@
+[wrap-file]
+directory = libircclient-1.10
+
+source_url = http://downloads.sourceforge.net/project/libircclient/libircclient/1.10/libircclient-1.10.tar.gz
+source_filename = libircclient-1.10.tar.gz
+source_hash = bbb26f3af348b252c5204917a7f91cfdf172f1b6afbf4df1e561b03e20503c2d
+
+patch_url = http://fake.url.please.dont.download.brennan.io
+patch_filename = libircclient-patch-1.10.tar.gz
+patch_hash = c4e004e7ababddada8299f4db0c93b0bccf8b453b589934668d00e6e1d1ce25a

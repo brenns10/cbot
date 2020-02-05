@@ -13,9 +13,9 @@ fi
 
 current_hash=$(./auth.sh "$HASH_FILE")
 
-bin/release/cbot \
+build/cbot \
 	irc \
-	--plugin-dir bin/release/plugin \
+	--plugin-dir build \
 	--name cbot \
 	--hash "$current_hash" \
 	# more args here

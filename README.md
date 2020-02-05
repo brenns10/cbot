@@ -42,17 +42,22 @@ Plugin List
 Building and Running
 --------------------
 
-Dependencies:
-- `libircclient`: On Arch Linux, the package is `libircclient`. For Ubuntu, I
-  would guess you need to run `sudo apt-get install libircclient-devel`, but I
-  haven't tried it myself. You can also statically link to libircclient, by
-  simply passing `LIBIRCCLIENT_LOCAL=yes` as an argument to `make`, which will
-  download, build, and link libircclient into CBot correctly.
-- `libstephen`: Simply run `git submodule init` and `git submodule update` in
-  the repository root. Any time the `libstephen` version is updated, you'll
-  probably need to run `git submodule update` again.
+This project uses the Meson build system. The following commands will build the
+project:
 
-Compiling: just run `make`.  Running: run `bin/release/cbot` with the following arguments:
+    meson build
+    ninja -C build
+
+The first command creates a build directory, and the second command runs the
+"ninja" build system (Meson's backend) in the build directory. Compiled output
+is placed into the build directory (both the `cbot` binary and all plugins).
+
+Meson will automatically download and build the following dependencies:
+
+- `libircclient`
+- `libstephen`
+
+To run, invoke `build/cbot` with the following arguments:
 
 1. Either `cli` or `irc`, depending on whether you want to run locally or on a
    real IRC server.

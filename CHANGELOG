@@ -1,0 +1,16 @@
+Changelog
+=========
+
+0.1.0 (2020-02-05)
+------------------
+
+* Migrated build system to Meson, began versioning and recording changelog.
+
+Prehistory
+----------
+
+Before this point, there are no changelogs, only git logs. At this point, the
+following was implemented:
+
+* IRC + CLI backends
+* Plugins: greet, emote, help, ircctl, karma, name, sadness, magic8

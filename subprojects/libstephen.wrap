@@ -1,0 +1,4 @@
+[wrap-git]
+directory = libstephen.git
+url = https://github.com/brenns10/libstephen
+revision = master

@@ -1,11 +1,10 @@
-dep
-bin
-obj
+build
 GPATH
 GTAGS
 GRTAGS
-*.so
-plugin/help.h
-libircclient-*
 run.sh
 hash.txt
+subprojects/*
+!subprojects/*.wrap
+subprojects/localcache/*
+!subprojects/localcache/libircclient-patch-1.10.tar.gz
