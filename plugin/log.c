@@ -8,8 +8,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "sc-collections.h"
+
 #include "cbot/cbot.h"
-#include "libstephen/cb.h"
 
 static void write_string(FILE *f, const char *str)
 {
@@ -44,7 +45,7 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
 	struct timespec now;
 	struct tm *tm;
 	double time_float;
-	cbuf filename;
+	struct sc_charbuf filename;
 	FILE *f;
 
 	/*
@@ -57,8 +58,8 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
 	/*
 	 * Create filename and open it.
 	 */
-	cb_init(&filename, 40);
-	cb_printf(&filename, "%s-%04d-%02d-%02d.log", event.channel,
+	sc_cb_init(&filename, 40);
+	sc_cb_printf(&filename, "%s-%04d-%02d-%02d.log", event.channel,
 	          tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 	f = fopen(filename.buf, "a");
 
@@ -75,7 +76,7 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
 	 * Cleanup
 	 */
 	fclose(f);
-	cb_destroy(&filename);
+	sc_cb_destroy(&filename);
 }
 
 void log_load(cbot_t *bot, cbot_register_t registrar)

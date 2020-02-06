@@ -4,7 +4,9 @@ Changelog
 Unreleased
 ----------
 
-* Added dependency on sc-regex, migrated plugins off of it.
+* Added dependency on sc-regex, migrated plugins onto it.
+* Added dependency on sc-collections, migrated log plugin onto it.
+* Removed libstephen dependency from plugins!
 
 0.1.0 (2020-02-05)
 ------------------

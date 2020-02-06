@@ -27,6 +27,11 @@ libsc_regex_dep = dependency(
   fallback: ['sc-regex', 'libsc_regex_dep'],
   version: '>=0.3.1',
 )
+libsc_collections_dep = dependency(
+  'libsc-collections',
+  fallback: ['sc-collections', 'libsc_collections_dep'],
+  version: '>=0.3.1',
+)
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
 
@@ -55,7 +60,7 @@ foreach f: plugins
     shared_library(
       f, 'plugin/' + f + '.c',
       include_directories : inc, install : true,
-      dependencies : [libstephen_dep, libsc_regex_dep],
+      dependencies : [libsc_regex_dep, libsc_collections_dep],
       name_prefix : '',
     )
   ]
