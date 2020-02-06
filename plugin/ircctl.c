@@ -57,7 +57,7 @@ static void handler(struct cbot_event event, struct cbot_actions actions)
 	}
 }
 
-void ircctl_load(struct cbot *bot, cbot_register_t registrar)
+void ircctl_load(struct cbot *bot)
 {
 	// commands[0] = recomp("join +(.*) " HASH);
 	commands[0] = sc_regex_compile("op +(.*) +" HASH);
@@ -66,5 +66,5 @@ void ircctl_load(struct cbot *bot, cbot_register_t registrar)
 	commands[1] = sc_regex_compile("join +(.*) +" HASH);
 	handlers[1] = join_handler;
 	// invite = recomp(" invite +(.*) +(.*) " HASH);
-	registrar(bot, CBOT_CHANNEL_MSG, handler);
+	cbot_register(bot, CBOT_CHANNEL_MSG, handler);
 }

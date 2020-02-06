@@ -31,8 +31,8 @@ static void help(struct cbot_event event, struct cbot_actions actions)
 	}
 }
 
-void help_load(struct cbot *bot, cbot_register_t registrar)
+void help_load(struct cbot *bot)
 {
 	r = sc_regex_compile("[Hh][Ee][Ll][Pp].*");
-	registrar(bot, CBOT_CHANNEL_MSG, help);
+	cbot_register(bot, CBOT_CHANNEL_MSG, help);
 }

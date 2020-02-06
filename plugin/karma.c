@@ -280,7 +280,7 @@ static void karma_handler(struct cbot_event event, struct cbot_actions actions)
  * @param bot Bot we're loading into.
  * @param registrar Function to call to register handlers.
  */
-void karma_load(struct cbot *bot, cbot_register_t registrar)
+void karma_load(struct cbot *bot)
 {
 #define KARMA_WORD "^ \t\n"
 #define NOT_KARMA_WORD " \t\n"
@@ -289,5 +289,5 @@ void karma_load(struct cbot *bot, cbot_register_t registrar)
 	set = sc_regex_compile("set-karma +([" KARMA_WORD
 	                       "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
 	forget = sc_regex_compile("forget-me");
-	registrar(bot, CBOT_CHANNEL_MSG, karma_handler);
+	cbot_register(bot, CBOT_CHANNEL_MSG, karma_handler);
 }

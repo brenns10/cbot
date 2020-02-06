@@ -35,8 +35,8 @@ static void lod(struct cbot_event event, struct cbot_actions actions)
 	free(target);
 }
 
-void lod_load(struct cbot *bot, cbot_register_t registrar)
+void lod_load(struct cbot *bot)
 {
 	r = sc_regex_compile("lod\\s+(.+)\\s*");
-	registrar(bot, CBOT_CHANNEL_MSG, lod);
+	cbot_register(bot, CBOT_CHANNEL_MSG, lod);
 }

@@ -79,7 +79,7 @@ static void cbot_log(struct cbot_event event, struct cbot_actions actions)
 	sc_cb_destroy(&filename);
 }
 
-void log_load(struct cbot *bot, cbot_register_t registrar)
+void log_load(struct cbot *bot)
 {
-	registrar(bot, CBOT_CHANNEL_MSG, cbot_log);
+	cbot_register(bot, CBOT_CHANNEL_MSG, cbot_log);
 }

@@ -32,8 +32,6 @@ void cbot_delete(struct cbot *obj);
 void cbot_handle_event(struct cbot *bot, struct cbot_event event);
 void cbot_handle_channel_message(struct cbot *bot, const char *channel,
                                  const char *user, const char *message);
-void cbot_register(struct cbot *bot, enum cbot_event_type type,
-                   cbot_handler_t handler);
 void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names);
 
 int cbot_is_authorized(struct cbot *cbot, const char *message);

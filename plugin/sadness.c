@@ -42,11 +42,11 @@ static void sadness(struct cbot_event event, struct cbot_actions actions)
 	             event.username);
 }
 
-void sadness_load(struct cbot *bot, cbot_register_t registrar)
+void sadness_load(struct cbot *bot)
 {
 	r = sc_regex_compile("([Yy]ou +[Ss]uck[!.]?|"
 	                     "[Ss]ucks[!.]?|"
 	                     "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
 	                     "[Ss]hut [Uu]p[!.]?)");
-	registrar(bot, CBOT_CHANNEL_MSG, sadness);
+	cbot_register(bot, CBOT_CHANNEL_MSG, sadness);
 }

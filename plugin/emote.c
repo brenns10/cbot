@@ -37,8 +37,8 @@ static void emote(struct cbot_event event, struct cbot_actions actions)
 	free(indices);
 }
 
-void emote_load(struct cbot *bot, cbot_register_t registrar)
+void emote_load(struct cbot *bot)
 {
 	r = sc_regex_compile("emote (.*)");
-	registrar(bot, CBOT_CHANNEL_MSG, emote);
+	cbot_register(bot, CBOT_CHANNEL_MSG, emote);
 }

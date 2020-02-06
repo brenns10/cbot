@@ -179,7 +179,7 @@ static bool cbot_load_plugin(struct cbot *bot, const char *filename,
 		return false;
 	}
 
-	plugin(bot, cbot_register);
+	plugin(bot);
 	return true;
 }
 

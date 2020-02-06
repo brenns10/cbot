@@ -22,8 +22,8 @@ static void cbot_hello(struct cbot_event event, struct cbot_actions actions)
 	actions.send(event.bot, event.channel, "hello, %s!", event.username);
 }
 
-void greet_load(struct cbot *bot, cbot_register_t registrar)
+void greet_load(struct cbot *bot)
 {
 	greeting = sc_regex_compile("[Hh](ello|i|ey),? +[Cc][Bb]ot!?");
-	registrar(bot, CBOT_CHANNEL_MSG, cbot_hello);
+	cbot_register(bot, CBOT_CHANNEL_MSG, cbot_hello);
 }

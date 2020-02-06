@@ -20,9 +20,9 @@ static void name(struct cbot_event event, struct cbot_actions actions)
 	             "https://github.com/brenns10/cbot");
 }
 
-void name_load(struct cbot *bot, cbot_register_t registrar)
+void name_load(struct cbot *bot)
 {
 	r = sc_regex_compile("([wW]ho|[wW]hat|[wW][tT][fF])('?s?| +"
 	                     "[iI]s| +[aA]re +[yY]ou,?) +[cC][bB]ot\\??");
-	registrar(bot, CBOT_CHANNEL_MSG, name);
+	cbot_register(bot, CBOT_CHANNEL_MSG, name);
 }

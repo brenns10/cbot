@@ -57,8 +57,8 @@ static void magic8(struct cbot_event event, struct cbot_actions actions)
 	             event.username);
 }
 
-void magic8_load(struct cbot *bot, cbot_register_t registrar)
+void magic8_load(struct cbot *bot)
 {
 	query = sc_regex_compile("(magic8|8ball).+");
-	registrar(bot, CBOT_CHANNEL_MSG, magic8);
+	cbot_register(bot, CBOT_CHANNEL_MSG, magic8);
 }
