@@ -5,10 +5,11 @@
 
 #include <stdlib.h>
 
-#include "cbot/cbot.h"
-#include "libstephen/re.h"
+#include "sc-regex.h"
 
-Regex r;
+#include "cbot/cbot.h"
+
+struct sc_regex *r;
 char *responses[] = {
 	":(",
 	"I don't like you, %s",
@@ -33,7 +34,7 @@ static void sadness(cbot_event_t event, cbot_actions_t actions)
 	if (!incr)
 		return;
 
-	if (reexec(r, event.message + incr, NULL) == -1)
+	if (sc_regex_exec(r, event.message + incr, NULL) == -1)
 		return;
 
 	actions.send(event.bot, event.channel,
@@ -43,9 +44,9 @@ static void sadness(cbot_event_t event, cbot_actions_t actions)
 
 void sadness_load(cbot_t *bot, cbot_register_t registrar)
 {
-	r = recomp("([Yy]ou +[Ss]uck[!.]?|"
-	           "[Ss]ucks[!.]?|"
-	           "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
-	           "[Ss]hut [Uu]p[!.]?)");
+	r = sc_regex_compile("([Yy]ou +[Ss]uck[!.]?|"
+	                     "[Ss]ucks[!.]?|"
+	                     "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
+	                     "[Ss]hut [Uu]p[!.]?)");
 	registrar(bot, CBOT_CHANNEL_MSG, sadness);
 }

@@ -8,14 +8,18 @@
  * (above the /me is just used to demonstrate what CBot is doing)
  */
 
-#include "cbot/cbot.h"
-#include "libstephen/re.h"
+#include <stdlib.h>
 
-Regex r;
+#include "sc-regex.h"
+
+#include "cbot/cbot.h"
+
+struct sc_regex *r;
+const int num_captures = 1;
 
 static void emote(cbot_event_t event, cbot_actions_t actions)
 {
-	size_t *captures = NULL;
+	size_t *indices;
 	int incr = actions.addressed(event.bot, event.message);
 
 	if (!incr)
@@ -23,19 +27,18 @@ static void emote(cbot_event_t event, cbot_actions_t actions)
 
 	event.message += incr;
 
-	if (reexec(r, event.message, &captures) == -1) {
+	if (sc_regex_exec(r, event.message, &indices) == -1) {
 		return;
 	}
 
-	Captures c = recap(event.message, captures, renumsaves(r));
-
-	actions.me(event.bot, event.channel, c.cap[0]);
-
-	recapfree(c);
+	char *c = sc_regex_get_capture(event.message, indices, 0);
+	actions.me(event.bot, event.channel, c);
+	free(c);
+	free(indices);
 }
 
 void emote_load(cbot_t *bot, cbot_register_t registrar)
 {
-	r = recomp("emote (.*)");
+	r = sc_regex_compile("emote (.*)");
 	registrar(bot, CBOT_CHANNEL_MSG, emote);
 }

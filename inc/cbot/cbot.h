@@ -124,7 +124,6 @@ typedef void (*cbot_handler_t)(cbot_event_t event, cbot_actions_t actions);
 
    @param bot The bot you are registering with.
    @param event Event you are registering to handle.
-   @param regex Regex to match on the event text (mostly for messages).
    @param handler Event handler function.
  */
 typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event,

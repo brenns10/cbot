@@ -9,34 +9,34 @@
 
 #include <stdlib.h>
 
-#include "cbot/cbot.h"
-#include "libstephen/re.h"
-#include "libstephen/cb.h"
+#include <sc-regex.h>
 
-Regex r;
+#include "cbot/cbot.h"
+
+struct sc_regex *r;
 
 static void lod(cbot_event_t event, cbot_actions_t actions)
 {
-	Captures captures;
+	char *target;
 	size_t *rawcap = NULL;
 	int incr = actions.addressed(event.bot, event.message);
 
 	if (!incr)
 		return;
 
-	if (reexec(r, event.message + incr, &rawcap) == -1) {
+	if (sc_regex_exec(r, event.message + incr, &rawcap) == -1) {
 		free(rawcap);
 		return;
 	}
 
-	captures = recap(event.message + incr, rawcap, renumsaves(r));
-	actions.send(event.bot, event.channel, "%s: ಠ_ಠ", captures.cap[0]);
-	recapfree(captures);
+	target = sc_regex_get_capture(event.message + incr, rawcap, 0);
+	actions.send(event.bot, event.channel, "%s: ಠ_ಠ", target);
 	free(rawcap);
+	free(target);
 }
 
 void lod_load(cbot_t *bot, cbot_register_t registrar)
 {
-	r = recomp("lod\\s+(.+)\\s*");
+	r = sc_regex_compile("lod\\s+(.+)\\s*");
 	registrar(bot, CBOT_CHANNEL_MSG, lod);
 }

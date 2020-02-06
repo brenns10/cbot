@@ -10,13 +10,15 @@
  *     cbot> Outlook not so good
  */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include "sc-regex.h"
 
 #include "cbot/cbot.h"
-#include "libstephen/re.h"
 
-Regex query;
+struct sc_regex *query;
+
 char *responses[] = {
 	"It is certain.",
 	"It is decidedly so.",
@@ -47,16 +49,16 @@ static void magic8(cbot_event_t event, cbot_actions_t actions)
 	if (!incr)
 		return;
 
-	if (reexec(query, event.message + incr, NULL) == -1)
+	if (sc_regex_exec(query, event.message + incr, NULL) == -1)
 		return;
 
-	int response = rand() % (sizeof(responses) / sizeof(char*));
+	int response = rand() % (sizeof(responses) / sizeof(char *));
 	actions.send(event.bot, event.channel, responses[response],
 	             event.username);
 }
 
 void magic8_load(cbot_t *bot, cbot_register_t registrar)
 {
-	query = recomp("(magic8|8ball).+");
+	query = sc_regex_compile("(magic8|8ball).+");
 	registrar(bot, CBOT_CHANNEL_MSG, magic8);
 }
