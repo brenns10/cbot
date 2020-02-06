@@ -17,7 +17,7 @@
 struct sc_regex *r;
 const int num_captures = 1;
 
-static void emote(cbot_event_t event, cbot_actions_t actions)
+static void emote(struct cbot_event event, struct cbot_actions actions)
 {
 	size_t *indices;
 	int incr = actions.addressed(event.bot, event.message);
@@ -37,7 +37,7 @@ static void emote(cbot_event_t event, cbot_actions_t actions)
 	free(indices);
 }
 
-void emote_load(cbot_t *bot, cbot_register_t registrar)
+void emote_load(struct cbot *bot, cbot_register_t registrar)
 {
 	r = sc_regex_compile("emote (.*)");
 	registrar(bot, CBOT_CHANNEL_MSG, emote);

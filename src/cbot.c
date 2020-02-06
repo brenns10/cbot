@@ -16,7 +16,7 @@
 
 #include "cbot_private.h"
 
-static int cbot_addressed(const cbot_t *bot, const char *message)
+static int cbot_addressed(const struct cbot *bot, const char *message)
 {
 	int increment = strlen(bot->name);
 	if (strncmp(bot->name, message, increment) == 0) {
@@ -29,14 +29,14 @@ static int cbot_addressed(const cbot_t *bot, const char *message)
 	return 0;
 }
 
-void cbot_init_handler_list(cbot_handler_list_t *list, size_t init_alloc)
+void cbot_init_handler_list(struct cbot_handler_list *list, size_t init_alloc)
 {
 	list->handler = smb_new(cbot_handler_t, init_alloc);
 	list->num = 0;
 	list->alloc = init_alloc;
 }
 
-void cbot_free_handler_list(cbot_handler_list_t *list)
+void cbot_free_handler_list(struct cbot_handler_list *list)
 {
 	smb_free(list->handler);
 }
@@ -51,10 +51,10 @@ void cbot_free_handler_list(cbot_handler_list_t *list)
    @param send The "send" function.
    @return A new cbot instance.
  */
-cbot_t *cbot_create(const char *name)
+struct cbot *cbot_create(const char *name)
 {
 #define CBOT_INIT_ALLOC 32
-	cbot_t *cbot = smb_new(cbot_t, 1);
+	struct cbot *cbot = smb_new(struct cbot, 1);
 	cbot->name = name;
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
 		cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
@@ -69,7 +69,7 @@ cbot_t *cbot_create(const char *name)
    @brief Free up all resources held by a cbot instance.
    @param cbot The bot to delete.
  */
-void cbot_delete(cbot_t *cbot)
+void cbot_delete(struct cbot *cbot)
 {
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
 		cbot_free_handler_list(&cbot->hlists[i]);
@@ -78,7 +78,7 @@ void cbot_delete(cbot_t *cbot)
 	EVP_cleanup();
 }
 
-static void cbot_add_to_handler_list(cbot_handler_list_t *list,
+static void cbot_add_to_handler_list(struct cbot_handler_list *list,
                                      cbot_handler_t handler)
 {
 	if (list->num >= list->alloc) {
@@ -90,8 +90,8 @@ static void cbot_add_to_handler_list(cbot_handler_list_t *list,
 	list->num++;
 }
 
-static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot,
-                                                cbot_event_type_t type)
+static struct cbot_handler_list *cbot_list_for_event(struct cbot *bot,
+                                                     enum cbot_event_type type)
 {
 	return &bot->hlists[type];
 }
@@ -103,7 +103,8 @@ static cbot_handler_list_t *cbot_list_for_event(cbot_t *bot,
    @param type The type of event to register a handler for.
    @param handler Handler to register.
  */
-void cbot_register(cbot_t *bot, cbot_event_type_t type, cbot_handler_t handler)
+void cbot_register(struct cbot *bot, enum cbot_event_type type,
+                   cbot_handler_t handler)
 {
 	cbot_add_to_handler_list(cbot_list_for_event(bot, type), handler);
 }
@@ -119,9 +120,9 @@ void cbot_register(cbot_t *bot, cbot_event_type_t type, cbot_handler_t handler)
    @param bot The bot we're working with.
    @param event The event to dispatch.
  */
-void cbot_handle_event(cbot_t *bot, cbot_event_t event)
+void cbot_handle_event(struct cbot *bot, struct cbot_event event)
 {
-	cbot_handler_list_t *list = cbot_list_for_event(bot, event.type);
+	struct cbot_handler_list *list = cbot_list_for_event(bot, event.type);
 
 	for (size_t i = 0; i < list->num; i++) {
 		cbot_handler_t handler = list->handler[i];
@@ -142,10 +143,10 @@ void cbot_handle_event(cbot_t *bot, cbot_event_t event)
    @param user The user who said it.
    @param message The message itself.
  */
-void cbot_handle_channel_message(cbot_t *bot, const char *channel,
+void cbot_handle_channel_message(struct cbot *bot, const char *channel,
                                  const char *user, const char *message)
 {
-	cbot_event_t event;
+	struct cbot_event event;
 
 	event.bot = bot;
 	event.type = CBOT_CHANNEL_MSG;
@@ -159,7 +160,7 @@ void cbot_handle_channel_message(cbot_t *bot, const char *channel,
 /**
    @brief Private function to load a single plugin.
  */
-static bool cbot_load_plugin(cbot_t *bot, const char *filename,
+static bool cbot_load_plugin(struct cbot *bot, const char *filename,
                              const char *loader)
 {
 	void *plugin_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
@@ -185,7 +186,7 @@ static bool cbot_load_plugin(cbot_t *bot, const char *filename,
 /**
    @brief Load a list of plugins from a plugin directory.
  */
-void cbot_load_plugins(cbot_t *bot, char *plugin_dir, smb_iter names)
+void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names)
 {
 	cbuf name;
 	cbuf loader;

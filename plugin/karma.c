@@ -168,7 +168,7 @@ static void karma_sort()
  * @param event The event we're responding to.
  * @param actions Actions available to us.
  */
-static void karma_best(cbot_event_t event, cbot_actions_t actions)
+static void karma_best(struct cbot_event event, struct cbot_actions actions)
 {
 	size_t i;
 	karma_sort();
@@ -184,8 +184,8 @@ static void karma_best(cbot_event_t event, cbot_actions_t actions)
  * @param event The event we're responding to.
  * @param actions Actions given to us by bot.
  */
-static void karma_check(const char *word, cbot_event_t event,
-                        cbot_actions_t actions)
+static void karma_check(const char *word, struct cbot_event event,
+                        struct cbot_actions actions)
 {
 	ssize_t index;
 
@@ -214,7 +214,7 @@ static void karma_check(const char *word, cbot_event_t event,
  * @param event Information for the event.
  * @param actions Actions the plugin may take.
  */
-static void karma_handler(cbot_event_t event, cbot_actions_t actions)
+static void karma_handler(struct cbot_event event, struct cbot_actions actions)
 {
 	size_t *indices;
 	int increment = actions.addressed(event.bot, event.message);
@@ -280,7 +280,7 @@ static void karma_handler(cbot_event_t event, cbot_actions_t actions)
  * @param bot Bot we're loading into.
  * @param registrar Function to call to register handlers.
  */
-void karma_load(cbot_t *bot, cbot_register_t registrar)
+void karma_load(struct cbot *bot, cbot_register_t registrar)
 {
 #define KARMA_WORD "^ \t\n"
 #define NOT_KARMA_WORD " \t\n"

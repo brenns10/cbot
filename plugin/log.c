@@ -39,7 +39,7 @@ static void write_string(FILE *f, const char *str)
  * - username: sender of the message
  * - message: content of message
  */
-static void cbot_log(cbot_event_t event, cbot_actions_t actions)
+static void cbot_log(struct cbot_event event, struct cbot_actions actions)
 {
 #define NSEC_PER_SEC 10000000000.0
 	struct timespec now;
@@ -60,7 +60,7 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
 	 */
 	sc_cb_init(&filename, 40);
 	sc_cb_printf(&filename, "%s-%04d-%02d-%02d.log", event.channel,
-	          tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+	             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 	f = fopen(filename.buf, "a");
 
 	/*
@@ -79,7 +79,7 @@ static void cbot_log(cbot_event_t event, cbot_actions_t actions)
 	sc_cb_destroy(&filename);
 }
 
-void log_load(cbot_t *bot, cbot_register_t registrar)
+void log_load(struct cbot *bot, cbot_register_t registrar)
 {
 	registrar(bot, CBOT_CHANNEL_MSG, cbot_log);
 }

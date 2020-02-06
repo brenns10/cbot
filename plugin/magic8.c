@@ -42,7 +42,7 @@ char *responses[] = {
 	"Very doubtful.",
 };
 
-static void magic8(cbot_event_t event, cbot_actions_t actions)
+static void magic8(struct cbot_event event, struct cbot_actions actions)
 {
 	int incr = actions.addressed(event.bot, event.message);
 
@@ -57,7 +57,7 @@ static void magic8(cbot_event_t event, cbot_actions_t actions)
 	             event.username);
 }
 
-void magic8_load(cbot_t *bot, cbot_register_t registrar)
+void magic8_load(struct cbot *bot, cbot_register_t registrar)
 {
 	query = sc_regex_compile("(magic8|8ball).+");
 	registrar(bot, CBOT_CHANNEL_MSG, magic8);

@@ -11,7 +11,7 @@
 
 char *name = "cbot";
 
-static void cbot_cli_send(const cbot_t *bot, const char *dest,
+static void cbot_cli_send(const struct cbot *bot, const char *dest,
                           const char *format, ...)
 {
 	(void)bot; // unused
@@ -23,8 +23,8 @@ static void cbot_cli_send(const cbot_t *bot, const char *dest,
 	va_end(va);
 }
 
-static void cbot_cli_me(const cbot_t *bot, const char *dest, const char *format,
-                        ...)
+static void cbot_cli_me(const struct cbot *bot, const char *dest,
+                        const char *format, ...)
 {
 	(void)bot; // unused
 	va_list va;
@@ -35,14 +35,14 @@ static void cbot_cli_me(const cbot_t *bot, const char *dest, const char *format,
 	va_end(va);
 }
 
-static void cbot_cli_op(const cbot_t *bot, const char *channel,
+static void cbot_cli_op(const struct cbot *bot, const char *channel,
                         const char *person)
 {
 	(void)bot; // unused
 	printf("[%s~CMD]%s: /op %s\n", channel, name, person);
 }
 
-static void cbot_cli_join(const cbot_t *bot, const char *channel,
+static void cbot_cli_join(const struct cbot *bot, const char *channel,
                           const char *password)
 {
 	(void)bot; // unused
@@ -67,7 +67,7 @@ void run_cbot_cli(int argc, char **argv)
 {
 	char *line, *plugin_dir = "bin/release/plugin";
 	char *hash = NULL;
-	cbot_t *bot;
+	struct cbot *bot;
 	smb_ad args;
 	arg_data_init(&args);
 

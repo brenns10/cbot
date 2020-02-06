@@ -28,7 +28,7 @@ char *responses[] = {
 	"http://foaas.com/flying/cbot",
 };
 
-static void sadness(cbot_event_t event, cbot_actions_t actions)
+static void sadness(struct cbot_event event, struct cbot_actions actions)
 {
 	int incr = actions.addressed(event.bot, event.message);
 	if (!incr)
@@ -42,7 +42,7 @@ static void sadness(cbot_event_t event, cbot_actions_t actions)
 	             event.username);
 }
 
-void sadness_load(cbot_t *bot, cbot_register_t registrar)
+void sadness_load(struct cbot *bot, cbot_register_t registrar)
 {
 	r = sc_regex_compile("([Yy]ou +[Ss]uck[!.]?|"
 	                     "[Ss]ucks[!.]?|"

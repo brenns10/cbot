@@ -13,7 +13,7 @@ static char *help_lines[] = {
 #include "help.h"
 };
 
-static void help(cbot_event_t event, cbot_actions_t actions)
+static void help(struct cbot_event event, struct cbot_actions actions)
 {
 	// Make sure the message is addressed to the bot.
 	int increment = actions.addressed(event.bot, event.message);
@@ -31,7 +31,7 @@ static void help(cbot_event_t event, cbot_actions_t actions)
 	}
 }
 
-void help_load(cbot_t *bot, cbot_register_t registrar)
+void help_load(struct cbot *bot, cbot_register_t registrar)
 {
 	r = sc_regex_compile("[Hh][Ee][Ll][Pp].*");
 	registrar(bot, CBOT_CHANNEL_MSG, help);

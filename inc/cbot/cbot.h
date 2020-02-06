@@ -8,12 +8,11 @@
 #include <stddef.h>
 
 struct cbot;
-typedef struct cbot cbot_t;
 
 /**
    An enumeration of possible events that can be handled by a plugin.
  */
-typedef enum {
+enum cbot_event_type {
 
 	/* A message in a channel. */
 	CBOT_CHANNEL_MSG = 0,
@@ -27,27 +26,26 @@ typedef enum {
 
 	_CBOT_NUM_EVENT_TYPES_
 
-} cbot_event_type_t;
+};
 
 /**
    Details associated with an event, which are passed to an event handler.
  */
-typedef struct {
+struct cbot_event {
 
-	cbot_t *bot;
+	struct cbot *bot;
 	const char *name;
 
-	cbot_event_type_t type;
+	enum cbot_event_type type;
 	const char *channel;
 	const char *username;
 	const char *message;
-
-} cbot_event_t;
+};
 
 /**
    A struct filled with actions that can be taken on a bot.
  */
-typedef struct {
+struct cbot_actions {
 
 	/**
 	   Send a message to a destination.
@@ -56,8 +54,8 @@ typedef struct {
 	   @param format Format string for your message.
 	   @param ... Arguments to the format string.
 	 */
-	void (*send)(const cbot_t *bot, const char *dest, const char *format,
-	             ...);
+	void (*send)(const struct cbot *bot, const char *dest,
+	             const char *format, ...);
 	/**
 	   Send a "me" (action) message to a destination.
 	   @param bot The bot provided in the event struct.
@@ -66,7 +64,7 @@ typedef struct {
 	   bot's name or "/me".
 	   @param ... Arguments to the format string.
 	 */
-	void (*me)(const cbot_t *bot, const char *dest, const char *format,
+	void (*me)(const struct cbot *bot, const char *dest, const char *format,
 	           ...);
 	/**
 	   Return whether or not a message is addressed to the bot. When the
@@ -76,7 +74,7 @@ typedef struct {
 	   @param bot The bot the message might be addressed to.
 	   @returns 0 when not addressed, otherwise index of rest of string.
 	 */
-	int (*addressed)(const cbot_t *bot, const char *message);
+	int (*addressed)(const struct cbot *bot, const char *message);
 	/**
 	   Determines whether the beginning of the message contains a hash that
 	   matches the bot's current hash in the chain. If not, returns 0. If
@@ -85,24 +83,24 @@ typedef struct {
 	   @param message The message to check for the SHA in.
 	   @returns The index of the beginning of the rest of the message.
 	*/
-	int (*is_authorized)(cbot_t *bot, const char *message);
+	int (*is_authorized)(struct cbot *bot, const char *message);
 	/**
 	   Give operator privileges to a user.
 	   @param bot Bot instance.
 	   @param channel Channel to give op of.
 	   @param nick Nickname of person to make op.
 	 */
-	void (*op)(const cbot_t *bot, const char *channel, const char *message);
+	void (*op)(const struct cbot *bot, const char *channel,
+	           const char *message);
 	/**
 	   Join a channel.
 	   @param bot Bot instance.
 	   @param channel Channel to join.
 	   @param password Password for channel, or NULL if there's none.
 	 */
-	void (*join)(const cbot_t *bot, const char *channel,
+	void (*join)(const struct cbot *bot, const char *channel,
 	             const char *password);
-
-} cbot_actions_t;
+};
 
 /**
    An event handler function. Takes an event and does some action to handle it.
@@ -114,7 +112,8 @@ typedef struct {
    @param event Structure containing details of the event to handle.
    @param actions Structure containing action functions available.
  */
-typedef void (*cbot_handler_t)(cbot_event_t event, cbot_actions_t actions);
+typedef void (*cbot_handler_t)(struct cbot_event event,
+                               struct cbot_actions actions);
 
 /**
    An event registrar function.
@@ -126,7 +125,7 @@ typedef void (*cbot_handler_t)(cbot_event_t event, cbot_actions_t actions);
    @param event Event you are registering to handle.
    @param handler Event handler function.
  */
-typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event,
+typedef void (*cbot_register_t)(struct cbot *bot, enum cbot_event_type event,
                                 cbot_handler_t handler);
 
 /**
@@ -141,7 +140,7 @@ typedef void (*cbot_register_t)(cbot_t *bot, cbot_event_type_t event,
    @param bot CBot instance for the plugin.
    @param registrar Function to call to register each plugin.
  */
-typedef void (*cbot_plugin_t)(cbot_t *bot, cbot_register_t registrar);
+typedef void (*cbot_plugin_t)(struct cbot *bot, cbot_register_t registrar);
 
 void *base64_decode(const char *str, int explen);
 

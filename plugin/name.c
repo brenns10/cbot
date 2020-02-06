@@ -8,7 +8,7 @@
 
 struct sc_regex *r;
 
-static void name(cbot_event_t event, cbot_actions_t actions)
+static void name(struct cbot_event event, struct cbot_actions actions)
 {
 	// Make sure it maches our regex.
 	if (sc_regex_exec(r, event.message, NULL) == -1)
@@ -20,7 +20,7 @@ static void name(cbot_event_t event, cbot_actions_t actions)
 	             "https://github.com/brenns10/cbot");
 }
 
-void name_load(cbot_t *bot, cbot_register_t registrar)
+void name_load(struct cbot *bot, cbot_register_t registrar)
 {
 	r = sc_regex_compile("([wW]ho|[wW]hat|[wW][tT][fF])('?s?| +"
 	                     "[iI]s| +[aA]re +[yY]ou,?) +[cC][bB]ot\\??");

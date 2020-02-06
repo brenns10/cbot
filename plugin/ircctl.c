@@ -11,19 +11,21 @@
 #define HASH "([A-Za-z0-9+=/]+)"
 #define NCMD 2
 struct sc_regex *commands[NCMD];
-void (*handlers[NCMD])(cbot_event_t, cbot_actions_t, char **);
+void (*handlers[NCMD])(struct cbot_event, struct cbot_actions, char **);
 
-static void op_handler(cbot_event_t event, cbot_actions_t actions, char **c)
+static void op_handler(struct cbot_event event, struct cbot_actions actions,
+                       char **c)
 {
 	actions.op(event.bot, event.channel, c[0]);
 }
 
-static void join_handler(cbot_event_t event, cbot_actions_t actions, char **c)
+static void join_handler(struct cbot_event event, struct cbot_actions actions,
+                         char **c)
 {
 	actions.join(event.bot, c[0], NULL);
 }
 
-static void handler(cbot_event_t event, cbot_actions_t actions)
+static void handler(struct cbot_event event, struct cbot_actions actions)
 {
 	size_t *indices = NULL;
 	char **captures;
@@ -55,7 +57,7 @@ static void handler(cbot_event_t event, cbot_actions_t actions)
 	}
 }
 
-void ircctl_load(cbot_t *bot, cbot_register_t registrar)
+void ircctl_load(struct cbot *bot, cbot_register_t registrar)
 {
 	// commands[0] = recomp("join +(.*) " HASH);
 	commands[0] = sc_regex_compile("op +(.*) +" HASH);

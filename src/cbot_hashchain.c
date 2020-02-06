@@ -57,7 +57,7 @@ void *base64_decode(const char *str, int explen)
 	return buf;
 }
 
-int cbot_is_authorized(cbot_t *cbot, const char *message)
+int cbot_is_authorized(struct cbot *cbot, const char *message)
 {
 	const EVP_MD *hash = EVP_get_digestbyname("sha1");
 	int digest_len = EVP_MD_size(hash);

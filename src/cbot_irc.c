@@ -54,8 +54,8 @@ void event_connect(irc_session_t *session, const char *event,
 	log_event(session, event, origin, params, count);
 }
 
-void cbot_irc_send(const cbot_t *cbot, const char *dest, const char *format,
-                   ...)
+void cbot_irc_send(const struct cbot *cbot, const char *dest,
+                   const char *format, ...)
 {
 	va_list va;
 	cbuf cb;
@@ -68,7 +68,8 @@ void cbot_irc_send(const cbot_t *cbot, const char *dest, const char *format,
 	va_end(va);
 }
 
-void cbot_irc_me(const cbot_t *cbot, const char *dest, const char *format, ...)
+void cbot_irc_me(const struct cbot *cbot, const char *dest, const char *format,
+                 ...)
 {
 	va_list va;
 	cbuf cb;
@@ -81,7 +82,8 @@ void cbot_irc_me(const cbot_t *cbot, const char *dest, const char *format, ...)
 	va_end(va);
 }
 
-void cbot_irc_op(const cbot_t *cbot, const char *channel, const char *person)
+void cbot_irc_op(const struct cbot *cbot, const char *channel,
+                 const char *person)
 {
 	irc_session_t *session = cbot->backend;
 	cbuf cb;
@@ -91,7 +93,7 @@ void cbot_irc_op(const cbot_t *cbot, const char *channel, const char *person)
 	cb_destroy(&cb);
 }
 
-void cbot_irc_join(const cbot_t *cbot, const char *channel,
+void cbot_irc_join(const struct cbot *cbot, const char *channel,
                    const char *password)
 {
 	irc_session_t *session = cbot->backend;
@@ -113,8 +115,8 @@ void event_action(irc_session_t *session, const char *event, const char *origin,
                   const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	cbot_t *bot = irc_get_ctx(session);
-	cbot_event_t ircevent = {
+	struct cbot *bot = irc_get_ctx(session);
+	struct cbot_event ircevent = {
 		.bot = bot,
 		.type = CBOT_CHANNEL_ACTION,
 		.channel = params[0],
@@ -129,8 +131,8 @@ void event_join(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	cbot_t *bot = irc_get_ctx(session);
-	cbot_event_t ircevent = {
+	struct cbot *bot = irc_get_ctx(session);
+	struct cbot_event ircevent = {
 		.bot = bot,
 		.type = CBOT_JOIN,
 		.channel = params[0],
@@ -145,8 +147,8 @@ void event_part(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	cbot_t *bot = irc_get_ctx(session);
-	cbot_event_t ircevent = {
+	struct cbot *bot = irc_get_ctx(session);
+	struct cbot_event ircevent = {
 		.bot = bot,
 		.type = CBOT_PART,
 		.channel = params[0],
@@ -181,7 +183,7 @@ void run_cbot_irc(int argc, char *argv[])
 {
 	irc_callbacks_t callbacks;
 	irc_session_t *session;
-	cbot_t *cbot;
+	struct cbot *cbot;
 	smb_ad args;
 	char *name = "cbot";
 	char *host = "irc.case.edu";
