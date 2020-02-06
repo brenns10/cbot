@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+* Added dependency on sc-regex, migrated plugins off of it.
+
 0.1.0 (2020-02-05)
 ------------------
 
