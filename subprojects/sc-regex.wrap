@@ -1,0 +1,4 @@
+[wrap-git]
+directory = sc-regex.git
+url = https://git.sr.ht/~brenns10/sc-regex
+revision = master
