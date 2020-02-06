@@ -11,26 +11,26 @@
 #define HASH "([A-Za-z0-9+=/]+)"
 #define NCMD 2
 struct sc_regex *commands[NCMD];
-void (*handlers[NCMD])(struct cbot_event, struct cbot_actions, char **);
+void (*handlers[NCMD])(struct cbot_event, char **);
 
-static void op_handler(struct cbot_event event, struct cbot_actions actions,
+static void op_handler(struct cbot_event event,
                        char **c)
 {
-	actions.op(event.bot, event.channel, c[0]);
+	cbot_op(event.bot, event.channel, c[0]);
 }
 
-static void join_handler(struct cbot_event event, struct cbot_actions actions,
+static void join_handler(struct cbot_event event,
                          char **c)
 {
-	actions.join(event.bot, c[0], NULL);
+	cbot_join(event.bot, c[0], NULL);
 }
 
-static void handler(struct cbot_event event, struct cbot_actions actions)
+static void handler(struct cbot_event event)
 {
 	size_t *indices = NULL;
 	char **captures;
 	size_t num_cap;
-	int incr = actions.addressed(event.bot, event.message);
+	int incr = cbot_addressed(event.bot, event.message);
 
 	if (!incr)
 		return;
@@ -44,10 +44,10 @@ static void handler(struct cbot_event event, struct cbot_actions actions)
 		num_cap = sc_regex_num_captures(commands[idx]);
 		captures =
 		        sc_regex_get_captures(event.message, indices, num_cap);
-		if (actions.is_authorized(event.bot, captures[num_cap - 1])) {
-			handlers[idx](event, actions, captures);
+		if (cbot_is_authorized(event.bot, captures[num_cap - 1])) {
+			handlers[idx](event, captures);
 		} else {
-			actions.send(
+			cbot_send(
 			        event.bot, event.channel,
 			        "sorry, you aren't authorized to do that!");
 		}

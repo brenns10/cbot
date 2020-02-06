@@ -28,16 +28,16 @@ char *responses[] = {
 	"http://foaas.com/flying/cbot",
 };
 
-static void sadness(struct cbot_event event, struct cbot_actions actions)
+static void sadness(struct cbot_event event)
 {
-	int incr = actions.addressed(event.bot, event.message);
+	int incr = cbot_addressed(event.bot, event.message);
 	if (!incr)
 		return;
 
 	if (sc_regex_exec(r, event.message + incr, NULL) == -1)
 		return;
 
-	actions.send(event.bot, event.channel,
+	cbot_send(event.bot, event.channel,
 	             responses[rand() % (sizeof(responses) / sizeof(char *))],
 	             event.username);
 }

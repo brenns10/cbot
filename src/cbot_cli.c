@@ -12,27 +12,17 @@
 char *name = "cbot";
 
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
-                          const char *format, ...)
+                          const char *msg)
 {
 	(void)bot; // unused
-	va_list va;
-	va_start(va, format);
-	printf("[%s]%s: ", dest, name);
-	vprintf(format, va);
-	putchar('\n');
-	va_end(va);
+	printf("[%s]%s: %s\n", dest, name, msg);
 }
 
 static void cbot_cli_me(const struct cbot *bot, const char *dest,
-                        const char *format, ...)
+                        const char *msg)
 {
 	(void)bot; // unused
-	va_list va;
-	va_start(va, format);
-	printf("[%s]%s ", dest, name);
-	vprintf(format, va);
-	putchar('\n');
-	va_end(va);
+	printf("[%s]%s %s\n", dest, name, msg);
 }
 
 static void cbot_cli_op(const struct cbot *bot, const char *channel,
@@ -68,6 +58,7 @@ void run_cbot_cli(int argc, char **argv)
 	char *line, *plugin_dir = "bin/release/plugin";
 	char *hash = NULL;
 	struct cbot *bot;
+	struct cbot_backend backend;
 	smb_ad args;
 	arg_data_init(&args);
 
@@ -91,11 +82,12 @@ void run_cbot_cli(int argc, char **argv)
 		help();
 	}
 
-	bot = cbot_create("cbot");
-	bot->actions.send = cbot_cli_send;
-	bot->actions.me = cbot_cli_me;
-	bot->actions.op = cbot_cli_op;
-	bot->actions.join = cbot_cli_join;
+	backend.send = cbot_cli_send;
+	backend.me = cbot_cli_me;
+	backend.op = cbot_cli_op;
+	backend.join = cbot_cli_join;
+
+	bot = cbot_create("cbot", &backend);
 
 	// Set the hash in the bot.
 	void *decoded = base64_decode(hash, 20);

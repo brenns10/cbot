@@ -15,11 +15,11 @@
 
 struct sc_regex *greeting;
 
-static void cbot_hello(struct cbot_event event, struct cbot_actions actions)
+static void cbot_hello(struct cbot_event event)
 {
 	if (sc_regex_exec(greeting, event.message, NULL) == -1)
 		return;
-	actions.send(event.bot, event.channel, "hello, %s!", event.username);
+	cbot_send(event.bot, event.channel, "hello, %s!", event.username);
 }
 
 void greet_load(struct cbot *bot)

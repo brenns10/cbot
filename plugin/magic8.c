@@ -42,9 +42,9 @@ char *responses[] = {
 	"Very doubtful.",
 };
 
-static void magic8(struct cbot_event event, struct cbot_actions actions)
+static void magic8(struct cbot_event event)
 {
-	int incr = actions.addressed(event.bot, event.message);
+	int incr = cbot_addressed(event.bot, event.message);
 
 	if (!incr)
 		return;
@@ -53,7 +53,7 @@ static void magic8(struct cbot_event event, struct cbot_actions actions)
 		return;
 
 	int response = rand() % (sizeof(responses) / sizeof(char *));
-	actions.send(event.bot, event.channel, responses[response],
+	cbot_send(event.bot, event.channel, responses[response],
 	             event.username);
 }
 

@@ -166,14 +166,13 @@ static void karma_sort()
 /**
  * @brief Print the top KARMA_BEST words.
  * @param event The event we're responding to.
- * @param actions Actions available to us.
  */
-static void karma_best(struct cbot_event event, struct cbot_actions actions)
+static void karma_best(struct cbot_event event)
 {
 	size_t i;
 	karma_sort();
 	for (i = 0; i < (nkarma > KARMA_TOP ? KARMA_TOP : nkarma); i++) {
-		actions.send(event.bot, event.channel, "%d. %s (%d karma)",
+		cbot_send(event.bot, event.channel, "%d. %s (%d karma)",
 		             i + 1, karma[i].word, karma[i].karma);
 	}
 }
@@ -182,25 +181,23 @@ static void karma_best(struct cbot_event event, struct cbot_actions actions)
  * @brief Lookup a word's karma and send it in a message to the event origin.
  * @param word The word to look up karma for.
  * @param event The event we're responding to.
- * @param actions Actions given to us by bot.
  */
-static void karma_check(const char *word, struct cbot_event event,
-                        struct cbot_actions actions)
+static void karma_check(const char *word, struct cbot_event event)
 {
 	ssize_t index;
 
 	// An empty capture means we should list out the best karma.
 	if (strcmp(word, "") == 0) {
-		karma_best(event, actions);
+		karma_best(event);
 		return;
 	}
 
 	index = find_karma(word);
 	if (index < 0) {
-		actions.send(event.bot, event.channel, "%s has no karma yet",
+		cbot_send(event.bot, event.channel, "%s has no karma yet",
 		             word);
 	} else {
-		actions.send(event.bot, event.channel, "%s has %d karma", word,
+		cbot_send(event.bot, event.channel, "%s has %d karma", word,
 		             karma[index].karma);
 	}
 }
@@ -212,12 +209,11 @@ static void karma_check(const char *word, struct cbot_event event,
  * "increment", and "decrement" operations that are available.
  *
  * @param event Information for the event.
- * @param actions Actions the plugin may take.
  */
-static void karma_handler(struct cbot_event event, struct cbot_actions actions)
+static void karma_handler(struct cbot_event event)
 {
 	size_t *indices;
-	int increment = actions.addressed(event.bot, event.message);
+	int increment = cbot_addressed(event.bot, event.message);
 
 	if (increment &&
 	    sc_regex_exec(check, event.message + increment, &indices) != -1) {
@@ -228,7 +224,7 @@ static void karma_handler(struct cbot_event event, struct cbot_actions actions)
 		// capture.
 		char *word = sc_regex_get_capture(event.message + increment,
 		                                  indices, 1);
-		karma_check(word, event, actions);
+		karma_check(word, event);
 		free(word);
 		free(indices);
 	} else if (sc_regex_exec(augment, event.message, &indices) != -1) {
@@ -253,11 +249,11 @@ static void karma_handler(struct cbot_event event, struct cbot_actions actions)
 		                            0);
 		number = sc_regex_get_capture(event.message + increment,
 		                              indices, 1);
-		if (actions.is_authorized(event.bot, hash)) {
+		if (cbot_is_authorized(event.bot, hash)) {
 			int index = find_or_create_karma(word);
 			karma[index].karma = atoi(number);
 		} else {
-			actions.send(
+			cbot_send(
 			        event.bot, event.channel,
 			        "sorry, you're not authorized to do that!");
 		}

@@ -54,46 +54,30 @@ void event_connect(irc_session_t *session, const char *event,
 	log_event(session, event, origin, params, count);
 }
 
-void cbot_irc_send(const struct cbot *cbot, const char *dest,
-                   const char *format, ...)
+static void cbot_irc_send(const struct cbot *cbot, const char *to, const char *msg)
 {
-	va_list va;
-	cbuf cb;
-	irc_session_t *session = cbot->backend;
-	va_start(va, format);
-	cb_init(&cb, 1024);
-	cb_vprintf(&cb, format, va);
-	irc_cmd_msg(session, dest, cb.buf);
-	cb_destroy(&cb);
-	va_end(va);
+	irc_session_t *session = cbot->backend->backend_data;
+	irc_cmd_msg(session, to, msg);
 }
 
-void cbot_irc_me(const struct cbot *cbot, const char *dest, const char *format,
-                 ...)
+static void cbot_irc_me(const struct cbot *cbot, const char *to, const char *msg)
 {
-	va_list va;
-	cbuf cb;
-	irc_session_t *session = cbot->backend;
-	va_start(va, format);
-	cb_init(&cb, 1024);
-	cb_vprintf(&cb, format, va);
-	irc_cmd_me(session, dest, cb.buf);
-	cb_destroy(&cb);
-	va_end(va);
+	irc_session_t *session = cbot->backend->backend_data;
+	irc_cmd_me(session, to, msg);
 }
 
-void cbot_irc_op(const struct cbot *cbot, const char *channel,
-                 const char *person)
+static void cbot_irc_op(const struct cbot *cbot, const char *channel,
+                 const char *username)
 {
-	irc_session_t *session = cbot->backend;
+	irc_session_t *session = cbot->backend->backend_data;
 	cbuf cb;
 	cb_init(&cb, 256);
-	cb_printf(&cb, "+o %s", person);
+	cb_printf(&cb, "+o %s", username);
 	irc_cmd_channel_mode(session, channel, cb.buf);
 	cb_destroy(&cb);
 }
 
-void cbot_irc_join(const struct cbot *cbot, const char *channel,
+static void cbot_irc_join(const struct cbot *cbot, const char *channel,
                    const char *password)
 {
 	irc_session_t *session = cbot->backend;
@@ -184,6 +168,7 @@ void run_cbot_irc(int argc, char *argv[])
 	irc_callbacks_t callbacks;
 	irc_session_t *session;
 	struct cbot *cbot;
+	struct cbot_backend backend;
 	smb_ad args;
 	char *name = "cbot";
 	char *host = "irc.case.edu";
@@ -228,11 +213,12 @@ void run_cbot_irc(int argc, char *argv[])
 	}
 	sscanf(port, "%hu", &port_num);
 
-	cbot = cbot_create(name);
-	cbot->actions.send = cbot_irc_send;
-	cbot->actions.me = cbot_irc_me;
-	cbot->actions.op = cbot_irc_op;
-	cbot->actions.join = cbot_irc_join;
+	backend.send = cbot_irc_send;
+	backend.me = cbot_irc_me;
+	backend.op = cbot_irc_op;
+	backend.join = cbot_irc_join;
+
+	cbot = cbot_create(name, &backend);
 
 	// Set the hash in the bot.
 	void *decoded = base64_decode(hash, 20);
@@ -265,8 +251,9 @@ void run_cbot_irc(int argc, char *argv[])
 		        irc_strerror(irc_errno(session)));
 		exit(EXIT_FAILURE);
 	}
+	backend.backend_data = session;
 
-	cbot->backend = session;
+	cbot->backend = &backend;
 	cbot_load_plugins(cbot, plugin_dir, ll_get_iter(args.bare_strings));
 
 	// Set libircclient to parse nicknames for us.

@@ -15,11 +15,11 @@
 
 struct sc_regex *r;
 
-static void lod(struct cbot_event event, struct cbot_actions actions)
+static void lod(struct cbot_event event)
 {
 	char *target;
 	size_t *rawcap = NULL;
-	int incr = actions.addressed(event.bot, event.message);
+	int incr = cbot_addressed(event.bot, event.message);
 
 	if (!incr)
 		return;
@@ -30,7 +30,7 @@ static void lod(struct cbot_event event, struct cbot_actions actions)
 	}
 
 	target = sc_regex_get_capture(event.message + incr, rawcap, 0);
-	actions.send(event.bot, event.channel, "%s: ಠ_ಠ", target);
+	cbot_send(event.bot, event.channel, "%s: ಠ_ಠ", target);
 	free(rawcap);
 	free(target);
 }

@@ -16,7 +16,43 @@
 
 #include "cbot_private.h"
 
-static int cbot_addressed(const struct cbot *bot, const char *message)
+void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
+               ...)
+{
+	va_list va;
+	cbuf cb;
+	va_start(va, format);
+	cb_init(&cb, 1024);
+	cb_vprintf(&cb, format, va);
+	cbot->backend->send(cbot, dest, cb.buf);
+	cb_destroy(&cb);
+	va_end(va);
+}
+
+void cbot_me(const struct cbot *cbot, const char *dest, const char *format, ...)
+{
+	va_list va;
+	cbuf cb;
+	va_start(va, format);
+	cb_init(&cb, 1024);
+	cb_vprintf(&cb, format, va);
+	cbot->backend->me(cbot, dest, cb.buf);
+	cb_destroy(&cb);
+	va_end(va);
+}
+
+void cbot_op(const struct cbot *cbot, const char *channel, const char *person)
+{
+	cbot->backend->op(cbot, channel, person);
+}
+
+void cbot_join(const struct cbot *cbot, const char *channel,
+               const char *password)
+{
+	cbot->backend->join(cbot, channel, password);
+}
+
+int cbot_addressed(const struct cbot *bot, const char *message)
 {
 	int increment = strlen(bot->name);
 	if (strncmp(bot->name, message, increment) == 0) {
@@ -48,10 +84,9 @@ void cbot_free_handler_list(struct cbot_handler_list *list)
    need to implement the functions that allow cbot to send on your backend
    (typically IRC, but also console).
    @param name The name of the cbot.
-   @param send The "send" function.
    @return A new cbot instance.
  */
-struct cbot *cbot_create(const char *name)
+struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 {
 #define CBOT_INIT_ALLOC 32
 	struct cbot *cbot = smb_new(struct cbot, 1);
@@ -59,9 +94,8 @@ struct cbot *cbot_create(const char *name)
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
 		cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
 	}
-	cbot->actions.addressed = cbot_addressed;
-	cbot->actions.is_authorized = cbot_is_authorized;
 	OpenSSL_add_all_digests();
+	cbot->backend = backend;
 	return cbot;
 }
 
@@ -126,7 +160,7 @@ void cbot_handle_event(struct cbot *bot, struct cbot_event event)
 
 	for (size_t i = 0; i < list->num; i++) {
 		cbot_handler_t handler = list->handler[i];
-		handler(event, event.bot->actions);
+		handler(event);
 	}
 }
 

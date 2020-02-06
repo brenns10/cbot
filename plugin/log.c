@@ -39,7 +39,7 @@ static void write_string(FILE *f, const char *str)
  * - username: sender of the message
  * - message: content of message
  */
-static void cbot_log(struct cbot_event event, struct cbot_actions actions)
+static void cbot_log(struct cbot_event event)
 {
 #define NSEC_PER_SEC 10000000000.0
 	struct timespec now;

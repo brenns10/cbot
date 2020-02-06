@@ -17,10 +17,10 @@
 struct sc_regex *r;
 const int num_captures = 1;
 
-static void emote(struct cbot_event event, struct cbot_actions actions)
+static void emote(struct cbot_event event)
 {
 	size_t *indices;
-	int incr = actions.addressed(event.bot, event.message);
+	int incr = cbot_addressed(event.bot, event.message);
 
 	if (!incr)
 		return;
@@ -32,7 +32,7 @@ static void emote(struct cbot_event event, struct cbot_actions actions)
 	}
 
 	char *c = sc_regex_get_capture(event.message, indices, 0);
-	actions.me(event.bot, event.channel, c);
+	cbot_me(event.bot, event.channel, c);
 	free(c);
 	free(indices);
 }

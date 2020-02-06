@@ -13,10 +13,10 @@ static char *help_lines[] = {
 #include "help.h"
 };
 
-static void help(struct cbot_event event, struct cbot_actions actions)
+static void help(struct cbot_event event)
 {
 	// Make sure the message is addressed to the bot.
-	int increment = actions.addressed(event.bot, event.message);
+	int increment = cbot_addressed(event.bot, event.message);
 	if (!increment)
 		return;
 
@@ -27,7 +27,7 @@ static void help(struct cbot_event event, struct cbot_actions actions)
 	// Send the help text.
 	size_t i;
 	for (i = 0; i < sizeof(help_lines) / sizeof(char *); i++) {
-		actions.send(event.bot, event.username, help_lines[i]);
+		cbot_send(event.bot, event.username, help_lines[i]);
 	}
 }
 

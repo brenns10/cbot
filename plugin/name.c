@@ -8,14 +8,14 @@
 
 struct sc_regex *r;
 
-static void name(struct cbot_event event, struct cbot_actions actions)
+static void name(struct cbot_event event)
 {
 	// Make sure it maches our regex.
 	if (sc_regex_exec(r, event.message, NULL) == -1)
 		return;
 
 	// Send our response.
-	actions.send(event.bot, event.channel,
+	cbot_send(event.bot, event.channel,
 	             "My name is CBot.  My source lives at "
 	             "https://github.com/brenns10/cbot");
 }
