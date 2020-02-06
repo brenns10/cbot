@@ -8,7 +8,7 @@ sources = [
   'src/cbot_cli.c',
   'src/cbot_hashchain.c',
   'src/cbot_irc.c',
-  'src/main.c',
+  #'src/main.c',
 ]
 
 inc = include_directories('inc')
@@ -35,11 +35,22 @@ libsc_collections_dep = dependency(
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
 
-cbot = executable(
+
+libcbot = shared_library(
   'cbot', sources,
   include_directories : inc,
   install : true,
   dependencies : [libstephen_dep, libircclient_dep, crypto_dep, dl_dep],
+)
+libcbot_dep = declare_dependency(
+  include_directories : inc,
+  link_with : libcbot,
+)
+cbot = executable(
+  'cbot', ['src/main.c'],
+  include_directories : inc,
+  install : true,
+  dependencies : [libcbot_dep],
 )
 
 plugins = [
@@ -60,7 +71,7 @@ foreach f: plugins
     shared_library(
       f, 'plugin/' + f + '.c',
       include_directories : inc, install : true,
-      dependencies : [libsc_regex_dep, libsc_collections_dep],
+      dependencies : [libcbot_dep, libsc_regex_dep, libsc_collections_dep],
       name_prefix : '',
     )
   ]
