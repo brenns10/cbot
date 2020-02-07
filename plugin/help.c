@@ -13,26 +13,16 @@ static char *help_lines[] = {
 #include "help.h"
 };
 
-static void help(struct cbot_event event)
+static void help(struct cbot_message_event *event, void *user)
 {
-	// Make sure the message is addressed to the bot.
-	int increment = cbot_addressed(event.bot, event.message);
-	if (!increment)
-		return;
-
-	// Make sure the message matches our regex.
-	if (sc_regex_exec(r, event.message + increment, NULL) == -1)
-		return;
-
-	// Send the help text.
 	size_t i;
 	for (i = 0; i < sizeof(help_lines) / sizeof(char *); i++) {
-		cbot_send(event.bot, event.username, help_lines[i]);
+		cbot_send(event->bot, event->username, help_lines[i]);
 	}
 }
 
 void help_load(struct cbot *bot)
 {
-	r = sc_regex_compile("[Hh][Ee][Ll][Pp].*");
-	cbot_register(bot, CBOT_CHANNEL_MSG, help);
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)help, NULL,
+	              "[Hh][Ee][Ll][Pp].*");
 }

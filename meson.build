@@ -30,7 +30,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.3.1',
+  version: '>=0.4.0',
 )
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
@@ -40,7 +40,7 @@ libcbot = shared_library(
   'cbot', sources,
   include_directories : inc,
   install : true,
-  dependencies : [libstephen_dep, libircclient_dep, crypto_dep, dl_dep],
+  dependencies : [libsc_collections_dep, libsc_regex_dep, libstephen_dep, libircclient_dep, crypto_dep, dl_dep],
 )
 libcbot_dep = declare_dependency(
   include_directories : inc,

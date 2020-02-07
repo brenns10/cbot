@@ -33,30 +33,6 @@ static size_t karma_alloc = 128;
 static size_t nkarma = 0;
 
 /**
- * A regex which matches karma increments and decrements.
- * - capture 0: the word
- * - capture 1: the operation (++ or --)
- */
-static struct sc_regex *augment;
-/**
- * A regex which matches the karma command, including its optional argument.
- * - capture 0: space plus capture 1
- * - capture 1: the word being "asked" about, or empty string
- */
-static struct sc_regex *check;
-/**
- * A regex for admin set command
- * - capture 0: hash
- * - capture 1: the word
- * - capture 2: the number
- */
-static struct sc_regex *set;
-/**
- *A regex for forgetting a person
- */
-static struct sc_regex *forget;
-
-/**
  * @brief Return the index of a word in the karma array, or -1.
  * @param word The word to look up.
  * @returns The word's index, or -1 if it is not present in the array.
@@ -140,13 +116,6 @@ static size_t delete_if_exists(const char *word)
  *These functions are for sorting karma entries using C's built in qsort!
  */
 
-static void karma_change(const char *word, int change)
-{
-	size_t index;
-	index = find_or_create_karma(word);
-	karma[index].karma += change;
-}
-
 static int karma_compare(const void *l, const void *r)
 {
 	const karma_t *lhs = l, *rhs = r;
@@ -167,104 +136,73 @@ static void karma_sort()
  * @brief Print the top KARMA_BEST words.
  * @param event The event we're responding to.
  */
-static void karma_best(struct cbot_event event)
+static void karma_best(struct cbot_message_event *event)
 {
 	size_t i;
 	karma_sort();
 	for (i = 0; i < (nkarma > KARMA_TOP ? KARMA_TOP : nkarma); i++) {
-		cbot_send(event.bot, event.channel, "%d. %s (%d karma)",
-		             i + 1, karma[i].word, karma[i].karma);
+		cbot_send(event->bot, event->channel, "%d. %s (%d karma)",
+		          i + 1, karma[i].word, karma[i].karma);
 	}
 }
 
-/**
- * @brief Lookup a word's karma and send it in a message to the event origin.
- * @param word The word to look up karma for.
- * @param event The event we're responding to.
- */
-static void karma_check(const char *word, struct cbot_event event)
+static void karma_check(struct cbot_message_event *event, void *user)
 {
 	ssize_t index;
+	char *word = sc_regex_get_capture(event->message, event->indices, 1);
 
 	// An empty capture means we should list out the best karma.
 	if (strcmp(word, "") == 0) {
+		free(word);
 		karma_best(event);
 		return;
 	}
 
 	index = find_karma(word);
 	if (index < 0) {
-		cbot_send(event.bot, event.channel, "%s has no karma yet",
-		             word);
+		cbot_send(event->bot, event->channel, "%s has no karma yet",
+		          word);
 	} else {
-		cbot_send(event.bot, event.channel, "%s has %d karma", word,
-		             karma[index].karma);
+		cbot_send(event->bot, event->channel, "%s has %d karma", word,
+		          karma[index].karma);
 	}
+	free(word);
 }
 
-/**
- * @brief The karma plugin's single handler.
- *
- * This function receives an IRC message event and handles the "check",
- * "increment", and "decrement" operations that are available.
- *
- * @param event Information for the event.
- */
-static void karma_handler(struct cbot_event event)
+static void karma_change(struct cbot_message_event *event, void *user)
 {
-	size_t *indices;
-	int increment = cbot_addressed(event.bot, event.message);
+	char *word = sc_regex_get_capture(event->message, event->indices, 0);
+	char *op = sc_regex_get_capture(event->message, event->indices, 1);
+	int index = find_or_create_karma(word);
+	karma[index].karma += (strcmp(op, "++") == 0 ? 1 : -1);
+	free(word);
+	free(op);
+}
 
-	if (increment &&
-	    sc_regex_exec(check, event.message + increment, &indices) != -1) {
-		// When the message is addressed to the bot and matches the
-		// karma check regular expression.
-
-		// Execute the karma check operation, using the second regex
-		// capture.
-		char *word = sc_regex_get_capture(event.message + increment,
-		                                  indices, 1);
-		karma_check(word, event);
-		free(word);
-		free(indices);
-	} else if (sc_regex_exec(augment, event.message, &indices) != -1) {
-		// Or, when the message matches the "augment" regular
-		// expression, we update the karma.
-		char *word, *op;
-		word = sc_regex_get_capture(event.message, indices, 0);
-		op = sc_regex_get_capture(event.message, indices, 1);
-		karma_change(word, strcmp(op, "++") == 0 ? 1 : -1);
-		free(word);
-		free(op);
-		free(indices);
-	} else if (increment && sc_regex_exec(set, event.message + increment,
-	                                      &indices) != -1) {
-		// Or, when the message is addressed to the bot and the command
-		// is to set-karma, we will attempt to auth the command and
-		// execute it.
-		char *hash, *word, *number;
-		hash = sc_regex_get_capture(event.message + increment, indices,
-		                            2);
-		word = sc_regex_get_capture(event.message + increment, indices,
-		                            0);
-		number = sc_regex_get_capture(event.message + increment,
-		                              indices, 1);
-		if (cbot_is_authorized(event.bot, hash)) {
-			int index = find_or_create_karma(word);
-			karma[index].karma = atoi(number);
-		} else {
-			cbot_send(
-			        event.bot, event.channel,
-			        "sorry, you're not authorized to do that!");
-		}
-		free(word);
+static void karma_set(struct cbot_message_event *event, void *user)
+{
+	char *word, *value, *hash;
+	int index;
+	hash = sc_regex_get_capture(event->message, event->indices, 2);
+	if (!cbot_is_authorized(event->bot, hash)) {
 		free(hash);
-		free(number);
-		free(indices);
-	} else if (increment && sc_regex_exec(forget, event.message + increment,
-	                                      NULL) != -1) {
-		delete_if_exists(event.username);
+		cbot_send(event->bot, event->channel,
+		          "sorry, you're not authorized to do that!");
+		return;
 	}
+
+	word = sc_regex_get_capture(event->message, event->indices, 0);
+	value = sc_regex_get_capture(event->message, event->indices, 1);
+	index = find_or_create_karma(word);
+	karma[index].karma = atoi(value);
+	free(word);
+	free(value);
+	free(hash);
+}
+
+static void karma_forget(struct cbot_message_event *event, void *user)
+{
+	delete_if_exists(event->username);
 }
 
 /**
@@ -280,10 +218,13 @@ void karma_load(struct cbot *bot)
 {
 #define KARMA_WORD "^ \t\n"
 #define NOT_KARMA_WORD " \t\n"
-	augment = sc_regex_compile(".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
-	check = sc_regex_compile("karma(\\s+([" KARMA_WORD "]+))?");
-	set = sc_regex_compile("set-karma +([" KARMA_WORD
-	                       "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
-	forget = sc_regex_compile("forget-me");
-	cbot_register(bot, CBOT_CHANNEL_MSG, karma_handler);
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_check, NULL,
+	              "karma(\\s+([" KARMA_WORD "]+))?");
+	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)karma_change, NULL,
+	              ".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_set, NULL,
+	              "set-karma +([" KARMA_WORD
+	              "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_forget, NULL,
+	              "forget[ -]me");
 }

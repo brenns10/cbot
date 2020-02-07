@@ -13,11 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sc-regex.h"
-
 #include "cbot/cbot.h"
-
-struct sc_regex *query;
 
 char *responses[] = {
 	"It is certain.",
@@ -42,23 +38,15 @@ char *responses[] = {
 	"Very doubtful.",
 };
 
-static void magic8(struct cbot_event event)
+static void magic8(struct cbot_message_event *event, void *user)
 {
-	int incr = cbot_addressed(event.bot, event.message);
-
-	if (!incr)
-		return;
-
-	if (sc_regex_exec(query, event.message + incr, NULL) == -1)
-		return;
-
 	int response = rand() % (sizeof(responses) / sizeof(char *));
-	cbot_send(event.bot, event.channel, responses[response],
-	             event.username);
+	cbot_send(event->bot, event->channel, responses[response],
+	          event->username);
 }
 
 void magic8_load(struct cbot *bot)
 {
-	query = sc_regex_compile("(magic8|8ball).+");
-	cbot_register(bot, CBOT_CHANNEL_MSG, magic8);
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)magic8, NULL,
+	              "(magic8|8ball).+");
 }

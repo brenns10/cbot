@@ -3,6 +3,7 @@
  * secret to use as a one-time authentication with the bot in public
  */
 
+#include <ctype.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>

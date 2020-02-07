@@ -9,21 +9,15 @@
 
 #include <string.h>
 
-#include "sc-regex.h"
-
 #include "cbot/cbot.h"
 
-struct sc_regex *greeting;
-
-static void cbot_hello(struct cbot_event event)
+static void cbot_hello(struct cbot_message_event *event, void *user)
 {
-	if (sc_regex_exec(greeting, event.message, NULL) == -1)
-		return;
-	cbot_send(event.bot, event.channel, "hello, %s!", event.username);
+	cbot_send(event->bot, event->channel, "hello, %s!", event->username);
 }
 
 void greet_load(struct cbot *bot)
 {
-	greeting = sc_regex_compile("[Hh](ello|i|ey),? +[Cc][Bb]ot!?");
-	cbot_register(bot, CBOT_CHANNEL_MSG, cbot_hello);
+	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)cbot_hello, NULL,
+	              "[Hh](ello|i|ey),? +[Cc][Bb]ot!?");
 }

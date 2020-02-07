@@ -7,37 +7,86 @@
 
 #include <stddef.h>
 
+#include "sc-collections.h"
+
 struct cbot;
 
 /**
  * An enumeration of possible events that can be handled by a plugin.
  */
 enum cbot_event_type {
-	/* A message in a channel. */
-	CBOT_CHANNEL_MSG = 0,
-	/* CBot hears an action message. */
-	CBOT_CHANNEL_ACTION,
-	/* A user joins a channel (no regex matching here). */
+	/* Any action message in a channel */
+	CBOT_MESSAGE,
+	/* Any message addressed to CBot */
+	CBOT_ADDRESSED,
+
+	/* A user joins a channel */
 	CBOT_JOIN,
-	/* A user leaves a channel. */
+	/* A user leaves a channel */
 	CBOT_PART,
+
+	/* A user changes nickname */
+	CBOT_NICK,
 
 	_CBOT_NUM_EVENT_TYPES_
 
 };
 
 /**
- * Details associated with an event, which are passed to an event handler.
+ * A general event type. This holds only a reference to the bot, and the event
+ * type. From this information, it should be possible to cast a pointer to a
+ * more specific event type (such as cbot_regex_event).
  */
 struct cbot_event {
 	struct cbot *bot;
-	const char *name;
-
+	enum cbot_event_type type;
+};
+struct cbot_message_event {
+	struct cbot *bot;
 	enum cbot_event_type type;
 	const char *channel;
 	const char *username;
 	const char *message;
+	bool is_action;
+	size_t *indices;
+	int num_captures;
 };
+struct cbot_user_event {
+	struct cbot *bot;
+	enum cbot_event_type type; /* CBOT_JOIN, CBOT_PART */
+	const char *channel;
+	const char *username;
+};
+struct cbot_nick_event {
+	struct cbot *bot;
+	enum cbot_event_type type; /* CBOT_NICK */
+	const char *old_username;
+	const char *new_username;
+};
+
+struct cbot_member {
+	char *username;
+	struct sc_list_head list;
+};
+struct cbot_channel_info {
+	char *channel_name;
+	char *topic;
+	struct sc_list_head members;
+};
+const struct cbot_channel_info *cbot_get_channel_info(const char *channel);
+
+struct cbot_membership {
+	char *channel;
+	struct sc_list_head list;
+};
+struct cbot_user_info {
+	char *username;
+	char *realname;
+	struct sc_list_head memberships;
+};
+const struct cbot_user_info *cbot_get_user_info(const char *user);
+
+void *cbot_get_db_conn(void);
 
 /**
  * Send a message to a destination.
@@ -46,7 +95,8 @@ struct cbot_event {
  * @param format Format string for your message.
  * @param ... Arguments to the format string.
  */
-void cbot_send(const struct cbot *bot, const char *dest, const char *format, ...);
+void cbot_send(const struct cbot *bot, const char *dest, const char *format,
+               ...);
 /**
  * Send a "me" (action) message to a destination.
  * @param bot The bot provided in the event struct.
@@ -87,7 +137,8 @@ void cbot_op(const struct cbot *bot, const char *channel, const char *message);
  * @param channel Channel to join.
  * @param password Password for channel, or NULL if there's none.
  */
-void cbot_join(const struct cbot *bot, const char *channel, const char *password);
+void cbot_join(const struct cbot *bot, const char *channel,
+               const char *password);
 
 /**
  * An event handler function. Takes an event and does some action to handle it.
@@ -96,17 +147,20 @@ void cbot_join(const struct cbot *bot, const char *channel, const char *password
  * handlers. These handlers take event parameters and then they do something.
  *
  * @param event Structure containing details of the event to handle.
+ * @param user User data for the handler
  */
-typedef void (*cbot_handler_t)(struct cbot_event event);
+typedef void (*cbot_handler_t)(struct cbot_event *event, void *user);
 
 /**
  * @brief Register a handler for an event
  * @param bot Handle to the cbot instance
- * @param event Event type you are registering to handle.
+ * @param event Event type you are registering to handle
  * @param handler Event handler callback
+ * @param user User pointer for this function
+ * @param regex Regular expression (if applicable)
  */
 void cbot_register(struct cbot *bot, enum cbot_event_type type,
-                   cbot_handler_t handler);
+                   cbot_handler_t handler, void *user, char *regex);
 
 /**
  * Main plugin loader function signture.

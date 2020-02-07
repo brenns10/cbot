@@ -39,7 +39,7 @@ static void write_string(FILE *f, const char *str)
  * - username: sender of the message
  * - message: content of message
  */
-static void cbot_log(struct cbot_event event)
+static void cbot_log(struct cbot_message_event *event, void *user)
 {
 #define NSEC_PER_SEC 10000000000.0
 	struct timespec now;
@@ -59,7 +59,7 @@ static void cbot_log(struct cbot_event event)
 	 * Create filename and open it.
 	 */
 	sc_cb_init(&filename, 40);
-	sc_cb_printf(&filename, "%s-%04d-%02d-%02d.log", event.channel,
+	sc_cb_printf(&filename, "%s-%04d-%02d-%02d.log", event->channel,
 	             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 	f = fopen(filename.buf, "a");
 
@@ -67,9 +67,11 @@ static void cbot_log(struct cbot_event event)
 	 * Write log line.
 	 */
 	fprintf(f, "{\"timestamp\": %f, \"username\": ", time_float);
-	write_string(f, event.username);
+	write_string(f, event->username);
 	fprintf(f, ", \"message\": ");
-	write_string(f, event.message);
+	write_string(f, event->message);
+	if (event->is_action)
+		fprintf(f, ", action: true");
 	fprintf(f, "}\n");
 
 	/*
@@ -81,5 +83,5 @@ static void cbot_log(struct cbot_event event)
 
 void log_load(struct cbot *bot)
 {
-	cbot_register(bot, CBOT_CHANNEL_MSG, cbot_log);
+	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)cbot_log, NULL, NULL);
 }

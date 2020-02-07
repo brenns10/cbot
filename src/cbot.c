@@ -16,6 +16,11 @@
 
 #include "cbot_private.h"
 
+/********
+ * Functions which plugins can call to perform actions. These are generally
+ * delegated to the backends.
+ ********/
+
 void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
                ...)
 {
@@ -23,7 +28,7 @@ void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
 	cbuf cb;
 	va_start(va, format);
 	cb_init(&cb, 1024);
-	cb_vprintf(&cb, format, va);
+	cb_vprintf(&cb, (char *)format, va);
 	cbot->backend->send(cbot, dest, cb.buf);
 	cb_destroy(&cb);
 	va_end(va);
@@ -35,7 +40,7 @@ void cbot_me(const struct cbot *cbot, const char *dest, const char *format, ...)
 	cbuf cb;
 	va_start(va, format);
 	cb_init(&cb, 1024);
-	cb_vprintf(&cb, format, va);
+	cb_vprintf(&cb, (char *)format, va);
 	cbot->backend->me(cbot, dest, cb.buf);
 	cb_destroy(&cb);
 	va_end(va);
@@ -65,17 +70,9 @@ int cbot_addressed(const struct cbot *bot, const char *message)
 	return 0;
 }
 
-void cbot_init_handler_list(struct cbot_handler_list *list, size_t init_alloc)
-{
-	list->handler = smb_new(cbot_handler_t, init_alloc);
-	list->num = 0;
-	list->alloc = init_alloc;
-}
-
-void cbot_free_handler_list(struct cbot_handler_list *list)
-{
-	smb_free(list->handler);
-}
+/********
+ * Functions related to the bot lifetime
+ ********/
 
 /**
    @brief Create a cbot instance.
@@ -88,11 +85,10 @@ void cbot_free_handler_list(struct cbot_handler_list *list)
  */
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 {
-#define CBOT_INIT_ALLOC 32
-	struct cbot *cbot = smb_new(struct cbot, 1);
+	struct cbot *cbot = malloc(sizeof(struct cbot));
 	cbot->name = name;
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
-		cbot_init_handler_list(&cbot->hlists[i], CBOT_INIT_ALLOC);
+		sc_list_init(&cbot->handlers[i]);
 	}
 	OpenSSL_add_all_digests();
 	cbot->backend = backend;
@@ -105,91 +101,155 @@ struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
  */
 void cbot_delete(struct cbot *cbot)
 {
+	struct cbot_handler *hdlr, *next;
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
-		cbot_free_handler_list(&cbot->hlists[i]);
+		sc_list_for_each_safe(hdlr, next, &cbot->handlers[i],
+		                      handler_list, struct cbot_handler)
+		{
+			if (hdlr->regex) {
+				sc_regex_free(hdlr->regex);
+			}
+			sc_list_remove(&hdlr->handler_list);
+			free(hdlr);
+		}
 	}
 	smb_free(cbot);
 	EVP_cleanup();
 }
 
-static void cbot_add_to_handler_list(struct cbot_handler_list *list,
-                                     cbot_handler_t handler)
-{
-	if (list->num >= list->alloc) {
-		list->alloc *= 2;
-		list->handler =
-		        smb_renew(cbot_handler_t, list->handler, list->alloc);
-	}
-	list->handler[list->num] = handler;
-	list->num++;
-}
-
-static struct cbot_handler_list *cbot_list_for_event(struct cbot *bot,
-                                                     enum cbot_event_type type)
-{
-	return &bot->hlists[type];
-}
+/*********
+ * Functions related to handlers: registration and handling of events
+ *********/
 
 /**
-   Register an event handler for CBot!
-
-   @param bot The bot instance to register into.
-   @param type The type of event to register a handler for.
-   @param handler Handler to register.
+ * Register an event handler for CBot!
+ * @param bot The bot instance to register into.
+ * @param type The type of event to register a handler for.
+ * @param handler Handler to register.
  */
 void cbot_register(struct cbot *bot, enum cbot_event_type type,
-                   cbot_handler_t handler)
+                   cbot_handler_t handler, void *user, char *regex)
 {
-	cbot_add_to_handler_list(cbot_list_for_event(bot, type), handler);
+	struct cbot_handler *hdlr = malloc(sizeof(struct cbot_handler));
+	hdlr->handler = handler;
+	hdlr->user = user;
+	if (regex)
+		hdlr->regex = sc_regex_compile(regex);
+	sc_list_insert_end(&bot->handlers[type], &hdlr->handler_list);
 }
 
-/**
-   Dispatch an event for CBot.
-
-   This goes through the correct handler list, looks for a matching handler, and
-   calls the event handler. It doesn't terminate after the first event, because
-   more than one plugin may want to see the event. So plugins have to make sure
-   they don't get duplicate events accidentally.
-
-   @param bot The bot we're working with.
-   @param event The event to dispatch.
- */
-void cbot_handle_event(struct cbot *bot, struct cbot_event event)
+static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,
+                              enum cbot_event_type type)
 {
-	struct cbot_handler_list *list = cbot_list_for_event(bot, event.type);
-
-	for (size_t i = 0; i < list->num; i++) {
-		cbot_handler_t handler = list->handler[i];
-		handler(event);
+	struct cbot_handler *hdlr;
+	struct cbot_message_event copy;
+	size_t *indices;
+	int result;
+	sc_list_for_each_entry(hdlr, &bot->handlers[type], handler_list,
+	                       struct cbot_handler)
+	{
+		if (!hdlr->regex) {
+			event.indices = NULL;
+			event.num_captures = 0;
+			copy = event; /* safe in case of modification */
+			hdlr->handler((struct cbot_event *)&copy, hdlr->user);
+		} else {
+			result = sc_regex_exec(hdlr->regex, event.message,
+			                       &indices);
+			if (result != -1) {
+				event.indices = indices;
+				event.num_captures =
+				        sc_regex_num_captures(hdlr->regex);
+				copy = event;
+				hdlr->handler((struct cbot_event *)&copy,
+				              hdlr->user);
+				free(indices);
+			}
+		}
 	}
 }
 
 /**
-   @brief Helper function that handles channel messages.
-
-   CBot has the concept of messages directed AT the bot versus messages said in
-   a channel, but not specifically targeted at the bot. IRC doesn't have this
-   separation, so we have to separate out the two cases and then call the
-   appropriate handlers.
-
-   @param bot The bot we're operating on.
-   @param channel The channel this message came in.
-   @param user The user who said it.
-   @param message The message itself.
+ * @brief Function called by backends to handle standard messages
+ *
+ * CBot has the concept of messages directed AT the bot versus messages said in
+ * a channel, but not specifically targeted at the bot. IRC doesn't have this
+ * separation, so we have to separate out the two cases and then call the
+ * appropriate handlers.
+ *
+ * IRC also has tho concept of "action" messages, e.g. /me says hello. This
+ * function serves these messages too, using the "action" flag.
+ *
+ * @param bot The bot we're operating on
+ * @param channel The channel this message came in
+ * @param user The user who said it
+ * @param message The message itself
+ * @param action True if the message was a CTCP action, false otherwise.
  */
-void cbot_handle_channel_message(struct cbot *bot, const char *channel,
-                                 const char *user, const char *message)
+void cbot_handle_message(struct cbot *bot, const char *channel,
+                         const char *user, const char *message, bool action)
 {
-	struct cbot_event event;
+	struct cbot_message_event event;
+	int address_increment = cbot_addressed(bot, message);
 
+	/* shared fields */
 	event.bot = bot;
-	event.type = CBOT_CHANNEL_MSG;
 	event.channel = channel;
 	event.username = user;
-	event.message = message;
+	event.is_action = action;
+	event.indices = NULL;
 
-	cbot_handle_event(bot, event);
+	/* When cbot is directly addressed */
+	if (address_increment) {
+		event.message = message + address_increment;
+		event.type = CBOT_ADDRESSED;
+		cbot_dispatch_msg(bot, event, CBOT_ADDRESSED);
+	}
+
+	event.type = CBOT_MESSAGE;
+	event.message = message;
+	cbot_dispatch_msg(bot, event, CBOT_MESSAGE);
 }
+
+void cbot_handle_user_event(struct cbot *bot, const char *channel,
+                            const char *user, enum cbot_event_type type)
+{
+	struct cbot_user_event event, copy;
+	struct cbot_handler *hdlr;
+	event.bot = bot;
+	event.type = type;
+	event.channel = channel;
+	event.username = user;
+
+	sc_list_for_each_entry(hdlr, &bot->handlers[type], handler_list,
+	                       struct cbot_handler)
+	{
+		copy = event; /* safe in case of modification */
+		hdlr->handler((struct cbot_event *)&copy, hdlr->user);
+	}
+}
+
+void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
+                            const char *new_username)
+{
+	struct cbot_nick_event event, copy;
+	struct cbot_handler *hdlr;
+	event.bot = bot;
+	event.type = CBOT_NICK;
+	event.old_username = old_username;
+	event.new_username = new_username;
+
+	sc_list_for_each_entry(hdlr, &bot->handlers[CBOT_NICK], handler_list,
+	                       struct cbot_handler)
+	{
+		copy = event; /* safe in case of modification */
+		hdlr->handler((struct cbot_event *)&copy, hdlr->user);
+	}
+}
+
+/**********
+ * Functions related to plugins
+ **********/
 
 /**
    @brief Private function to load a single plugin.

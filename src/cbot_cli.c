@@ -98,7 +98,7 @@ void run_cbot_cli(int argc, char **argv)
 	while (!feof(stdin)) {
 		printf("> ");
 		line = read_line(stdin);
-		cbot_handle_channel_message(bot, "stdin", "shell", line);
+		cbot_handle_message(bot, "stdin", "shell", line, false);
 		smb_free(line);
 	}
 

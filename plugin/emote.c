@@ -14,31 +14,15 @@
 
 #include "cbot/cbot.h"
 
-struct sc_regex *r;
-const int num_captures = 1;
-
-static void emote(struct cbot_event event)
+static void emote(struct cbot_message_event *event, void *user)
 {
-	size_t *indices;
-	int incr = cbot_addressed(event.bot, event.message);
-
-	if (!incr)
-		return;
-
-	event.message += incr;
-
-	if (sc_regex_exec(r, event.message, &indices) == -1) {
-		return;
-	}
-
-	char *c = sc_regex_get_capture(event.message, indices, 0);
-	cbot_me(event.bot, event.channel, c);
+	char *c = sc_regex_get_capture(event->message, event->indices, 0);
+	cbot_me(event->bot, event->channel, c);
 	free(c);
-	free(indices);
 }
 
 void emote_load(struct cbot *bot)
 {
-	r = sc_regex_compile("emote (.*)");
-	cbot_register(bot, CBOT_CHANNEL_MSG, emote);
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)emote, NULL,
+	              "emote (.*)");
 }

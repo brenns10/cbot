@@ -13,30 +13,16 @@
 
 #include "cbot/cbot.h"
 
-struct sc_regex *r;
-
-static void lod(struct cbot_event event)
+static void lod(struct cbot_message_event *event, void *user)
 {
 	char *target;
-	size_t *rawcap = NULL;
-	int incr = cbot_addressed(event.bot, event.message);
-
-	if (!incr)
-		return;
-
-	if (sc_regex_exec(r, event.message + incr, &rawcap) == -1) {
-		free(rawcap);
-		return;
-	}
-
-	target = sc_regex_get_capture(event.message + incr, rawcap, 0);
-	cbot_send(event.bot, event.channel, "%s: ಠ_ಠ", target);
-	free(rawcap);
+	target = sc_regex_get_capture(event->message, event->indices, 0);
+	cbot_send(event->bot, event->channel, "%s: ಠ_ಠ", target);
 	free(target);
 }
 
 void lod_load(struct cbot *bot)
 {
-	r = sc_regex_compile("lod\\s+(.+)\\s*");
-	cbot_register(bot, CBOT_CHANNEL_MSG, lod);
+	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)lod, NULL,
+	              "lod\\s+(.+)\\s*");
 }

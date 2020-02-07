@@ -5,11 +5,8 @@
 
 #include <stdlib.h>
 
-#include "sc-regex.h"
-
 #include "cbot/cbot.h"
 
-struct sc_regex *r;
 char *responses[] = {
 	":(",
 	"I don't like you, %s",
@@ -28,25 +25,18 @@ char *responses[] = {
 	"http://foaas.com/flying/cbot",
 };
 
-static void sadness(struct cbot_event event)
+static void sadness(struct cbot_message_event *event, void *user)
 {
-	int incr = cbot_addressed(event.bot, event.message);
-	if (!incr)
-		return;
-
-	if (sc_regex_exec(r, event.message + incr, NULL) == -1)
-		return;
-
-	cbot_send(event.bot, event.channel,
-	             responses[rand() % (sizeof(responses) / sizeof(char *))],
-	             event.username);
+	cbot_send(event->bot, event->channel,
+	          responses[rand() % (sizeof(responses) / sizeof(char *))],
+	          event->username);
 }
 
 void sadness_load(struct cbot *bot)
 {
-	r = sc_regex_compile("([Yy]ou +[Ss]uck[!.]?|"
-	                     "[Ss]ucks[!.]?|"
-	                     "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
-	                     "[Ss]hut [Uu]p[!.]?)");
-	cbot_register(bot, CBOT_CHANNEL_MSG, sadness);
+	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)sadness, NULL,
+	              "([Yy]ou +[Ss]uck[!.]?|"
+	              "[Ss]ucks[!.]?|"
+	              "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
+	              "[Ss]hut [Uu]p[!.]?)");
 }
