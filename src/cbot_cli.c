@@ -9,34 +9,32 @@
 #include "libstephen/ad.h"
 #include "libstephen/str.h"
 
-char *name = "cbot";
-
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
                           const char *msg)
 {
 	(void)bot; // unused
-	printf("[%s]%s: %s\n", dest, name, msg);
+	printf("[%s]%s: %s\n", dest, bot->name, msg);
 }
 
 static void cbot_cli_me(const struct cbot *bot, const char *dest,
                         const char *msg)
 {
 	(void)bot; // unused
-	printf("[%s]%s %s\n", dest, name, msg);
+	printf("[%s]%s %s\n", dest, bot->name, msg);
 }
 
 static void cbot_cli_op(const struct cbot *bot, const char *channel,
                         const char *person)
 {
 	(void)bot; // unused
-	printf("[%s~CMD]%s: /op %s\n", channel, name, person);
+	printf("[%s~CMD]%s: /op %s\n", channel, bot->name, person);
 }
 
 static void cbot_cli_join(const struct cbot *bot, const char *channel,
                           const char *password)
 {
 	(void)bot; // unused
-	printf("[%s~CMD]%s: /join %s\n", channel, name, channel);
+	printf("[%s~CMD]%s: /join %s\n", channel, bot->name, channel);
 }
 
 static void help(void)
@@ -57,6 +55,7 @@ void run_cbot_cli(int argc, char **argv)
 {
 	char *line, *plugin_dir = "bin/release/plugin";
 	char *hash = NULL;
+	char *name = "cbot";
 	struct cbot *bot;
 	struct cbot_backend backend;
 	smb_ad args;

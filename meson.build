@@ -64,6 +64,7 @@ plugins = [
   'magic8',
   'name',
   'sadness',
+  'become',
 ]
 plugin_libs = []
 foreach f: plugins

@@ -86,13 +86,19 @@ int cbot_addressed(const struct cbot *bot, const char *message)
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 {
 	struct cbot *cbot = malloc(sizeof(struct cbot));
-	cbot->name = name;
+	cbot->name = strdup(name);
 	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
 		sc_list_init(&cbot->handlers[i]);
 	}
 	OpenSSL_add_all_digests();
 	cbot->backend = backend;
 	return cbot;
+}
+
+void cbot_rename(struct cbot *bot, const char *newname)
+{
+	free(bot->name);
+	bot->name = strdup(newname);
 }
 
 /**

@@ -139,6 +139,12 @@ void cbot_op(const struct cbot *bot, const char *channel, const char *message);
  */
 void cbot_join(const struct cbot *bot, const char *channel,
                const char *password);
+/**
+ * Change the bot's nickname.
+ * @param bot Bot instance
+ * @param newname New name to set
+ */
+void cbot_rename(struct cbot *bot, const char *newname);
 
 /**
  * An event handler function. Takes an event and does some action to handle it.

@@ -16,6 +16,7 @@ Unreleased
   - Plugins no longer need to compile and execute their own regular expressions.
     They may be provided within `cbot_register()` and will be executed by the
     bot itself. Handlers will be called only if the regular expression matches.
+* Added "become" plugin
 
 0.1.0 (2020-02-05)
 ------------------
