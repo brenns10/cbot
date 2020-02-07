@@ -7,6 +7,15 @@ Unreleased
 * Added dependency on sc-regex, migrated plugins onto it.
 * Added dependency on sc-collections, migrated log plugin onto it.
 * Removed libstephen dependency from plugins!
+* Updated plugin API:
+  - Plugins may directly call functions listed in cbot.h, rather than using a
+    function pointer. The function pointer struct is removed from the API.
+  - Plugins no longer need to use the `addressed()` (or `cbot_addressed()`)
+    function to determine whether a message is addressed to them. They may
+    simply subscribe to the `CBOT_ADDRESSED` message type.
+  - Plugins no longer need to compile and execute their own regular expressions.
+    They may be provided within `cbot_register()` and will be executed by the
+    bot itself. Handlers will be called only if the regular expression matches.
 
 0.1.0 (2020-02-05)
 ------------------
