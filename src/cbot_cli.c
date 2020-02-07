@@ -37,6 +37,13 @@ static void cbot_cli_join(const struct cbot *bot, const char *channel,
 	printf("[%s~CMD]%s: /join %s\n", channel, bot->name, channel);
 }
 
+static void cbot_cli_nick(const struct cbot *bot, const char *newnick)
+{
+	(void)bot; // unused
+	printf("%s becomes %s\n", bot->name, newnick);
+	cbot_set_nick((struct cbot*)bot, newnick);
+}
+
 static void help(void)
 {
 	puts("usage: cbot cli [options] plugins");
@@ -85,6 +92,7 @@ void run_cbot_cli(int argc, char **argv)
 	backend.me = cbot_cli_me;
 	backend.op = cbot_cli_op;
 	backend.join = cbot_cli_join;
+	backend.nick = cbot_cli_nick;
 
 	bot = cbot_create("cbot", &backend);
 

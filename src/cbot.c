@@ -57,6 +57,11 @@ void cbot_join(const struct cbot *cbot, const char *channel,
 	cbot->backend->join(cbot, channel, password);
 }
 
+void cbot_nick(const struct cbot *cbot, const char *newnick)
+{
+	cbot->backend->nick(cbot, newnick);
+}
+
 int cbot_addressed(const struct cbot *bot, const char *message)
 {
 	int increment = strlen(bot->name);
@@ -95,7 +100,7 @@ struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 	return cbot;
 }
 
-void cbot_rename(struct cbot *bot, const char *newname)
+void cbot_set_nick(struct cbot *bot, const char *newname)
 {
 	free(bot->name);
 	bot->name = strdup(newname);

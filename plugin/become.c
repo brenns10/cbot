@@ -15,7 +15,7 @@
 static void become(struct cbot_message_event *event, void *user)
 {
 	char *name = sc_regex_get_capture(event->message, event->indices, 0);
-	cbot_rename(event->bot, name);
+	cbot_nick(event->bot, name);
 	free(name);
 }
 

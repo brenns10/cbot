@@ -43,11 +43,12 @@ struct cbot_backend {
 	           const char *username);
 	void (*join)(const struct cbot *cbot, const char *channel,
 	             const char *password);
+	void (*nick)(const struct cbot *cbot, const char *newnick);
 	void *backend_data;
 };
 
 struct cbot {
-	const char *name;
+	char *name;
 	struct sc_list_head handlers[_CBOT_NUM_EVENT_TYPES_];
 	uint8_t hash[20];
 	struct cbot_backend *backend;
@@ -58,6 +59,8 @@ void cbot_delete(struct cbot *obj);
 void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names);
 
 int cbot_is_authorized(struct cbot *cbot, const char *message);
+
+void cbot_set_nick(struct cbot *bot, const char *newname);
 
 /* Functions which backends can call, to trigger various types of events */
 void cbot_handle_message(struct cbot *bot, const char *channel,

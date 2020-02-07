@@ -79,6 +79,12 @@ static void cbot_irc_op(const struct cbot *cbot, const char *channel,
 	cb_destroy(&cb);
 }
 
+static void cbot_irc_nick(const struct cbot *cbot, const char *newnick)
+{
+	irc_session_t *session = cbot->backend->backend_data;
+	irc_cmd_nick(session, newnick);
+}
+
 static void cbot_irc_join(const struct cbot *cbot, const char *channel,
                           const char *password)
 {
@@ -130,7 +136,7 @@ void event_nick(irc_session_t *session, const char *event, const char *origin,
 	log_event(session, event, origin, params, count);
 	struct cbot *bot = irc_get_ctx(session);
 	if (strcmp(origin, bot->name) == 0)
-		cbot_rename(bot, params[0]);
+		cbot_set_nick(bot, params[0]);
 	else
 		cbot_handle_nick_event(bot, origin, params[0]);
 	printf("Event handled by CBot.\n");
@@ -210,6 +216,7 @@ void run_cbot_irc(int argc, char *argv[])
 	backend.me = cbot_irc_me;
 	backend.op = cbot_irc_op;
 	backend.join = cbot_irc_join;
+	backend.nick = cbot_irc_nick;
 
 	cbot = cbot_create(name, &backend);
 
