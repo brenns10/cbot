@@ -4,6 +4,10 @@ Changelog
 Unreleased
 ----------
 
+0.3.0 (2020-05-07)
+------------------
+
+* Skip 0.2.0 due to inconsistency between meson.build and CHANGELOG
 * Added dependency on sc-regex, migrated plugins onto it.
 * Added dependency on sc-collections, migrated log plugin onto it.
 * Added dependency on sc-argparse, migrated bot runner to use it.
@@ -23,6 +27,7 @@ Unreleased
 ------------------
 
 * Migrated build system to Meson, began versioning and recording changelog.
+* This release was labeled 0.2.0 in the meson.build file
 
 Prehistory
 ----------
