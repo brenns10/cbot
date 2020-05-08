@@ -9,10 +9,7 @@
 #include <string.h>
 
 #include <openssl/evp.h>
-
-#include "libstephen/al.h"
-#include "libstephen/base.h"
-#include "libstephen/cb.h"
+#include <sc-collections.h>
 
 #include "cbot_private.h"
 
@@ -25,24 +22,24 @@ void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
                ...)
 {
 	va_list va;
-	cbuf cb;
+	struct sc_charbuf cb;
 	va_start(va, format);
-	cb_init(&cb, 1024);
-	cb_vprintf(&cb, (char *)format, va);
+	sc_cb_init(&cb, 1024);
+	sc_cb_vprintf(&cb, (char *)format, va);
 	cbot->backend->send(cbot, dest, cb.buf);
-	cb_destroy(&cb);
+	sc_cb_destroy(&cb);
 	va_end(va);
 }
 
 void cbot_me(const struct cbot *cbot, const char *dest, const char *format, ...)
 {
 	va_list va;
-	cbuf cb;
+	struct sc_charbuf cb;
 	va_start(va, format);
-	cb_init(&cb, 1024);
-	cb_vprintf(&cb, (char *)format, va);
+	sc_cb_init(&cb, 1024);
+	sc_cb_vprintf(&cb, (char *)format, va);
 	cbot->backend->me(cbot, dest, cb.buf);
-	cb_destroy(&cb);
+	sc_cb_destroy(&cb);
 	va_end(va);
 }
 
@@ -124,7 +121,7 @@ void cbot_delete(struct cbot *cbot)
 			free(hdlr);
 		}
 	}
-	smb_free(cbot);
+	free(cbot);
 	EVP_cleanup();
 }
 
@@ -293,31 +290,30 @@ static bool cbot_load_plugin(struct cbot *bot, const char *filename,
  */
 void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names, int count)
 {
-	cbuf name;
-	cbuf loader;
-	char *plugin_name;
+	struct sc_charbuf name;
+	struct sc_charbuf loader;
 	int i;
-	cb_init(&name, 256);
-	cb_init(&loader, 256);
+	sc_cb_init(&name, 256);
+	sc_cb_init(&loader, 256);
 
 	for (i = 0; i < count; i++) {
-		cb_clear(&name);
-		cb_clear(&loader);
+		sc_cb_clear(&name);
+		sc_cb_clear(&loader);
 
 		// Construct a filename.
-		cb_concat(&name, plugin_dir);
+		sc_cb_concat(&name, plugin_dir);
 		if (plugin_dir[strlen(plugin_dir) - 1] != '/') {
-			cb_append(&name, '/');
+			sc_cb_append(&name, '/');
 		}
-		cb_concat(&name, names[i]);
-		cb_concat(&name, ".so");
+		sc_cb_concat(&name, names[i]);
+		sc_cb_concat(&name, ".so");
 
 		// Construct the loader name
-		cb_printf(&loader, "%s_load", names[i]);
+		sc_cb_printf(&loader, "%s_load", names[i]);
 
 		cbot_load_plugin(bot, name.buf, loader.buf);
 	}
 
-	cb_destroy(&name);
-	cb_destroy(&loader);
+	sc_cb_destroy(&name);
+	sc_cb_destroy(&loader);
 }

@@ -6,7 +6,8 @@ Unreleased
 
 * Added dependency on sc-regex, migrated plugins onto it.
 * Added dependency on sc-collections, migrated log plugin onto it.
-* Removed libstephen dependency from plugins!
+* Added dependency on sc-argparse, migrated bot runner to use it.
+* Removed libstephen dependency from the project!
 * Updated plugin API:
   - Plugins may directly call functions listed in cbot.h, rather than using a
     function pointer. The function pointer struct is removed from the API.

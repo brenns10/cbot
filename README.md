@@ -55,7 +55,7 @@ is placed into the build directory (both the `cbot` binary and all plugins).
 Meson will automatically download and build the following dependencies:
 
 - `libircclient`
-- `libstephen`
+- `sc-regex`, `sc-collections`, `sc-argparse`
 
 To run, invoke `build/cbot` with the following arguments:
 

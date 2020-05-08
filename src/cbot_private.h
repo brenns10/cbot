@@ -8,7 +8,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include "libstephen/list.h"
 #include "sc-collections.h"
 #include "sc-regex.h"
 

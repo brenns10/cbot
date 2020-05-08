@@ -8,12 +8,10 @@
 #include <string.h>
 
 #include <sc-argparse.h>
+#include <sc-collections.h>
 
 #include "libirc_rfcnumeric.h"
 #include "libircclient.h"
-
-#include "libstephen/cb.h"
-#include "libstephen/ll.h"
 
 #include "cbot_handlers.h"
 #include "cbot_irc.h"
@@ -73,11 +71,11 @@ static void cbot_irc_op(const struct cbot *cbot, const char *channel,
                         const char *username)
 {
 	irc_session_t *session = cbot->backend->backend_data;
-	cbuf cb;
-	cb_init(&cb, 256);
-	cb_printf(&cb, "+o %s", username);
+	struct sc_charbuf cb;
+	sc_cb_init(&cb, 256);
+	sc_cb_printf(&cb, "+o %s", username);
 	irc_cmd_channel_mode(session, channel, cb.buf);
-	cb_destroy(&cb);
+	sc_cb_destroy(&cb);
 }
 
 static void cbot_irc_nick(const struct cbot *cbot, const char *newnick)

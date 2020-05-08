@@ -4,11 +4,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <sc-argparse.h>
 
 #include "cbot_private.h"
-#include "libstephen/str.h"
 
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
                           const char *msg)
@@ -68,10 +68,12 @@ enum {
 
 void run_cbot_cli(int argc, char **argv)
 {
-	char *line, *plugin_dir, *hash, *name;
+	char *line = NULL, *plugin_dir, *hash, *name;
 	struct cbot *bot;
 	struct cbot_backend backend;
 	int rv;
+	size_t n;
+	int newline;
 	struct sc_arg args[] = {
 		SC_ARG_STRING('H', "--hash", "hash chain tip"),
 		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
@@ -88,6 +90,7 @@ void run_cbot_cli(int argc, char **argv)
 
 	if (args[ARG_HELP].val_int)
 		help();
+
 	hash = args[ARG_HASH].val_string;
 	name = args[ARG_NAME].val_string;
 	plugin_dir = args[ARG_PLUGIN_DIR].val_string;
@@ -98,7 +101,7 @@ void run_cbot_cli(int argc, char **argv)
 	backend.join = cbot_cli_join;
 	backend.nick = cbot_cli_nick;
 
-	bot = cbot_create("cbot", &backend);
+	bot = cbot_create(name, &backend);
 
 	// Set the hash in the bot.
 	void *decoded = base64_decode(hash, 20);
@@ -108,10 +111,13 @@ void run_cbot_cli(int argc, char **argv)
 	cbot_load_plugins(bot, plugin_dir, argv, rv);
 	while (!feof(stdin)) {
 		printf("> ");
-		line = read_line(stdin);
+		getline(&line, &n, stdin);
+		newline = strlen(line);
+		if (line[newline - 1] == '\n')
+			line[newline - 1] = '\0';
 		cbot_handle_message(bot, "stdin", "shell", line, false);
-		smb_free(line);
 	}
+	free(line);
 
 	cbot_delete(bot);
 }

@@ -14,10 +14,6 @@ sources = [
 inc = include_directories('inc')
 
 cc = meson.get_compiler('c')
-libstephen_dep = dependency(
-  'libstephen',
-  fallback: ['libstephen', 'libstephen_dep'],
-)
 libircclient_dep = dependency(
   'libircclient',
   fallback: ['libircclient', 'libircclient_dep'],
@@ -49,7 +45,6 @@ libcbot = shared_library(
     libsc_collections_dep,
     libsc_regex_dep,
     libsc_argparse_dep,
-    libstephen_dep,
     libircclient_dep,
     crypto_dep,
     dl_dep,
