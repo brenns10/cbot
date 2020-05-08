@@ -181,6 +181,4 @@ void cbot_register(struct cbot *bot, enum cbot_event_type type,
  */
 typedef void (*cbot_plugin_t)(struct cbot *bot);
 
-void *base64_decode(const char *str, int explen);
-
 #endif // CBOT_H

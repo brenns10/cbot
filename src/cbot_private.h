@@ -69,4 +69,5 @@ void cbot_handle_user_event(struct cbot *bot, const char *channel,
 void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
                             const char *new_username);
 
+void *base64_decode(const char *str, int explen);
 #endif // CBOT_PRIVATE_H
