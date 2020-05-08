@@ -7,10 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sc-argparse.h>
+
 #include "libirc_rfcnumeric.h"
 #include "libircclient.h"
 
-#include "libstephen/ad.h"
 #include "libstephen/cb.h"
 #include "libstephen/ll.h"
 
@@ -162,55 +163,56 @@ void help()
 	exit(EXIT_FAILURE);
 }
 
+enum {
+	ARG_NAME = 0,
+	ARG_PLUGIN_DIR,
+	ARG_HASH,
+	ARG_HOST,
+	ARG_PASSWORD,
+	ARG_PORT,
+	ARG_CHAN,
+	ARG_CHANPASS,
+	ARG_HELP,
+};
+
 void run_cbot_irc(int argc, char *argv[])
 {
 	irc_callbacks_t callbacks;
 	irc_session_t *session;
 	struct cbot *cbot;
 	struct cbot_backend backend;
-	smb_ad args;
-	char *name = "cbot";
-	char *host = "irc.case.edu";
-	char *port = "6667";
-	char *plugin_dir = "bin/release/plugin";
-	char *password = NULL;
-	char *hash = NULL;
+	char *name, *host, *plugin_dir, *password, *hash;
 	unsigned short port_num;
-	arg_data_init(&args);
+	int rv;
+	struct sc_arg args[] = {
+		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
+		SC_ARG_DEF_STRING('p', "--plugin-dir", "bin/release/plugin",
+		                  "plugin directory"),
+		SC_ARG_STRING('H', "--hash", "hash chain tip"),
+		SC_ARG_DEF_STRING('t', "--host", "irc.case.edu", "server host"),
+		SC_ARG_STRING('P', "--password", "server password"),
+		SC_ARG_DEF_INT('p', "--port", 6667, "server port number"),
+		SC_ARG_DEF_STRING('c', "--chan", "#cbot", "channel to join"),
+		SC_ARG_STRING('w', "--chanpass", "channel password"),
+		SC_ARG_COUNT('h', "--help", "show help and exit"),
+	};
 
-	process_args(&args, argc, argv);
-
-	if (check_long_flag(&args, "name")) {
-		name = get_long_flag_parameter(&args, "name");
-	}
-	if (check_long_flag(&args, "host")) {
-		host = get_long_flag_parameter(&args, "host");
-	}
-	if (check_long_flag(&args, "port")) {
-		port = get_long_flag_parameter(&args, "port");
-	}
-	if (check_long_flag(&args, "chan")) {
-		chan = get_long_flag_parameter(&args, "chan");
-	}
-	if (check_long_flag(&args, "chanpass")) {
-		chanpass = get_long_flag_parameter(&args, "chanpass");
-	}
-	if (check_long_flag(&args, "plugin-dir")) {
-		plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
-	}
-	if (check_long_flag(&args, "hash")) {
-		hash = get_long_flag_parameter(&args, "hash");
-	}
-	if (check_long_flag(&args, "help")) {
+	if ((rv = sc_argparse(args, argc, argv)) < 0) {
+		fprintf(stderr, "error parsing args\n");
 		help();
 	}
-	if (check_long_flag(&args, "password")) {
-		password = get_long_flag_parameter(&args, "password");
-	}
-	if (!(name && host && port && chan && plugin_dir && hash)) {
+
+	if (args[ARG_HELP].val_int)
 		help();
-	}
-	sscanf(port, "%hu", &port_num);
+
+	name = args[ARG_NAME].val_string;
+	host = args[ARG_HOST].val_string;
+	port_num = args[ARG_PORT].val_int;
+	plugin_dir = args[ARG_PLUGIN_DIR].val_string;
+	password = args[ARG_PASSWORD].val_string;
+	chan = args[ARG_CHAN].val_string;
+	chanpass = args[ARG_CHANPASS].val_string;
+	hash = args[ARG_HASH].val_string;
 
 	backend.send = cbot_irc_send;
 	backend.me = cbot_irc_me;
@@ -254,7 +256,7 @@ void run_cbot_irc(int argc, char *argv[])
 	backend.backend_data = session;
 
 	cbot->backend = &backend;
-	cbot_load_plugins(cbot, plugin_dir, ll_get_iter(args.bare_strings));
+	cbot_load_plugins(cbot, plugin_dir, argv, rv);
 
 	// Set libircclient to parse nicknames for us.
 	irc_option_set(session, LIBIRC_OPTION_STRIPNICKS);
@@ -279,6 +281,5 @@ void run_cbot_irc(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	arg_data_destroy(&args);
 	exit(EXIT_SUCCESS);
 }

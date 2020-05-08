@@ -56,7 +56,7 @@ struct cbot {
 
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend);
 void cbot_delete(struct cbot *obj);
-void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names);
+void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names, int count);
 
 int cbot_is_authorized(struct cbot *cbot, const char *message);
 

@@ -1,0 +1,6 @@
+[wrap-file]
+directory = Unity-2.5.1
+
+source_url = https://github.com/ThrowTheSwitch/Unity/archive/v2.5.1.tar.gz
+source_filename = Unity-2.5.1.tar.gz
+source_hash = 5ce08ef62f5f64d18f8137b3eaa6d29199ee81d1fc952cef0eea96660a2caf47

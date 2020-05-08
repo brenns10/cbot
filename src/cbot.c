@@ -291,19 +291,16 @@ static bool cbot_load_plugin(struct cbot *bot, const char *filename,
 /**
    @brief Load a list of plugins from a plugin directory.
  */
-void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names)
+void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names, int count)
 {
 	cbuf name;
 	cbuf loader;
-	smb_status status = SMB_SUCCESS;
 	char *plugin_name;
+	int i;
 	cb_init(&name, 256);
 	cb_init(&loader, 256);
 
-	while (names.has_next(&names)) {
-		plugin_name = names.next(&names, &status).data_ptr;
-		assert(status == SMB_SUCCESS);
-
+	for (i = 0; i < count; i++) {
 		cb_clear(&name);
 		cb_clear(&loader);
 
@@ -312,11 +309,11 @@ void cbot_load_plugins(struct cbot *bot, char *plugin_dir, smb_iter names)
 		if (plugin_dir[strlen(plugin_dir) - 1] != '/') {
 			cb_append(&name, '/');
 		}
-		cb_concat(&name, plugin_name);
+		cb_concat(&name, names[i]);
 		cb_concat(&name, ".so");
 
 		// Construct the loader name
-		cb_printf(&loader, "%s_load", plugin_name);
+		cb_printf(&loader, "%s_load", names[i]);
 
 		cbot_load_plugin(bot, name.buf, loader.buf);
 	}

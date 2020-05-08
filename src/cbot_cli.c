@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sc-argparse.h>
+
 #include "cbot_private.h"
-#include "libstephen/ad.h"
 #include "libstephen/str.h"
 
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
@@ -58,35 +59,38 @@ static void help(void)
 	exit(EXIT_FAILURE);
 }
 
+enum {
+	ARG_HASH = 0,
+	ARG_NAME,
+	ARG_PLUGIN_DIR,
+	ARG_HELP,
+};
+
 void run_cbot_cli(int argc, char **argv)
 {
-	char *line, *plugin_dir = "bin/release/plugin";
-	char *hash = NULL;
-	char *name = "cbot";
+	char *line, *plugin_dir, *hash, *name;
 	struct cbot *bot;
 	struct cbot_backend backend;
-	smb_ad args;
-	arg_data_init(&args);
+	int rv;
+	struct sc_arg args[] = {
+		SC_ARG_STRING('H', "--hash", "hash chain tip"),
+		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
+		SC_ARG_DEF_STRING('p', "--plugin-dir", "bin/release/plugin",
+		                  "plugin directory"),
+		SC_ARG_COUNT('h', "--help", "help"),
+		SC_ARG_END()
+	};
 
-	process_args(&args, argc, argv);
-	if (check_long_flag(&args, "name")) {
-		name = get_long_flag_parameter(&args, "name");
-	}
-	if (check_long_flag(&args, "plugin-dir")) {
-		plugin_dir = get_long_flag_parameter(&args, "plugin-dir");
-	}
-	if (check_long_flag(&args, "hash")) {
-		hash = get_long_flag_parameter(&args, "hash");
-	}
-	if (check_long_flag(&args, "help")) {
+	if ((rv = sc_argparse(args, argc, argv)) < 0) {
+		fprintf(stderr, "argument parse error\n");
 		help();
 	}
-	if (!(name && plugin_dir)) {
+
+	if (args[ARG_HELP].val_int)
 		help();
-	}
-	if (!hash) {
-		help();
-	}
+	hash = args[ARG_HASH].val_string;
+	name = args[ARG_NAME].val_string;
+	plugin_dir = args[ARG_PLUGIN_DIR].val_string;
 
 	backend.send = cbot_cli_send;
 	backend.me = cbot_cli_me;
@@ -101,7 +105,7 @@ void run_cbot_cli(int argc, char **argv)
 	memcpy(bot->hash, decoded, 20);
 	free(decoded);
 
-	cbot_load_plugins(bot, plugin_dir, ll_get_iter(args.bare_strings));
+	cbot_load_plugins(bot, plugin_dir, argv, rv);
 	while (!feof(stdin)) {
 		printf("> ");
 		line = read_line(stdin);
@@ -109,6 +113,5 @@ void run_cbot_cli(int argc, char **argv)
 		smb_free(line);
 	}
 
-	arg_data_destroy(&args);
 	cbot_delete(bot);
 }
