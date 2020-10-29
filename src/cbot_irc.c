@@ -162,6 +162,7 @@ void help()
 }
 
 enum {
+	/* noformat */
 	ARG_NAME = 0,
 	ARG_PLUGIN_DIR,
 	ARG_HASH,
@@ -193,6 +194,8 @@ void run_cbot_irc(int argc, char *argv[])
 		SC_ARG_DEF_STRING('c', "--chan", "#cbot", "channel to join"),
 		SC_ARG_STRING('w', "--chanpass", "channel password"),
 		SC_ARG_COUNT('h', "--help", "show help and exit"),
+
+		SC_ARG_END()
 	};
 
 	if ((rv = sc_argparse(args, argc, argv)) < 0) {

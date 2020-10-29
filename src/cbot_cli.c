@@ -3,8 +3,8 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sc-argparse.h>
 
@@ -46,7 +46,7 @@ static void cbot_cli_nick(const struct cbot *bot, const char *newnick)
 {
 	(void)bot; // unused
 	printf("%s becomes %s\n", bot->name, newnick);
-	cbot_set_nick((struct cbot*)bot, newnick);
+	cbot_set_nick((struct cbot *)bot, newnick);
 }
 
 /***************
@@ -86,18 +86,20 @@ static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv);
 struct cbot_cli_cmd {
 	char *cmd;
 	int cmdlen;
-	void(*func)(struct cbot *, int, char **);
+	void (*func)(struct cbot *, int, char **);
 	char *help;
 };
 
-#define CMD(cmd, func, help) {cmd, sizeof(cmd)-1, func, help}
+#define CMD(cmd, func, help)                                                   \
+	{                                                                      \
+		cmd, sizeof(cmd) - 1, func, help                               \
+	}
 const struct cbot_cli_cmd cmds[] = {
 	CMD("/memberadd", cbot_cli_cmd_add_membership,
-		"add a member to a cbot channel"),
+	    "add a member to a cbot channel"),
 	CMD("/memberlist", cbot_cli_cmd_get_members,
-		"list members in a cbot channel"),
-	CMD("/help", cbot_cli_cmd_help,
-		"list all commands"),
+	    "list members in a cbot channel"),
+	CMD("/help", cbot_cli_cmd_help, "list all commands"),
 };
 
 static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv)
@@ -117,7 +119,7 @@ static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv)
 }
 
 #define CBOT_CLI_TOK_BUFSIZE 64
-#define CBOT_CLI_TOK_DELIM " \t\r\n\a"
+#define CBOT_CLI_TOK_DELIM   " \t\r\n\a"
 char **cbot_cli_split_line(char *line, int *count)
 {
 	int bufsize = CBOT_CLI_TOK_BUFSIZE, position = 0;
@@ -183,6 +185,7 @@ static void help(void)
 }
 
 enum {
+	/* noformat */
 	ARG_HASH = 0,
 	ARG_NAME,
 	ARG_PLUGIN_DIR,
@@ -203,6 +206,7 @@ void run_cbot_cli(int argc, char **argv)
 		SC_ARG_DEF_STRING('p', "--plugin-dir", "bin/release/plugin",
 		                  "plugin directory"),
 		SC_ARG_COUNT('h', "--help", "help"),
+
 		SC_ARG_END()
 	};
 

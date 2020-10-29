@@ -8,9 +8,9 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include <sqlite3.h>
 #include <sc-collections.h>
 #include <sc-regex.h>
+#include <sqlite3.h>
 
 #include "cbot/cbot.h"
 
@@ -57,7 +57,8 @@ struct cbot {
 
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend);
 void cbot_delete(struct cbot *obj);
-void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names, int count);
+void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names,
+                       int count);
 
 int cbot_is_authorized(struct cbot *cbot, const char *message);
 
@@ -75,6 +76,6 @@ int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
 
 void *base64_decode(const char *str, int explen);
 
-#define nelem(arr) (sizeof(arr)/sizeof(arr[0]))
+#define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #endif // CBOT_PRIVATE_H

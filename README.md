@@ -97,11 +97,11 @@ Here's a brief rundown of how to write a plugin:
     sends an "action" or `/me` message.
 - After you've written your handler function (or at least declared it), go back
   to your `[somename]_load` function. Put the following function call in it:
-  
+
       ```
       registrar(bot, CBOT_CHANNEL_MSG, give_me_a_name);
       ```
-  
+
 - The argument `CBOT_CHANNEL_MSG` tells cbot that this handles a message in a
   channel. You can handle the following additional events:
   - `CBOT_CHANNEL_ACTION`: an action message in a channel

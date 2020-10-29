@@ -216,7 +216,7 @@ static void karma_forget(struct cbot_message_event *event, void *user)
  */
 void karma_load(struct cbot *bot)
 {
-#define KARMA_WORD "^ \t\n"
+#define KARMA_WORD     "^ \t\n"
 #define NOT_KARMA_WORD " \t\n"
 	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_check, NULL,
 	              "karma(\\s+([" KARMA_WORD "]+))?");

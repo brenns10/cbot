@@ -81,24 +81,22 @@ int cbot_db_create_tables(struct cbot *bot)
 {
 	int rv;
 	char *errmsg = NULL;
-	char *stmts =
-		"CREATE TABLE user ( "
-		" id INTEGER PRIMARY KEY ASC, "
-		" nick TEXT NOT NULL UNIQUE, "
-		" realname TEXT, "
-		" host TEXT "
-		"); "
-		"CREATE TABLE channel ( "
-		" id INTEGER PRIMARY KEY ASC, "
-		" name TEXT NOT NULL UNIQUE, "
-		" topic TEXT "
-		"); "
-		"CREATE TABLE membership ( "
-		" user_id INT NOT NULL, "
-		" channel_id INT NOT NULL, "
-		" UNIQUE(user_id, channel_id) "
-		"); "
-	;
+	char *stmts = "CREATE TABLE user ( "
+	              " id INTEGER PRIMARY KEY ASC, "
+	              " nick TEXT NOT NULL UNIQUE, "
+	              " realname TEXT, "
+	              " host TEXT "
+	              "); "
+	              "CREATE TABLE channel ( "
+	              " id INTEGER PRIMARY KEY ASC, "
+	              " name TEXT NOT NULL UNIQUE, "
+	              " topic TEXT "
+	              "); "
+	              "CREATE TABLE membership ( "
+	              " user_id INT NOT NULL, "
+	              " channel_id INT NOT NULL, "
+	              " UNIQUE(user_id, channel_id) "
+	              "); ";
 	rv = sqlite3_exec(bot->privDb, stmts, NULL, NULL, &errmsg);
 	if (rv != SQLITE_OK) {
 		fprintf(stderr, "sqlite error creating tables: %s\n", errmsg);
@@ -116,8 +114,8 @@ int cbot_db_get_user_id(struct cbot *bot, char *nick)
 
 	rv = sqlite3_prepare_v2(bot->privDb, select, -1, &stmt, NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		return -1;
 	}
 
@@ -157,8 +155,8 @@ int cbot_db_insert_user(struct cbot *bot, char *nick)
 
 	rv = sqlite3_prepare_v2(bot->privDb, select, -1, &stmt, NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		return -1;
 	}
 
@@ -197,8 +195,8 @@ int cbot_db_get_chan(struct cbot *bot, char *chan)
 
 	rv = sqlite3_prepare_v2(bot->privDb, select, -1, &stmt, NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		return -1;
 	}
 
@@ -238,8 +236,8 @@ int cbot_db_insert_chan(struct cbot *bot, char *name)
 
 	rv = sqlite3_prepare_v2(bot->privDb, select, -1, &stmt, NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		return -1;
 	}
 
@@ -273,15 +271,15 @@ int cbot_db_upsert_chan(struct cbot *bot, char *name)
 int cbot_db_upsert_membership(struct cbot *bot, int user_id, int chan_id)
 {
 	char *insert =
-		"INSERT INTO membership(user_id, channel_id) VALUES(?, ?) "
-		"ON CONFLICT DO NOTHING;";
+	        "INSERT INTO membership(user_id, channel_id) VALUES(?, ?) "
+	        "ON CONFLICT DO NOTHING;";
 	sqlite3_stmt *stmt = NULL;
 	int rv;
 
 	rv = sqlite3_prepare_v2(bot->privDb, insert, -1, &stmt, NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		return -1;
 	}
 
@@ -336,13 +334,12 @@ void cbot_user_info_free_all(struct sc_list_head *head)
 
 int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head)
 {
-	char *cmd =
-		"SELECT u.nick "
-		"FROM user u "
-		" INNER JOIN membership m ON u.id=m.user_id "
-		" INNER JOIN channel c ON c.id=m.channel_id "
-		"WHERE c.name = \"%s\" "
-		";";
+	char *cmd = "SELECT u.nick "
+	            "FROM user u "
+	            " INNER JOIN membership m ON u.id=m.user_id "
+	            " INNER JOIN channel c ON c.id=m.channel_id "
+	            "WHERE c.name = \"%s\" "
+	            ";";
 	char *formatted;
 	int rv;
 	struct sc_list_head tmp;
@@ -352,10 +349,11 @@ int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head)
 	rv = snprintf(NULL, 0, cmd, chan);
 	formatted = malloc(rv + 1);
 	sprintf(formatted, cmd, chan);
-	rv = sqlite3_exec(bot->privDb, formatted, cbot_db_cb_add_user, &tmp, NULL);
+	rv = sqlite3_exec(bot->privDb, formatted, cbot_db_cb_add_user, &tmp,
+	                  NULL);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "exec: %s(%d): %s\n", sqlite3_errstr(rv),
-		        rv, sqlite3_errmsg(bot->privDb));
+		fprintf(stderr, "exec: %s(%d): %s\n", sqlite3_errstr(rv), rv,
+		        sqlite3_errmsg(bot->privDb));
 		cbot_user_info_free_all(&tmp);
 		free(formatted);
 		return -1;
@@ -370,7 +368,7 @@ int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head)
 	return rv;
 }
 
-int cbot_add_membership(struct cbot *bot, char *nick, char* chan)
+int cbot_add_membership(struct cbot *bot, char *nick, char *chan)
 {
 	int user_id = cbot_db_upsert_user(bot, nick);
 	int chan_id = cbot_db_upsert_chan(bot, chan);
@@ -406,7 +404,8 @@ struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 	cbot->backend = backend;
 	rv = sqlite3_open_v2("cbot_priv", &cbot->privDb,
 	                     SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
-	                     SQLITE_OPEN_MEMORY, NULL);
+	                             SQLITE_OPEN_MEMORY,
+	                     NULL);
 	if (rv != SQLITE_OK) {
 		sqlite3_close(cbot->privDb);
 		free(cbot->name);
@@ -620,7 +619,8 @@ static bool cbot_load_plugin(struct cbot *bot, const char *filename,
 /**
    @brief Load a list of plugins from a plugin directory.
  */
-void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names, int count)
+void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names,
+                       int count)
 {
 	struct sc_charbuf name;
 	struct sc_charbuf loader;
