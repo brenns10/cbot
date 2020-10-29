@@ -2,18 +2,44 @@
  * name.c: CBot plugin which responds to questions about what CBot is, by
  * linking to the CBot repository
  */
+#include <sc-collections.h>
+
 #include "cbot/cbot.h"
+
+struct cbot_handler *name_hdlr;
 
 static void name(struct cbot_message_event *event, void *user)
 {
+	const char *botname = cbot_get_name(event->bot);
 	cbot_send(event->bot, event->channel,
-	          "My name is CBot.  My source lives at "
-	          "https://github.com/brenns10/cbot");
+	          "My name is %s, I am a cbot.  My source lives at "
+	          "https://github.com/brenns10/cbot",
+	          botname);
+}
+
+static void register_name(struct cbot *bot)
+{
+	const char *botname = cbot_get_name(bot);
+	struct sc_charbuf buf;
+	sc_cb_init(&buf, 256);
+	sc_cb_printf(&buf,
+	             "([wW]ho|[wW]hat|[wW][tT][fF])('?s?| +"
+	             "[iI]s| +[aA]re +[yY]ou,?) +(%s|cbot)\\??",
+	             botname);
+	name_hdlr = cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)name, NULL,
+	                          buf.buf);
+	sc_cb_destroy(&buf);
+}
+
+static void cbot_bot_name_change(struct cbot_nick_event *event, void *user)
+{
+	cbot_deregister(event->bot, name_hdlr);
+	register_name(event->bot);
 }
 
 void name_load(struct cbot *bot)
 {
-	char *r = ("([wW]ho|[wW]hat|[wW][tT][fF])('?s?| +"
-	           "[iI]s| +[aA]re +[yY]ou,?) +[cC][bB]ot\\??");
-	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)name, NULL, r);
+	register_name(bot);
+	cbot_register(bot, CBOT_BOT_NAME, (cbot_handler_t)cbot_bot_name_change,
+	              NULL, NULL);
 }
