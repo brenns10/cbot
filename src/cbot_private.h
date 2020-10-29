@@ -72,9 +72,12 @@ void cbot_handle_user_event(struct cbot *bot, const char *channel,
 void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
                             const char *new_username);
 
-int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
-
 void *base64_decode(const char *str, int explen);
+
+/*******
+ * Database functions!
+ *******/
+int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
 
 #define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 

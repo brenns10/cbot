@@ -8,6 +8,7 @@ sources = [
   'src/cbot_cli.c',
   'src/cbot_hashchain.c',
   'src/cbot_irc.c',
+  'src/db.c',
   #'src/main.c',
 ]
 
