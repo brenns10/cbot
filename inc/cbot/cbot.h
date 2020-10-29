@@ -64,29 +64,11 @@ struct cbot_nick_event {
 	const char *new_username;
 };
 
-struct cbot_member {
-	char *username;
-	struct sc_list_head list;
-};
-struct cbot_channel_info {
-	char *channel_name;
-	char *topic;
-	struct sc_list_head members;
-};
-const struct cbot_channel_info *cbot_get_channel_info(const char *channel);
-
-struct cbot_membership {
-	char *channel;
-	struct sc_list_head list;
-};
 struct cbot_user_info {
 	char *username;
 	char *realname;
-	struct sc_list_head memberships;
+	struct sc_list_head list;
 };
-const struct cbot_user_info *cbot_get_user_info(const char *user);
-
-void *cbot_get_db_conn(void);
 
 /**
  * Send a message to a destination.
@@ -180,5 +162,39 @@ void cbot_register(struct cbot *bot, enum cbot_event_type type,
  * @param bot CBot instance for the plugin.
  */
 typedef void (*cbot_plugin_t)(struct cbot *bot);
+
+/**
+ * Return a linked list of channel members.
+ *
+ * This function inserts into the list head pointed by `head`, a structure for
+ * each user which is a member of a channel. The structure is of type
+ * `struct cbot_user_info`, and the links are via the `list` field. The function
+ * returns the number of users added to this list, or a negative number on any
+ * error.
+ *
+ * The resulting list should be freed with sc_user_info_free_all(), or
+ * individual elements should be freed with sc_user_info_free().
+ *
+ * @param bot CBot instance for the plugin
+ * @param chan Name of the channel
+ * @param head List head into which we store users
+ * @returns Number of users, or a negative error code
+ */
+int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head);
+
+/**
+ * Free the user_info structure.
+ *
+ * String fields are owned by the structure, and are freed along with it.
+ *
+ * @param info User info to free
+ */
+void cbot_user_info_free(struct cbot_user_info *info);
+
+/**
+ * Free all user_info in the list
+ * @param head List to free
+ */
+void cbot_user_info_free_all(struct sc_list_head *head);
 
 #endif // CBOT_H

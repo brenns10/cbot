@@ -8,8 +8,9 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include "sc-collections.h"
-#include "sc-regex.h"
+#include <sqlite3.h>
+#include <sc-collections.h>
+#include <sc-regex.h>
 
 #include "cbot/cbot.h"
 
@@ -51,6 +52,7 @@ struct cbot {
 	struct sc_list_head handlers[_CBOT_NUM_EVENT_TYPES_];
 	uint8_t hash[20];
 	struct cbot_backend *backend;
+	sqlite3 *privDb;
 };
 
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend);
@@ -69,5 +71,10 @@ void cbot_handle_user_event(struct cbot *bot, const char *channel,
 void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
                             const char *new_username);
 
+int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
+
 void *base64_decode(const char *str, int explen);
+
+#define nelem(arr) (sizeof(arr)/sizeof(arr[0]))
+
 #endif // CBOT_PRIVATE_H
