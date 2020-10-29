@@ -43,3 +43,37 @@ Things that are different
   - Provide plugins with a sqlite connection, and allow them to create tables if
     they do not exist during initialization, then use them to implement
     functionality.
+
+Sqlite schemas:
+
+    CREATE TABLE user (
+      id INTEGER PRIMARY KEY ASC,
+      nick TEXT UNIQUE,
+      realname TEXT,
+      host TEXT
+    );
+
+    CREATE TABLE channel (
+      id INTEGER PRIMARY KEY ASC,
+      name TEXT UNIQUE,
+      topic TEXT,
+    );
+
+    CREATE TABLE membership (
+      user_id INT NOT NULL,
+      channel_id INT NOT NULL,
+      UNIQUE(user_id, channel_id)
+    );
+
+Concrete changes:
+
+- [x] rename things to struct style naming
+- [x] get rid of unnecessary function pointer API
+- [x] draft new set of event types and new event structs
+- [x] draft user/channel APIs for plugins
+- [ ] make plugins return an int status
+- [ ] make plugins register a plugin object
+- [ ] make plugins define a cleanup function
+- [ ] implement user / channel APIs for plugins
+- [x] implement argument parsing library
+- [x] make plugin load list API not depend on libstephen
