@@ -236,11 +236,17 @@ void run_cbot_cli(int argc, char **argv)
 	free(decoded);
 
 	cbot_load_plugins(bot, plugin_dir, argv, rv);
-	while (!feof(stdin)) {
+	while (true) {
 		printf("> ");
-		getline(&line, &n, stdin);
+		rv = getline(&line, &n, stdin);
+		if (rv < 0 && feof(stdin)) {
+			break;
+		} else if (rv < 0) {
+			perror("getline");
+			break;
+		}
 		newline = strlen(line);
-		if (line[newline - 1] == '\n')
+		if (newline > 0 && line[newline - 1] == '\n')
 			line[newline - 1] = '\0';
 		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
 			continue;
