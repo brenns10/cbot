@@ -53,6 +53,34 @@ static void cbot_cli_nick(const struct cbot *bot, const char *newnick)
  * CLI Commands
  ***************/
 
+static void cbot_cli_cmd_add_membership(struct cbot *bot, int argc, char **argv)
+{
+	if (argc != 3) {
+		fprintf(stderr, "usage: /memberadd user #channel\n");
+		return;
+	}
+	cbot_add_membership(bot, argv[1], argv[2]);
+}
+
+static void cbot_cli_cmd_get_members(struct cbot *bot, int argc, char **argv)
+{
+	struct cbot_user_info *info = NULL;
+	struct sc_list_head head;
+	sc_list_init(&head);
+
+	if (argc != 2) {
+		fprintf(stderr, "usage: /memberlist #channel\n");
+		return;
+	}
+
+	cbot_get_members(bot, argv[1], &head);
+	sc_list_for_each_entry(info, &head, list, struct cbot_user_info)
+	{
+		printf("%s\n", info->username);
+	}
+	cbot_user_info_free_all(&head);
+}
+
 static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv);
 
 struct cbot_cli_cmd {
@@ -64,6 +92,10 @@ struct cbot_cli_cmd {
 
 #define CMD(cmd, func, help) {cmd, sizeof(cmd)-1, func, help}
 const struct cbot_cli_cmd cmds[] = {
+	CMD("/memberadd", cbot_cli_cmd_add_membership,
+		"add a member to a cbot channel"),
+	CMD("/memberlist", cbot_cli_cmd_get_members,
+		"list members in a cbot channel"),
 	CMD("/help", cbot_cli_cmd_help,
 		"list all commands"),
 };
