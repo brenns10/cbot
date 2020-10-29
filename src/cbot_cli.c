@@ -10,6 +10,10 @@
 
 #include "cbot_private.h"
 
+/***************
+ * CBot Backend Callbacks
+ ***************/
+
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
                           const char *msg)
 {
@@ -43,6 +47,93 @@ static void cbot_cli_nick(const struct cbot *bot, const char *newnick)
 	(void)bot; // unused
 	printf("%s becomes %s\n", bot->name, newnick);
 	cbot_set_nick((struct cbot*)bot, newnick);
+}
+
+/***************
+ * CLI Commands
+ ***************/
+
+static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv);
+
+struct cbot_cli_cmd {
+	char *cmd;
+	int cmdlen;
+	void(*func)(struct cbot *, int, char **);
+	char *help;
+};
+
+#define CMD(cmd, func, help) {cmd, sizeof(cmd)-1, func, help}
+const struct cbot_cli_cmd cmds[] = {
+	CMD("/help", cbot_cli_cmd_help,
+		"list all commands"),
+};
+
+static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv)
+{
+	int maxsize = 0;
+	for (int i = 0; i < nelem(cmds); i++)
+		if (cmds[i].cmdlen > maxsize)
+			maxsize = cmds[i].cmdlen;
+
+	maxsize += 1;
+	for (int i = 0; i < nelem(cmds); i++) {
+		printf("%s:", cmds[i].cmd);
+		for (int j = 0; j < maxsize - cmds[i].cmdlen; j++)
+			fputc(' ', stdout);
+		printf("%s\n", cmds[i].help);
+	}
+}
+
+#define CBOT_CLI_TOK_BUFSIZE 64
+#define CBOT_CLI_TOK_DELIM " \t\r\n\a"
+char **cbot_cli_split_line(char *line, int *count)
+{
+	int bufsize = CBOT_CLI_TOK_BUFSIZE, position = 0;
+	char **tokens = malloc(bufsize * sizeof(char *));
+	char *token, **tokens_backup, *save;
+
+	if (!tokens) {
+		fprintf(stderr, "cli: allocation error\n");
+		exit(EXIT_FAILURE);
+	}
+
+	token = strtok_r(line, CBOT_CLI_TOK_DELIM, &save);
+	while (token != NULL) {
+		tokens[position] = token;
+		position++;
+
+		if (position >= bufsize) {
+			bufsize += CBOT_CLI_TOK_BUFSIZE;
+			tokens_backup = tokens;
+			tokens = realloc(tokens, bufsize * sizeof(char *));
+			if (!tokens) {
+				free(tokens_backup);
+				fprintf(stderr, "cli: allocation error\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		token = strtok_r(NULL, CBOT_CLI_TOK_DELIM, &save);
+	}
+	tokens[position] = NULL;
+	if (count)
+		*count = position;
+	return tokens;
+}
+
+bool cbot_cli_execute_cmd(struct cbot *bot, char *line)
+{
+	int i, argc;
+	char **argv;
+	for (i = 0; i < nelem(cmds); i++) {
+		if (strncmp(cmds[i].cmd, line, cmds[i].cmdlen) == 0) {
+			argv = cbot_cli_split_line(line, &argc);
+			cmds[i].func(bot, argc, argv);
+			free(argv);
+			return true;
+		}
+	}
+	return false;
 }
 
 static void help(void)
@@ -115,6 +206,8 @@ void run_cbot_cli(int argc, char **argv)
 		newline = strlen(line);
 		if (line[newline - 1] == '\n')
 			line[newline - 1] = '\0';
+		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
+			continue;
 		cbot_handle_message(bot, "stdin", "shell", line, false);
 	}
 	free(line);
