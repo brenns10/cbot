@@ -27,8 +27,11 @@ enum cbot_event_type {
 	/* A user leaves a channel */
 	CBOT_PART,
 
-	/* A user changes nickname */
+	/* A user changes nickname (not the bot) */
 	CBOT_NICK,
+
+	/* The bot's name changes */
+	CBOT_BOT_NAME,
 
 	_CBOT_NUM_EVENT_TYPES_
 
@@ -61,7 +64,7 @@ struct cbot_user_event {
 };
 struct cbot_nick_event {
 	struct cbot *bot;
-	enum cbot_event_type type; /* CBOT_NICK */
+	enum cbot_event_type type; /* CBOT_NICK, CBOT_BOT_NAME */
 	const char *old_username;
 	const char *new_username;
 };

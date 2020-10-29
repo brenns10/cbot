@@ -425,10 +425,26 @@ struct cbot *cbot_create(const char *name, struct cbot_backend *backend)
 
 void cbot_set_nick(struct cbot *bot, const char *newname)
 {
-	free(bot->name);
-	bot->name = strdup(newname);
-}
+	struct cbot_nick_event event, copy;
+	struct cbot_handler *hdlr, *next;
 
+	event.bot = bot;
+	event.old_username = bot->name;
+	bot->name = strdup(newname);
+	event.new_username = bot->name;
+	event.type = CBOT_BOT_NAME;
+
+	if (strcmp(event.old_username, event.new_username) != 0) {
+		sc_list_for_each_safe(hdlr, next, &bot->handlers[event.type],
+		                      handler_list, struct cbot_handler)
+		{
+			copy = event; /* safe in case of modification */
+			hdlr->handler((struct cbot_event *)&copy, hdlr->user);
+		}
+	}
+
+	free((char *)event.old_username);
+}
 const char *cbot_get_name(struct cbot *bot)
 {
 	return bot->name;
