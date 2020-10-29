@@ -197,4 +197,17 @@ void cbot_user_info_free(struct cbot_user_info *info);
  */
 void cbot_user_info_free_all(struct sc_list_head *head);
 
+/**
+ * Return the bot name.
+ *
+ * The returned string may not be modified or freed by the caller. The name may
+ * at any point be freed by an IRC action. Thus, if the name is to be stored
+ * long term, it should be copied and stored elsewhere, to avoid dereferencing
+ * a freed name pointer later.
+ *
+ * @param bot Bot to get the name of
+ * @returns Bot name
+ */
+const char *cbot_get_name(struct cbot *bot);
+
 #endif // CBOT_H

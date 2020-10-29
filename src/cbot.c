@@ -429,6 +429,11 @@ void cbot_set_nick(struct cbot *bot, const char *newname)
 	bot->name = strdup(newname);
 }
 
+const char *cbot_get_name(struct cbot *bot)
+{
+	return bot->name;
+}
+
 /**
    @brief Free up all resources held by a cbot instance.
    @param cbot The bot to delete.

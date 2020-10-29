@@ -7,6 +7,7 @@
  *     cbot> hello, user!
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "cbot/cbot.h"
@@ -18,6 +19,15 @@ static void cbot_hello(struct cbot_message_event *event, void *user)
 
 void greet_load(struct cbot *bot)
 {
+	const char *refmt = "[Hh](ello|i|ey),? +%s!?";
+	const char *name = cbot_get_name(bot);
+	char *regexp = NULL;
+	int len;
+
+	len = 1 + snprintf(NULL, 0, refmt, name);
+	regexp = malloc(len);
+	snprintf(regexp, len, refmt, name);
 	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)cbot_hello, NULL,
-	              "[Hh](ello|i|ey),? +[Cc][Bb]ot!?");
+	              regexp);
+	free(regexp);
 }
