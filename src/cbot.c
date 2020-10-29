@@ -445,11 +445,7 @@ void cbot_delete(struct cbot *cbot)
 		sc_list_for_each_safe(hdlr, next, &cbot->handlers[i],
 		                      handler_list, struct cbot_handler)
 		{
-			if (hdlr->regex) {
-				sc_regex_free(hdlr->regex);
-			}
-			sc_list_remove(&hdlr->handler_list);
-			free(hdlr);
+			cbot_deregister(cbot, hdlr);
 		}
 	}
 	int rv = sqlite3_close(cbot->privDb);
@@ -471,15 +467,28 @@ void cbot_delete(struct cbot *cbot)
  * @param type The type of event to register a handler for.
  * @param handler Handler to register.
  */
-void cbot_register(struct cbot *bot, enum cbot_event_type type,
-                   cbot_handler_t handler, void *user, char *regex)
+struct cbot_handler *cbot_register(struct cbot *bot, enum cbot_event_type type,
+                                   cbot_handler_t handler, void *user,
+                                   char *regex)
 {
-	struct cbot_handler *hdlr = malloc(sizeof(struct cbot_handler));
+	struct cbot_handler *hdlr = calloc(1, sizeof(*hdlr));
 	hdlr->handler = handler;
 	hdlr->user = user;
 	if (regex)
 		hdlr->regex = sc_regex_compile(regex);
 	sc_list_insert_end(&bot->handlers[type], &hdlr->handler_list);
+	sc_list_init(&hdlr->plugin_list); // TODO add when plugins implemented
+	return hdlr;
+}
+
+void cbot_deregister(struct cbot *bot, struct cbot_handler *hdlr)
+{
+	sc_list_remove(&hdlr->handler_list);
+	sc_list_remove(&hdlr->plugin_list);
+	if (hdlr->regex) {
+		sc_regex_free(hdlr->regex);
+	}
+	free(hdlr);
 }
 
 static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,

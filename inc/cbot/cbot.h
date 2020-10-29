@@ -11,6 +11,8 @@
 
 struct cbot;
 
+struct cbot_handler;
+
 /**
  * An enumeration of possible events that can be handled by a plugin.
  */
@@ -146,9 +148,19 @@ typedef void (*cbot_handler_t)(struct cbot_event *event, void *user);
  * @param handler Event handler callback
  * @param user User pointer for this function
  * @param regex Regular expression (if applicable)
+ * @returns The "cbot_handler" pointer - an opaque type which is used to
+ *   deregister a plugin.
  */
-void cbot_register(struct cbot *bot, enum cbot_event_type type,
-                   cbot_handler_t handler, void *user, char *regex);
+struct cbot_handler *cbot_register(struct cbot *bot, enum cbot_event_type type,
+                                   cbot_handler_t handler, void *user,
+                                   char *regex);
+
+/**
+ * @brief Deregister an existing handler
+ * @param bot The bot instance
+ * @param hdlr Handler pointer returned by cbot_register()
+ */
+void cbot_deregister(struct cbot *bot, struct cbot_handler *hdlr);
 
 /**
  * Main plugin loader function signture.
