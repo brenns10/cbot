@@ -27,7 +27,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.5.0',
+  version: '>=0.5.1',
 )
 libsc_argparse_dep = dependency(
   'libsc-argparse',
@@ -79,6 +79,7 @@ plugins = [
   'name',
   'sadness',
   'become',
+  'who',
 ]
 plugin_libs = []
 foreach f: plugins
