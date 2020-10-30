@@ -78,7 +78,12 @@ void *base64_decode(const char *str, int explen);
  * Database functions!
  *******/
 int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
+int cbot_clear_channel_memberships(struct cbot *bot, char *chan);
+int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic);
 
 #define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
+
+void run_cbot_irc(int argc, char *argv[]);
+void run_cbot_cli(int argc, char **argv);
 
 #endif // CBOT_PRIVATE_H

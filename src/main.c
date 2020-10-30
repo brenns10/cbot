@@ -7,8 +7,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "cbot_cli.h"
-#include "cbot_irc.h"
+#include "cbot_private.h"
 
 static void usage(char *name)
 {

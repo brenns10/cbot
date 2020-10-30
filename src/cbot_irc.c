@@ -20,6 +20,96 @@
 char *chan = "#cbot";
 char *chanpass = NULL;
 
+static inline struct cbot *session_bot(irc_session_t *session)
+{
+	return irc_get_ctx(session);
+}
+
+static inline struct cbot_irc_backend *session_irc(irc_session_t *session)
+{
+	return session_bot(session)->backend->backend_data;
+}
+
+static inline struct cbot_irc_backend *bot_irc(const struct cbot *bot)
+{
+	return bot->backend->backend_data;
+}
+
+static inline irc_session_t *bot_session(const struct cbot *bot)
+{
+	return bot_irc(bot)->session;
+}
+
+static struct join_rq *join_rq_new(struct cbot_irc_backend *irc,
+                                   const char *chan)
+{
+	struct join_rq *rq;
+	rq = calloc(1, sizeof(*rq));
+	rq->channel = strdup(chan);
+	sc_list_insert_end(&irc->join_rqs, &rq->list);
+	return rq;
+}
+
+static void join_rq_delete(struct cbot_irc_backend *irc, struct join_rq *rq)
+{
+	sc_list_remove(&rq->list);
+	free(rq->channel);
+	free(rq);
+}
+
+static struct names_rq *names_rq_new(struct cbot_irc_backend *irc,
+                                     const char *chan)
+{
+	struct names_rq *rq;
+	rq = calloc(1, sizeof(*rq));
+	rq->channel = strdup(chan);
+	sc_list_insert_end(&irc->names_rqs, &rq->list);
+	sc_cb_init(&rq->names, 4096);
+	return rq;
+}
+
+static void names_rq_delete(struct cbot_irc_backend *irc, struct names_rq *rq)
+{
+	sc_list_remove(&rq->list);
+	free(rq->channel);
+	sc_cb_destroy(&rq->names);
+	free(rq);
+}
+
+static struct topic_rq *topic_rq_new(struct cbot_irc_backend *irc,
+                                     const char *chan)
+{
+	struct topic_rq *rq;
+	rq = calloc(1, sizeof(*rq));
+	rq->channel = strdup(chan);
+	sc_list_insert_end(&irc->topic_rqs, &rq->list);
+	return rq;
+}
+
+static void topic_rq_delete(struct cbot_irc_backend *irc, struct topic_rq *rq)
+{
+	sc_list_remove(&rq->list);
+	free(rq->channel);
+	if (rq->topic)
+		free(rq->topic);
+	free(rq);
+}
+
+void *lookup_by_str(struct sc_list_head *list, const char *str)
+{
+	struct sc_list_head *node;
+	char **after;
+
+	sc_list_for_each(node, list)
+	{
+		after = (char **)&node[1];
+		if (strcmp(*after, str) == 0)
+			return node;
+	}
+
+	return NULL;
+}
+
 void log_event(irc_session_t *session, const char *event, const char *origin,
                const char **params, unsigned int count)
 {
@@ -35,11 +125,110 @@ void log_event(irc_session_t *session, const char *event, const char *origin,
 	printf("]\n");
 }
 
+static void add_all_names(struct cbot *bot, struct names_rq *rq)
+{
+	char *nick = strtok(rq->names.buf, " ");
+	do {
+		if (nick[0] == '~' || nick[0] == '&' || nick[0] == '+' ||
+		    nick[0] == '%') {
+			nick++;
+		}
+		/* TODO bulk db insertion API? */
+		cbot_add_membership(bot, nick, rq->channel);
+	} while ((nick = strtok(NULL, " ")) != NULL);
+}
+
+static void join_maybe_done(struct cbot_irc_backend *irc, struct join_rq *rq)
+{
+	if (rq->received_names && rq->received_topics) {
+		add_all_names(irc->bot, rq->names_rq);
+		if (rq->topic_rq->topic)
+			cbot_set_channel_topic(irc->bot, rq->channel,
+			                       rq->topic_rq->topic);
+		names_rq_delete(irc, rq->names_rq);
+		topic_rq_delete(irc, rq->topic_rq);
+		join_rq_delete(irc, rq);
+	}
+}
+
+static void event_rpl_namreply(irc_session_t *session, const char *origin,
+                               const char **params, unsigned int count)
+{
+	struct cbot_irc_backend *irc = session_irc(session);
+	struct names_rq *rq = lookup_by_str(&irc->names_rqs, params[2]);
+	if (!rq) {
+		fprintf(stderr, "ERR: unsolicited RPL_NAMREPLY for %s\n",
+		        params[2]);
+		return;
+	}
+	sc_cb_concat(&rq->names, (char *)params[3]);
+}
+
+void event_rpl_endofnames(irc_session_t *session, const char *origin,
+                          const char **params, unsigned int count)
+{
+	struct cbot_irc_backend *irc = session_irc(session);
+	struct cbot *bot = session_bot(session);
+	struct names_rq *rq = lookup_by_str(&irc->names_rqs, params[1]);
+	if (!rq) {
+		fprintf(stderr, "ERR: unsolicited RPL_ENDOFNAMES for %s\n",
+		        params[1]);
+		return;
+	}
+	if (rq->join_rq) {
+		rq->join_rq->received_names = true;
+		join_maybe_done(irc, rq->join_rq);
+	} else {
+		/*
+		 * This is in response to an explicit join request sent by us.
+		 * For some reason. So clear the existing memberships and
+		 * refresh from this response.
+		 */
+		cbot_clear_channel_memberships(bot, rq->channel);
+		add_all_names(bot, rq);
+		names_rq_delete(irc, rq);
+	}
+}
+
+void event_rpl_topic(irc_session_t *session, const char *origin,
+                     const char **params, unsigned int count)
+{
+	/* TODO: notopic? */
+	struct cbot_irc_backend *irc = session_irc(session);
+	struct cbot *bot = session_bot(session);
+	struct topic_rq *rq = lookup_by_str(&irc->topic_rqs, params[1]);
+	if (!rq) {
+		fprintf(stderr, "ERR: unsolicited RPL_TOPIC for %s\n",
+		        params[1]);
+		return;
+	}
+	if (params[2])
+		rq->topic = strdup(params[2]);
+	if (rq->join_rq) {
+		rq->join_rq->received_topics = true;
+		join_maybe_done(irc, rq->join_rq);
+	} else {
+		cbot_set_channel_topic(bot, rq->channel, rq->topic);
+		topic_rq_delete(irc, rq);
+	}
+}
+
 void event_numeric(irc_session_t *session, unsigned int event,
                    const char *origin, const char **params, unsigned int count)
 {
 	char buf[24];
 	sprintf(buf, "%d", event);
+	switch (event) {
+	case 332:
+		event_rpl_topic(session, origin, params, count);
+		break;
+	case 353:
+		event_rpl_namreply(session, origin, params, count);
+		break;
+	case 366:
+		event_rpl_endofnames(session, origin, params, count);
+		break;
+	}
 	log_event(session, buf, origin, params, count);
 }
 
@@ -49,6 +238,7 @@ void event_numeric(irc_session_t *session, unsigned int event,
 void event_connect(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
+	cbot_join(session_bot(session), chan, chanpass);
 	irc_cmd_join(session, chan, chanpass);
 	log_event(session, event, origin, params, count);
 }
@@ -56,21 +246,21 @@ void event_connect(irc_session_t *session, const char *event,
 static void cbot_irc_send(const struct cbot *cbot, const char *to,
                           const char *msg)
 {
-	irc_session_t *session = cbot->backend->backend_data;
+	irc_session_t *session = bot_session(cbot);
 	irc_cmd_msg(session, to, msg);
 }
 
 static void cbot_irc_me(const struct cbot *cbot, const char *to,
                         const char *msg)
 {
-	irc_session_t *session = cbot->backend->backend_data;
+	irc_session_t *session = bot_session(cbot);
 	irc_cmd_me(session, to, msg);
 }
 
 static void cbot_irc_op(const struct cbot *cbot, const char *channel,
                         const char *username)
 {
-	irc_session_t *session = cbot->backend->backend_data;
+	irc_session_t *session = bot_session(cbot);
 	struct sc_charbuf cb;
 	sc_cb_init(&cb, 256);
 	sc_cb_printf(&cb, "+o %s", username);
@@ -80,14 +270,24 @@ static void cbot_irc_op(const struct cbot *cbot, const char *channel,
 
 static void cbot_irc_nick(const struct cbot *cbot, const char *newnick)
 {
-	irc_session_t *session = cbot->backend->backend_data;
+	irc_session_t *session = bot_session(cbot);
 	irc_cmd_nick(session, newnick);
 }
 
 static void cbot_irc_join(const struct cbot *cbot, const char *channel,
                           const char *password)
 {
-	irc_session_t *session = cbot->backend->backend_data;
+	irc_session_t *session = bot_session(cbot);
+	struct cbot_irc_backend *irc = bot_irc(cbot);
+	struct join_rq *join_rq;
+
+	/* Joining triggers a request for join, as well as names and topic */
+	join_rq = join_rq_new(irc, channel);
+	join_rq->names_rq = names_rq_new(irc, channel);
+	join_rq->names_rq->join_rq = join_rq;
+	join_rq->topic_rq = topic_rq_new(irc, channel);
+	join_rq->topic_rq->join_rq = join_rq;
+
 	irc_cmd_join(session, channel, password);
 }
 
@@ -96,7 +296,7 @@ void event_channel(irc_session_t *session, const char *event,
 {
 	log_event(session, event, origin, params, count);
 	if (count >= 2 && params[1] != NULL) {
-		cbot_handle_message(irc_get_ctx(session), params[0], origin,
+		cbot_handle_message(session_bot(session), params[0], origin,
 		                    params[1], false);
 		printf("Event handled by CBot.\n");
 	}
@@ -106,7 +306,7 @@ void event_action(irc_session_t *session, const char *event, const char *origin,
                   const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	struct cbot *bot = irc_get_ctx(session);
+	struct cbot *bot = session_bot(session);
 	cbot_handle_message(bot, params[0], origin, params[1], true);
 	printf("Event handled by CBot.\n");
 }
@@ -114,9 +314,22 @@ void event_action(irc_session_t *session, const char *event, const char *origin,
 void event_join(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
+	struct join_rq *rq;
 	log_event(session, event, origin, params, count);
-	struct cbot *bot = irc_get_ctx(session);
-	cbot_handle_user_event(bot, params[0], origin, CBOT_JOIN);
+	struct cbot_irc_backend *irc = session_irc(session);
+	struct cbot *bot = irc->bot;
+	if (strcmp(origin, bot->name) == 0) {
+		rq = lookup_by_str(&irc->join_rqs, params[0]);
+		if (!rq) {
+			fprintf(stderr, "ERR: unsolicited self JOIN %s\n",
+			        params[0]);
+		} else {
+			rq->received_join = true;
+			join_maybe_done(irc, rq);
+		}
+	} else {
+		cbot_handle_user_event(bot, params[0], origin, CBOT_JOIN);
+	}
 	printf("Event handled by CBot.\n");
 }
 
@@ -124,7 +337,7 @@ void event_part(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	struct cbot *bot = irc_get_ctx(session);
+	struct cbot *bot = session_bot(session);
 	cbot_handle_user_event(bot, params[0], origin, CBOT_PART);
 	printf("Event handled by CBot.\n");
 }
@@ -133,7 +346,7 @@ void event_nick(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
-	struct cbot *bot = irc_get_ctx(session);
+	struct cbot *bot = session_bot(session);
 	if (strcmp(origin, bot->name) == 0)
 		cbot_set_nick(bot, params[0]);
 	else
@@ -180,6 +393,7 @@ void run_cbot_irc(int argc, char *argv[])
 	irc_session_t *session;
 	struct cbot *cbot;
 	struct cbot_backend backend;
+	struct cbot_irc_backend irc_backend;
 	char *name, *host, *plugin_dir, *password, *hash;
 	unsigned short port_num;
 	int rv;
@@ -221,6 +435,10 @@ void run_cbot_irc(int argc, char *argv[])
 	backend.join = cbot_irc_join;
 	backend.nick = cbot_irc_nick;
 
+	sc_list_init(&irc_backend.join_rqs);
+	sc_list_init(&irc_backend.topic_rqs);
+	sc_list_init(&irc_backend.names_rqs);
+
 	cbot = cbot_create(name, &backend);
 
 	// Set the hash in the bot.
@@ -254,7 +472,9 @@ void run_cbot_irc(int argc, char *argv[])
 		        irc_strerror(irc_errno(session)));
 		exit(EXIT_FAILURE);
 	}
-	backend.backend_data = session;
+	irc_backend.bot = cbot;
+	irc_backend.session = session;
+	backend.backend_data = &irc_backend;
 
 	cbot->backend = &backend;
 	cbot_load_plugins(cbot, plugin_dir, argv, rv);

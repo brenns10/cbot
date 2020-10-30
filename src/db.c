@@ -210,6 +210,28 @@ int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head)
 	                   CBOTDB_OUTPUT(text, 1, realname););
 }
 
+int cbot_clear_channel_memberships(struct cbot *bot, char *chan)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void,
+	                        "DELETE FROM membership m "
+	                        " INNER JOIN channel c ON c.id=m.channel_id "
+	                        "WHERE c.name=$chan;");
+	CBOTDB_BIND_ARG(text, chan);
+	CBOTDB_NO_RESULT();
+}
+
+int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void,
+	                        "INSERT INTO channel(name, topic) "
+	                        "VALUES($chan, $topic) "
+	                        "ON CONFLICT(name) DO UPDATE "
+	                        "SET topic=excluded.topic;");
+	CBOTDB_BIND_ARG(text, chan);
+	CBOTDB_BIND_ARG(text, topic);
+	CBOTDB_NO_RESULT();
+}
+
 int cbot_db_create_tables(struct cbot *bot)
 {
 	int rv;

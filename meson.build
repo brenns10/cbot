@@ -64,7 +64,7 @@ cbot = executable(
   'cbot', ['src/main.c'],
   include_directories : inc,
   install : true,
-  dependencies : [libcbot_dep],
+  dependencies : [libcbot_dep, libsc_collections_dep],
 )
 
 plugins = [
