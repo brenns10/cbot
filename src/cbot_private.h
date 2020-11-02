@@ -80,6 +80,7 @@ void *base64_decode(const char *str, int explen);
 int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
 int cbot_clear_channel_memberships(struct cbot *bot, char *chan);
 int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic);
+int cbot_db_create_tables(struct cbot *bot);
 
 #define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 
