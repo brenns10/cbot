@@ -373,3 +373,8 @@ void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names,
 	sc_cb_destroy(&name);
 	sc_cb_destroy(&loader);
 }
+
+struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot)
+{
+	return bot->lwt_ctx;
+}

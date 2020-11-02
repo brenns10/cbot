@@ -9,6 +9,7 @@
 #include <stdarg.h>
 
 #include <sc-collections.h>
+#include <sc-lwt.h>
 #include <sc-regex.h>
 #include <sqlite3.h>
 
@@ -53,6 +54,8 @@ struct cbot {
 	uint8_t hash[20];
 	struct cbot_backend *backend;
 	sqlite3 *privDb;
+	struct sc_lwt_ctx *lwt_ctx;
+	struct sc_lwt *lwt;
 };
 
 struct cbot *cbot_create(const char *name, struct cbot_backend *backend);

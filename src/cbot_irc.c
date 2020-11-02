@@ -9,6 +9,7 @@
 
 #include <sc-argparse.h>
 #include <sc-collections.h>
+#include <sc-lwt.h>
 
 #include "libirc_rfcnumeric.h"
 #include "libircclient.h"
@@ -243,11 +244,18 @@ void event_connect(irc_session_t *session, const char *event,
 	log_event(session, event, origin, params, count);
 }
 
+static inline void maybe_schedule(const struct cbot *bot)
+{
+	if (sc_lwt_current() != bot->lwt)
+		sc_lwt_set_state(bot->lwt, SC_LWT_RUNNABLE);
+}
+
 static void cbot_irc_send(const struct cbot *cbot, const char *to,
                           const char *msg)
 {
 	irc_session_t *session = bot_session(cbot);
 	irc_cmd_msg(session, to, msg);
+	maybe_schedule(cbot);
 }
 
 static void cbot_irc_me(const struct cbot *cbot, const char *to,
@@ -255,6 +263,7 @@ static void cbot_irc_me(const struct cbot *cbot, const char *to,
 {
 	irc_session_t *session = bot_session(cbot);
 	irc_cmd_me(session, to, msg);
+	maybe_schedule(cbot);
 }
 
 static void cbot_irc_op(const struct cbot *cbot, const char *channel,
@@ -272,6 +281,7 @@ static void cbot_irc_nick(const struct cbot *cbot, const char *newnick)
 {
 	irc_session_t *session = bot_session(cbot);
 	irc_cmd_nick(session, newnick);
+	maybe_schedule(cbot);
 }
 
 static void cbot_irc_join(const struct cbot *cbot, const char *channel,
@@ -289,6 +299,7 @@ static void cbot_irc_join(const struct cbot *cbot, const char *channel,
 	join_rq->topic_rq->join_rq = join_rq;
 
 	irc_cmd_join(session, channel, password);
+	maybe_schedule(cbot);
 }
 
 void event_channel(irc_session_t *session, const char *event,
@@ -352,6 +363,55 @@ void event_nick(irc_session_t *session, const char *event, const char *origin,
 	else
 		cbot_handle_nick_event(bot, origin, params[0]);
 	printf("Event handled by CBot.\n");
+}
+
+static void cbot_irc_lwt(void *data)
+{
+	struct cbot *bot = data;
+	irc_session_t *session = bot_session(bot);
+	fd_set in_fd, out_fd;
+	int maxfd;
+	struct sc_lwt_poll poll[16];
+	struct sc_lwt *cur = sc_lwt_current();
+	int count;
+
+	while (1) {
+		FD_ZERO(&in_fd);
+		FD_ZERO(&out_fd);
+		maxfd = 0;
+		irc_add_select_descriptors(session, &in_fd, &out_fd, &maxfd);
+		for (int i = 0; i <= maxfd; i++) {
+			int flags = 0;
+			if (FD_ISSET(i, &in_fd))
+				flags |= SC_LWT_W_IN;
+			if (FD_ISSET(i, &out_fd))
+				flags |= SC_LWT_W_OUT;
+			if (flags) {
+				sc_lwt_wait_fd(cur, i, flags, NULL);
+			}
+		}
+		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		count = sc_lwt_ready_fds(cur, poll, nelem(poll));
+		if (count < 0) {
+			fprintf(stderr, "err: sc_lwt_ready_fds returned %d\n",
+			        count);
+			exit(EXIT_FAILURE);
+		} else if (count == nelem(poll)) {
+			fprintf(stderr, "warn: may have missed an fd\n");
+		}
+		FD_ZERO(&in_fd);
+		FD_ZERO(&out_fd);
+		for (int i = 0; i < count; i++) {
+			if (poll[i].event & SC_LWT_W_IN) {
+				FD_SET(poll[i].fd, &in_fd);
+			} else if (poll[i].event & SC_LWT_W_OUT) {
+				FD_SET(poll[i].fd, &out_fd);
+			}
+		}
+		irc_process_select_descriptors(session, &in_fd, &out_fd);
+		sc_lwt_remove_all(cur);
+	}
 }
 
 void help()
@@ -495,12 +555,8 @@ void run_cbot_irc(int argc, char *argv[])
 	}
 
 	// Run the networking event loop.
-	if (irc_run(session)) {
-		fprintf(stderr,
-		        "cbot: error running IRC connection loop - %s\n",
-		        irc_strerror(irc_errno(session)));
-		exit(EXIT_FAILURE);
-	}
-
+	cbot->lwt_ctx = sc_lwt_init();
+	cbot->lwt = sc_lwt_create_task(cbot->lwt_ctx, cbot_irc_lwt, cbot);
+	sc_lwt_run(cbot->lwt_ctx);
 	exit(EXIT_SUCCESS);
 }

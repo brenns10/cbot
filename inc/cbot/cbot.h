@@ -225,4 +225,15 @@ void cbot_user_info_free_all(struct sc_list_head *head);
  */
 const char *cbot_get_name(struct cbot *bot);
 
+/**
+ * Return the bot's lightweight thread context.
+ *
+ * This can be used to schedule threads to run on the event loop. Plugin should
+ * behave, and not hog the CPU. Otherwise the whole system becomes sad.
+ *
+ * @param bot the bot instance
+ * @returns the lwt_ctx
+ */
+struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot);
+
 #endif // CBOT_H

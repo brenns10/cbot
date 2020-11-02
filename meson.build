@@ -34,6 +34,11 @@ libsc_argparse_dep = dependency(
   fallback: ['sc-argparse', 'libsc_argparse_dep'],
   version: '>=0.2.0',
 )
+libsc_lwt_dep = dependency(
+  'libsc-lwt',
+  fallback: ['sc-lwt', 'libsc_lwt_dep'],
+  version: '>=0.1.0',
+)
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
 sqlite_dep = dependency(
@@ -41,20 +46,22 @@ sqlite_dep = dependency(
   fallback: ['sqlite', 'sqlite_dep'],
 )
 
+cbot_deps = [
+    libsc_collections_dep,
+    libsc_regex_dep,
+    libsc_argparse_dep,
+    libsc_lwt_dep,
+    libircclient_dep,
+    crypto_dep,
+    dl_dep,
+    sqlite_dep,
+]
 
 libcbot = shared_library(
   'cbot', sources,
   include_directories : inc,
   install : true,
-  dependencies : [
-    libsc_collections_dep,
-    libsc_regex_dep,
-    libsc_argparse_dep,
-    libircclient_dep,
-    crypto_dep,
-    dl_dep,
-    sqlite_dep,
-  ],
+  dependencies : cbot_deps,
 )
 libcbot_dep = declare_dependency(
   include_directories : inc,
@@ -64,7 +71,7 @@ cbot = executable(
   'cbot', ['src/main.c'],
   include_directories : inc,
   install : true,
-  dependencies : [libcbot_dep, libsc_collections_dep],
+  dependencies : [libcbot_dep] + cbot_deps,
 )
 
 plugins = [
@@ -80,6 +87,7 @@ plugins = [
   'sadness',
   'become',
   'who',
+  'annoy',
 ]
 plugin_libs = []
 foreach f: plugins
@@ -87,7 +95,7 @@ foreach f: plugins
     shared_library(
       f, 'plugin/' + f + '.c',
       include_directories : inc, install : true,
-      dependencies : [libcbot_dep, libsc_regex_dep, libsc_collections_dep],
+      dependencies : [libcbot_dep] + cbot_deps,
       name_prefix : '',
     )
   ]

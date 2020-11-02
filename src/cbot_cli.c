@@ -170,6 +170,38 @@ bool cbot_cli_execute_cmd(struct cbot *bot, char *line)
 	return false;
 }
 
+static void cbot_cli_run(void *data)
+{
+	struct cbot *bot = data;
+	char *line = NULL;
+	size_t n;
+	int newline, rv;
+	struct sc_lwt *cur = sc_lwt_current();
+
+	while (true) {
+		printf("> ");
+		fflush(stdout);
+		sc_lwt_wait_fd(cur, STDIN_FILENO, SC_LWT_W_IN, NULL);
+		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		sc_lwt_remove_fd(cur, STDIN_FILENO);
+		rv = getline(&line, &n, stdin);
+		if (rv < 0 && feof(stdin)) {
+			break;
+		} else if (rv < 0) {
+			perror("getline");
+			break;
+		}
+		newline = strlen(line);
+		if (newline > 0 && line[newline - 1] == '\n')
+			line[newline - 1] = '\0';
+		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
+			continue;
+		cbot_handle_message(bot, "stdin", "shell", line, false);
+	}
+	free(line);
+}
+
 static void help(void)
 {
 	puts("usage: cbot cli [options] plugins");
@@ -194,12 +226,11 @@ enum {
 
 void run_cbot_cli(int argc, char **argv)
 {
-	char *line = NULL, *plugin_dir, *hash, *name;
+	char *plugin_dir, *hash, *name;
 	struct cbot *bot;
 	struct cbot_backend backend;
 	int rv;
-	size_t n;
-	int newline;
+	struct sc_lwt_ctx *c;
 	struct sc_arg args[] = {
 		SC_ARG_STRING('H', "--hash", "hash chain tip"),
 		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
@@ -236,23 +267,10 @@ void run_cbot_cli(int argc, char **argv)
 	free(decoded);
 
 	cbot_load_plugins(bot, plugin_dir, argv, rv);
-	while (true) {
-		printf("> ");
-		rv = getline(&line, &n, stdin);
-		if (rv < 0 && feof(stdin)) {
-			break;
-		} else if (rv < 0) {
-			perror("getline");
-			break;
-		}
-		newline = strlen(line);
-		if (newline > 0 && line[newline - 1] == '\n')
-			line[newline - 1] = '\0';
-		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
-			continue;
-		cbot_handle_message(bot, "stdin", "shell", line, false);
-	}
-	free(line);
+
+	c = sc_lwt_init();
+	sc_lwt_create_task(c, cbot_cli_run, bot);
+	sc_lwt_run(c);
 
 	cbot_delete(bot);
 }
