@@ -230,7 +230,6 @@ void run_cbot_cli(int argc, char **argv)
 	struct cbot *bot;
 	struct cbot_backend backend;
 	int rv;
-	struct sc_lwt_ctx *c;
 	struct sc_arg args[] = {
 		SC_ARG_STRING('H', "--hash", "hash chain tip"),
 		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
@@ -268,9 +267,9 @@ void run_cbot_cli(int argc, char **argv)
 
 	cbot_load_plugins(bot, plugin_dir, argv, rv);
 
-	c = sc_lwt_init();
-	sc_lwt_create_task(c, cbot_cli_run, bot);
-	sc_lwt_run(c);
+	bot->lwt_ctx = sc_lwt_init();
+	bot->lwt = sc_lwt_create_task(bot->lwt_ctx, cbot_cli_run, bot);
+	sc_lwt_run(bot->lwt_ctx);
 
 	cbot_delete(bot);
 }
