@@ -236,4 +236,25 @@ const char *cbot_get_name(struct cbot *bot);
  */
 struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot);
 
+/*****************
+ * Tokenizing API
+ *****************/
+
+struct cbot_tok {
+	char *original; // copy of the tokenized string
+	char **tokens;  // pointers into original for each token
+	int ntok;       // count of tokens in array
+};
+
+/**
+ * Tokenize `msg` (copy it first) and fill `*result` with the tokens.
+ * Return count of tokens (also stored in ntok) on success, negative on fail.
+ */
+int cbot_tokenize(const char *msg, struct cbot_tok *result);
+
+/**
+ * Frees resources held by `tokens`. Does not free the actual tokens struct.
+ */
+void cbot_tok_destroy(struct cbot_tok *tokens);
+
 #endif // CBOT_H

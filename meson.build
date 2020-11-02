@@ -9,6 +9,7 @@ sources = [
   'src/cbot_hashchain.c',
   'src/cbot_irc.c',
   'src/db.c',
+  'src/tok.c',
   #'src/main.c',
 ]
 
@@ -88,6 +89,7 @@ plugins = [
   'become',
   'who',
   'annoy',
+  'tok',
 ]
 plugin_libs = []
 foreach f: plugins
