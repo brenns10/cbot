@@ -9,30 +9,24 @@
 
 #include "cbot_private.h"
 
-static void usage(char *name)
-{
-	printf("usage: %s [backend]\n", name);
-	puts("backend choices:");
-	puts("  irc - run on irc");
-	puts("  cli - run in the shell");
-	printf("see `%s [backend] --help` for more info on each backend's "
-	       "args\n",
-	       name);
-	exit(EXIT_FAILURE);
-}
-
 int main(int argc, char *argv[])
 {
+	struct cbot *bot;
+	int rv;
 	srand(time(NULL));
-	if (argc < 2) {
-		usage(argv[0]);
+	if (argc != 2) {
+		printf("usage: %s CONFIG_FILE\n", argv[0]);
+		return EXIT_FAILURE;
 	}
-	if (strcmp(argv[1], "irc") == 0) {
-		run_cbot_irc(argc - 2, argv + 2);
-	} else if (strcmp(argv[1], "cli") == 0) {
-		run_cbot_cli(argc - 2, argv + 2);
-	} else {
-		usage(argv[0]);
-	}
+
+	bot = cbot_create();
+	if (!bot)
+		return EXIT_FAILURE;
+
+	rv = cbot_load_config(bot, argv[1]);
+	if (rv < 0)
+		return EXIT_FAILURE;
+
+	cbot_run(bot);
 	return EXIT_SUCCESS;
 }

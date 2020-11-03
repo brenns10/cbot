@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
+#include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <sc-regex.h>
@@ -37,7 +38,10 @@ struct cbot_plugin {
 	struct sc_list_head plugins;
 };
 
-struct cbot_backend {
+struct cbot_backend_ops {
+	const char *name;
+	int (*configure)(struct cbot *cbot, config_setting_t *group);
+	void (*run)(struct cbot *cbot);
 	void (*send)(const struct cbot *cbot, const char *to, const char *msg);
 	void (*me)(const struct cbot *cbot, const char *to, const char *msg);
 	void (*op)(const struct cbot *cbot, const char *channel,
@@ -45,23 +49,38 @@ struct cbot_backend {
 	void (*join)(const struct cbot *cbot, const char *channel,
 	             const char *password);
 	void (*nick)(const struct cbot *cbot, const char *newnick);
-	void *backend_data;
+};
+
+extern struct cbot_backend_ops irc_ops;
+extern struct cbot_backend_ops cli_ops;
+
+struct cbot_channel_conf {
+	char *name;
+	char *pass;
+	struct sc_list_head list;
 };
 
 struct cbot {
+	/* Loaded from configuration */
 	char *name;
+	char *backend_name;
+	char *plugin_dir;
+	char *db_file;
+	struct sc_list_head init_channels;
+
 	struct sc_list_head handlers[_CBOT_NUM_EVENT_TYPES_];
 	uint8_t hash[20];
-	struct cbot_backend *backend;
+	struct cbot_backend_ops *backend_ops;
+	void *backend;
 	sqlite3 *privDb;
 	struct sc_lwt_ctx *lwt_ctx;
 	struct sc_lwt *lwt;
 };
 
-struct cbot *cbot_create(const char *name, struct cbot_backend *backend);
+struct cbot *cbot_create(void);
+int cbot_load_config(struct cbot *bot, const char *conf_file);
+void cbot_run(struct cbot *bot);
 void cbot_delete(struct cbot *obj);
-void cbot_load_plugins(struct cbot *bot, char *plugin_dir, char **names,
-                       int count);
 
 int cbot_is_authorized(struct cbot *cbot, const char *message);
 

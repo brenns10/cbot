@@ -170,9 +170,8 @@ bool cbot_cli_execute_cmd(struct cbot *bot, char *line)
 	return false;
 }
 
-static void cbot_cli_run(void *data)
+static void cbot_cli_run(struct cbot *bot)
 {
-	struct cbot *bot = data;
 	char *line = NULL;
 	size_t n;
 	int newline, rv;
@@ -202,74 +201,18 @@ static void cbot_cli_run(void *data)
 	free(line);
 }
 
-static void help(void)
+static int cbot_cli_configure(struct cbot *bot, config_setting_t *group)
 {
-	puts("usage: cbot cli [options] plugins");
-	puts("options:");
-	puts("  --hash HASH        set the hash chain tip (required)");
-	puts("  --name [name]      set the bot's name");
-	puts("  --plugin-dir [dir] set the plugin directory");
-	puts("  --help             show this help and exit");
-	puts("plugins:");
-	puts("  list of names of plugins within plugin-dir (don't include "
-	     "\".so\").");
-	exit(EXIT_FAILURE);
+	return 0;
 }
 
-enum {
-	/* noformat */
-	ARG_HASH = 0,
-	ARG_NAME,
-	ARG_PLUGIN_DIR,
-	ARG_HELP,
+struct cbot_backend_ops cli_ops = {
+	.name = "cli",
+	.configure = cbot_cli_configure,
+	.run = cbot_cli_run,
+	.send = cbot_cli_send,
+	.me = cbot_cli_me,
+	.op = cbot_cli_op,
+	.join = cbot_cli_join,
+	.nick = cbot_cli_nick,
 };
-
-void run_cbot_cli(int argc, char **argv)
-{
-	char *plugin_dir, *hash, *name;
-	struct cbot *bot;
-	struct cbot_backend backend;
-	int rv;
-	struct sc_arg args[] = {
-		SC_ARG_STRING('H', "--hash", "hash chain tip"),
-		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
-		SC_ARG_DEF_STRING('p', "--plugin-dir", "bin/release/plugin",
-		                  "plugin directory"),
-		SC_ARG_COUNT('h', "--help", "help"),
-
-		SC_ARG_END()
-	};
-
-	if ((rv = sc_argparse(args, argc, argv)) < 0) {
-		fprintf(stderr, "argument parse error\n");
-		help();
-	}
-
-	if (args[ARG_HELP].val_int)
-		help();
-
-	hash = args[ARG_HASH].val_string;
-	name = args[ARG_NAME].val_string;
-	plugin_dir = args[ARG_PLUGIN_DIR].val_string;
-
-	backend.send = cbot_cli_send;
-	backend.me = cbot_cli_me;
-	backend.op = cbot_cli_op;
-	backend.join = cbot_cli_join;
-	backend.nick = cbot_cli_nick;
-
-	bot = cbot_create(name, &backend);
-
-	// Set the hash in the bot.
-	void *decoded = base64_decode(hash, 20);
-	memcpy(bot->hash, decoded, 20);
-	free(decoded);
-
-	cbot_load_plugins(bot, plugin_dir, argv, rv);
-
-	bot->lwt_ctx = sc_lwt_init();
-	bot->lwt = sc_lwt_create_task(bot->lwt_ctx, cbot_cli_run, bot);
-	sc_lwt_run(bot->lwt_ctx);
-
-	cbot_delete(bot);
-}

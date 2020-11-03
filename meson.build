@@ -46,6 +46,7 @@ sqlite_dep = dependency(
   'sqlite3',
   fallback: ['sqlite', 'sqlite_dep'],
 )
+config_dep = dependency('libconfig')
 
 cbot_deps = [
     libsc_collections_dep,
@@ -56,6 +57,7 @@ cbot_deps = [
     crypto_dep,
     dl_dep,
     sqlite_dep,
+    config_dep,
 ]
 
 libcbot = shared_library(

@@ -10,3 +10,5 @@ subprojects/localcache/*
 !subprojects/localcache/libircclient-patch-1.10.tar.gz
 .clangd
 run_local.sh
+*.cfg
+!sample.cfg

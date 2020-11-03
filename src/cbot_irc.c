@@ -18,9 +18,6 @@
 #include "cbot_irc.h"
 #include "cbot_private.h"
 
-char *chan = "#cbot";
-char *chanpass = NULL;
-
 static inline struct cbot *session_bot(irc_session_t *session)
 {
 	return irc_get_ctx(session);
@@ -28,12 +25,12 @@ static inline struct cbot *session_bot(irc_session_t *session)
 
 static inline struct cbot_irc_backend *session_irc(irc_session_t *session)
 {
-	return session_bot(session)->backend->backend_data;
+	return session_bot(session)->backend;
 }
 
 static inline struct cbot_irc_backend *bot_irc(const struct cbot *bot)
 {
-	return bot->backend->backend_data;
+	return bot->backend;
 }
 
 static inline irc_session_t *bot_session(const struct cbot *bot)
@@ -239,8 +236,14 @@ void event_numeric(irc_session_t *session, unsigned int event,
 void event_connect(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
-	cbot_join(session_bot(session), chan, chanpass);
-	irc_cmd_join(session, chan, chanpass);
+	struct cbot *bot = session_bot(session);
+	struct cbot_channel_conf *c;
+	sc_list_for_each_entry(c, &bot->init_channels, list,
+	                       struct cbot_channel_conf)
+	{
+		cbot_join(bot, c->name, c->pass);
+		irc_cmd_join(session, c->name, c->pass);
+	}
 	log_event(session, event, origin, params, count);
 }
 
@@ -365,15 +368,23 @@ void event_nick(irc_session_t *session, const char *event, const char *origin,
 	printf("Event handled by CBot.\n");
 }
 
-static void cbot_irc_lwt(void *data)
+static void cbot_irc_run(struct cbot *bot)
 {
-	struct cbot *bot = data;
 	irc_session_t *session = bot_session(bot);
+	struct cbot_irc_backend *irc = bot_irc(bot);
 	fd_set in_fd, out_fd;
 	int maxfd;
 	struct sc_lwt_poll poll[16];
 	struct sc_lwt *cur = sc_lwt_current();
 	int count;
+
+	// Start the connection process!
+	if (irc_connect(session, irc->host, irc->port, irc->password, bot->name,
+	                bot->name, NULL)) {
+		fprintf(stderr, "cbot: error connecting to IRC - %s\n",
+		        irc_strerror(irc_errno(session)));
+		exit(EXIT_FAILURE);
+	}
 
 	while (1) {
 		FD_ZERO(&in_fd);
@@ -414,149 +425,81 @@ static void cbot_irc_lwt(void *data)
 	}
 }
 
-void help()
+static int cbot_irc_configure(struct cbot *bot, config_setting_t *group)
 {
-	puts("usage: cbot irc [options] plugins");
-	puts("required flags:");
-	puts("  --hash HASH        set the hash chain tip (required)");
-	puts("  --plugin-dir [dir] set the plugin directory");
-	puts("  --name [name]      set the bot's name");
-	puts("optional flags:");
-	puts("  --host [host]      set the irc server hostname");
-	puts("  --password [pass]  set the irc server password");
-	puts("  --port [port]      set the irc port number");
-	puts("  --chan [chan]      set the irc channel");
-	puts("  --chanpass [pw]    set the channel password");
-	puts("  --help             show this help and exit");
-	puts("plugins:");
-	puts("  list of names of plugins within plugin-dir (don't include "
-	     "\".so\").");
-	exit(EXIT_FAILURE);
-}
-
-enum {
-	/* noformat */
-	ARG_NAME = 0,
-	ARG_PLUGIN_DIR,
-	ARG_HASH,
-	ARG_HOST,
-	ARG_PASSWORD,
-	ARG_PORT,
-	ARG_CHAN,
-	ARG_CHANPASS,
-	ARG_HELP,
-};
-
-void run_cbot_irc(int argc, char *argv[])
-{
-	irc_callbacks_t callbacks;
-	irc_session_t *session;
-	struct cbot *cbot;
-	struct cbot_backend backend;
-	struct cbot_irc_backend irc_backend;
-	char *name, *host, *plugin_dir, *password, *hash;
-	unsigned short port_num;
 	int rv;
-	struct sc_arg args[] = {
-		SC_ARG_DEF_STRING('n', "--name", "cbot", "bot name"),
-		SC_ARG_DEF_STRING('p', "--plugin-dir", "bin/release/plugin",
-		                  "plugin directory"),
-		SC_ARG_STRING('H', "--hash", "hash chain tip"),
-		SC_ARG_DEF_STRING('t', "--host", "irc.case.edu", "server host"),
-		SC_ARG_STRING('P', "--password", "server password"),
-		SC_ARG_DEF_INT('p', "--port", 6667, "server port number"),
-		SC_ARG_DEF_STRING('c', "--chan", "#cbot", "channel to join"),
-		SC_ARG_STRING('w', "--chanpass", "channel password"),
-		SC_ARG_COUNT('h', "--help", "show help and exit"),
+	const char *host, *password;
+	int port;
+	struct cbot_irc_backend *backend;
 
-		SC_ARG_END()
-	};
-
-	if ((rv = sc_argparse(args, argc, argv)) < 0) {
-		fprintf(stderr, "error parsing args\n");
-		help();
+	rv = config_setting_lookup_string(group, "host", &host);
+	if (rv == CONFIG_FALSE) {
+		fprintf(stderr,
+		        "cbot irc: key \"host\" wrong type or not exists\n");
+		return -1;
 	}
+	rv = config_setting_lookup_int(group, "port", &port);
+	if (rv == CONFIG_FALSE) {
+		fprintf(stderr,
+		        "cbot irc: key \"port\" wrong type or not exists\n");
+		return -1;
+	}
+	rv = config_setting_lookup_string(group, "password", &password);
+	if (rv == CONFIG_FALSE)
+		password = NULL;
 
-	if (args[ARG_HELP].val_int)
-		help();
+	backend = calloc(1, sizeof(*backend));
+	bot->backend = backend;
+	backend->bot = bot;
+	backend->host = strdup(host);
+	backend->port = port;
+	if (password)
+		backend->password = strdup(password);
 
-	name = args[ARG_NAME].val_string;
-	host = args[ARG_HOST].val_string;
-	port_num = args[ARG_PORT].val_int;
-	plugin_dir = args[ARG_PLUGIN_DIR].val_string;
-	password = args[ARG_PASSWORD].val_string;
-	chan = args[ARG_CHAN].val_string;
-	chanpass = args[ARG_CHANPASS].val_string;
-	hash = args[ARG_HASH].val_string;
+	sc_list_init(&backend->join_rqs);
+	sc_list_init(&backend->topic_rqs);
+	sc_list_init(&backend->names_rqs);
 
-	backend.send = cbot_irc_send;
-	backend.me = cbot_irc_me;
-	backend.op = cbot_irc_op;
-	backend.join = cbot_irc_join;
-	backend.nick = cbot_irc_nick;
+	backend->callbacks.event_connect = event_connect;
+	backend->callbacks.event_join = event_join;
+	backend->callbacks.event_nick = event_nick;
+	backend->callbacks.event_quit = log_event;
+	backend->callbacks.event_part = event_part;
+	backend->callbacks.event_mode = log_event;
+	backend->callbacks.event_topic = log_event;
+	backend->callbacks.event_kick = log_event;
+	backend->callbacks.event_channel = event_channel;
+	backend->callbacks.event_privmsg = log_event;
+	backend->callbacks.event_notice = log_event;
+	backend->callbacks.event_invite = log_event;
+	backend->callbacks.event_umode = log_event;
+	backend->callbacks.event_ctcp_rep = log_event;
+	backend->callbacks.event_ctcp_action = log_event;
+	backend->callbacks.event_unknown = log_event;
+	backend->callbacks.event_numeric = event_numeric;
 
-	sc_list_init(&irc_backend.join_rqs);
-	sc_list_init(&irc_backend.topic_rqs);
-	sc_list_init(&irc_backend.names_rqs);
-
-	cbot = cbot_create(name, &backend);
-
-	// Set the hash in the bot.
-	void *decoded = base64_decode(hash, 20);
-	memcpy(cbot->hash, decoded, 20);
-	free(decoded);
-
-	memset(&callbacks, 0, sizeof(callbacks));
-
-	callbacks.event_connect = event_connect;
-	callbacks.event_join = event_join;
-	callbacks.event_nick = event_nick;
-	callbacks.event_quit = log_event;
-	callbacks.event_part = event_part;
-	callbacks.event_mode = log_event;
-	callbacks.event_topic = log_event;
-	callbacks.event_kick = log_event;
-	callbacks.event_channel = event_channel;
-	callbacks.event_privmsg = log_event;
-	callbacks.event_notice = log_event;
-	callbacks.event_invite = log_event;
-	callbacks.event_umode = log_event;
-	callbacks.event_ctcp_rep = log_event;
-	callbacks.event_ctcp_action = log_event;
-	callbacks.event_unknown = log_event;
-	callbacks.event_numeric = event_numeric;
-
-	session = irc_create_session(&callbacks);
-	if (!session) {
+	backend->session = irc_create_session(&backend->callbacks);
+	if (!backend->session) {
 		fprintf(stderr, "cbot: error creating IRC session - %s\n",
-		        irc_strerror(irc_errno(session)));
-		exit(EXIT_FAILURE);
+		        irc_strerror(irc_errno(backend->session)));
+		return -1;
 	}
-	irc_backend.bot = cbot;
-	irc_backend.session = session;
-	backend.backend_data = &irc_backend;
-
-	cbot->backend = &backend;
-	cbot_load_plugins(cbot, plugin_dir, argv, rv);
-
 	// Set libircclient to parse nicknames for us.
-	irc_option_set(session, LIBIRC_OPTION_STRIPNICKS);
+	irc_option_set(backend->session, LIBIRC_OPTION_STRIPNICKS);
 	// Set libircclient to ignore invalid certificates (irc.case.edu...)
-	irc_option_set(session, LIBIRC_OPTION_SSL_NO_VERIFY);
-
+	irc_option_set(backend->session, LIBIRC_OPTION_SSL_NO_VERIFY);
 	// Save the cbot struct in the irc context
-	irc_set_ctx(session, cbot);
-
-	// Start the connection process!
-	if (irc_connect(session, host, port_num, password, name, name, NULL)) {
-		fprintf(stderr, "cbot: error connecting to IRC - %s\n",
-		        irc_strerror(irc_errno(session)));
-		exit(EXIT_FAILURE);
-	}
-
-	// Run the networking event loop.
-	cbot->lwt_ctx = sc_lwt_init();
-	cbot->lwt = sc_lwt_create_task(cbot->lwt_ctx, cbot_irc_lwt, cbot);
-	sc_lwt_run(cbot->lwt_ctx);
-	exit(EXIT_SUCCESS);
+	irc_set_ctx(backend->session, bot);
+	return 0;
 }
+
+struct cbot_backend_ops irc_ops = {
+	.name = "irc",
+	.configure = cbot_irc_configure,
+	.run = cbot_irc_run,
+	.send = cbot_irc_send,
+	.me = cbot_irc_me,
+	.op = cbot_irc_op,
+	.join = cbot_irc_join,
+	.nick = cbot_irc_nick,
+};
