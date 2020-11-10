@@ -3,10 +3,14 @@
  * linking to the CBot repository
  */
 #include <sc-collections.h>
+#include <stdlib.h>
 
 #include "cbot/cbot.h"
 
-struct cbot_handler *name_hdlr;
+struct cbot_karma_priv {
+	struct cbot_plugin *plugin;
+	struct cbot_handler *name_hdlr;
+};
 
 static void name(struct cbot_message_event *event, void *user)
 {
@@ -17,29 +21,45 @@ static void name(struct cbot_message_event *event, void *user)
 	          botname);
 }
 
-static void register_name(struct cbot *bot)
+static void register_name(struct cbot_karma_priv *priv)
 {
-	const char *botname = cbot_get_name(bot);
+	const char *botname = cbot_get_name(priv->plugin->bot);
 	struct sc_charbuf buf;
 	sc_cb_init(&buf, 256);
 	sc_cb_printf(&buf,
 	             "([wW]ho|[wW]hat|[wW][tT][fF])('?s?| +"
 	             "[iI]s| +[aA]re +[yY]ou,?) +(%s|cbot)\\??",
 	             botname);
-	name_hdlr = cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)name, NULL,
-	                          buf.buf);
+	priv->name_hdlr = cbot_register(priv->plugin, CBOT_MESSAGE,
+	                                (cbot_handler_t)name, NULL, buf.buf);
 	sc_cb_destroy(&buf);
 }
 
 static void cbot_bot_name_change(struct cbot_nick_event *event, void *user)
 {
-	cbot_deregister(event->bot, name_hdlr);
-	register_name(event->bot);
+	struct cbot_karma_priv *priv = event->plugin->data;
+	cbot_deregister(event->bot, priv->name_hdlr);
+	register_name(priv);
 }
 
-void name_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	register_name(bot);
-	cbot_register(bot, CBOT_BOT_NAME, (cbot_handler_t)cbot_bot_name_change,
-	              NULL, NULL);
+	struct cbot_karma_priv *priv =
+	        calloc(1, sizeof(struct cbot_karma_priv));
+	priv->plugin = plugin;
+	plugin->data = priv;
+	register_name(priv);
+	cbot_register(plugin, CBOT_BOT_NAME,
+	              (cbot_handler_t)cbot_bot_name_change, NULL, NULL);
+	return 0;
 }
+
+static void unload(struct cbot_plugin *plugin)
+{
+	free(plugin->data);
+}
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+	.unload = unload,
+};

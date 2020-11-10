@@ -21,8 +21,13 @@ static void lod(struct cbot_message_event *event, void *user)
 	free(target);
 }
 
-void lod_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)lod, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)lod, NULL,
 	              "lod\\s+(.+)\\s*");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

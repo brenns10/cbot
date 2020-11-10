@@ -32,11 +32,16 @@ static void sadness(struct cbot_message_event *event, void *user)
 	          event->username);
 }
 
-void sadness_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)sadness, NULL,
+	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)sadness, NULL,
 	              "([Yy]ou +[Ss]uck[!.]?|"
 	              "[Ss]ucks[!.]?|"
 	              "[Ii] +[Hh]ate +[Yy]ou[!.]?|"
 	              "[Ss]hut [Uu]p[!.]?)");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

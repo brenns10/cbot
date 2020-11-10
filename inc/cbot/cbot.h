@@ -5,6 +5,7 @@
 #ifndef CBOT_H
 #define CBOT_H
 
+#include <libconfig.h>
 #include <stddef.h>
 
 #include "sc-collections.h"
@@ -44,10 +45,12 @@ enum cbot_event_type {
  */
 struct cbot_event {
 	struct cbot *bot;
+	struct cbot_plugin *plugin;
 	enum cbot_event_type type;
 };
 struct cbot_message_event {
 	struct cbot *bot;
+	struct cbot_plugin *plugin;
 	enum cbot_event_type type;
 	const char *channel;
 	const char *username;
@@ -58,12 +61,14 @@ struct cbot_message_event {
 };
 struct cbot_user_event {
 	struct cbot *bot;
+	struct cbot_plugin *plugin;
 	enum cbot_event_type type; /* CBOT_JOIN, CBOT_PART */
 	const char *channel;
 	const char *username;
 };
 struct cbot_nick_event {
 	struct cbot *bot;
+	struct cbot_plugin *plugin;
 	enum cbot_event_type type; /* CBOT_NICK, CBOT_BOT_NAME */
 	const char *old_username;
 	const char *new_username;
@@ -133,6 +138,63 @@ void cbot_join(const struct cbot *bot, const char *channel,
  */
 void cbot_nick(const struct cbot *bot, const char *newname);
 
+struct cbot_plugin;
+
+struct cbot_plugin_ops {
+	char *description;
+
+	/**
+	 * Load the plugin. Return 0 on success. Return negative on failure,
+	 * in which case the plugin's resources should be completely freed, as
+	 * it will not be added to the bot.
+	 * @param plugin A plugin handle unique to this plugin instance
+	 * @param config Configuration
+	 * @retval integer status
+	 */
+	int (*load)(struct cbot_plugin *plugin, config_setting_t *config);
+
+	/**
+	 * (optional) Unload the plugin. This is mainly called on shutdown, but
+	 * could also be called by user request to unload particular plugins.
+	 * Note that the plugin is *NOT* responsible for undoing its handler
+	 * registrations via cbot_deregister(). This callback is merely for
+	 * *additional* cleanup which may not otherwise be done.
+	 *
+	 * If this field is NULL, then the plugin will not receive any
+	 * notification before being unloaded.
+	 *
+	 * @param plugin Plugin instance
+	 */
+	void (*unload)(struct cbot_plugin *plugin);
+
+	/**
+	 * (optional) Send a help message to the given target.
+	 */
+	void (*help)(struct cbot_plugin *plugin, const char *target);
+};
+
+/*
+ * The public plugin interface. A pointer this struct serves as an identifying
+ * handle for plugins, as it is passed to plugin functions, and used by plugins
+ * to identify themselves when calling core functions.
+ */
+struct cbot_plugin {
+	struct cbot_plugin_ops *ops;
+	void *data;
+	struct cbot *bot;
+};
+
+/**
+ * Unload a plugin. Note that the plugin itself should not directly call this,
+ * as the plugin code would be unloaded by it. As an alternative, a plugin may
+ * do the following:
+ *
+ *     sc_lwt_create_task(cbot_get_lwt_ctx(), cbot_unload_plugin, plugin);
+ *
+ * This would schedule an asynchronous task to unload the plugin.
+ */
+void cbot_unload_plugin(struct cbot_plugin *plugin);
+
 /**
  * An event handler function. Takes an event and does some action to handle it.
  *
@@ -146,7 +208,7 @@ typedef void (*cbot_handler_t)(struct cbot_event *event, void *user);
 
 /**
  * @brief Register a handler for an event
- * @param bot Handle to the cbot instance
+ * @param plugin The plugin of this event
  * @param event Event type you are registering to handle
  * @param handler Event handler callback
  * @param user User pointer for this function
@@ -154,7 +216,8 @@ typedef void (*cbot_handler_t)(struct cbot_event *event, void *user);
  * @returns The "cbot_handler" pointer - an opaque type which is used to
  *   deregister a plugin.
  */
-struct cbot_handler *cbot_register(struct cbot *bot, enum cbot_event_type type,
+struct cbot_handler *cbot_register(struct cbot_plugin *plugin,
+                                   enum cbot_event_type type,
                                    cbot_handler_t handler, void *user,
                                    char *regex);
 

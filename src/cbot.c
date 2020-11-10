@@ -20,6 +20,8 @@ struct cbot_backend_ops *all_ops[] = {
 	&cli_ops,
 };
 
+#define plugpriv(plug) ((struct cbot_plugpriv *)plug)
+
 /********
  * Functions which plugins can call to perform actions. These are generally
  * delegated to the backends.
@@ -99,6 +101,7 @@ struct cbot *cbot_create(void)
 		sc_list_init(&cbot->handlers[i]);
 	}
 	sc_list_init(&cbot->init_channels);
+	sc_list_init(&cbot->plugins);
 	OpenSSL_add_all_digests();
 	return cbot;
 }
@@ -314,6 +317,7 @@ void cbot_set_nick(struct cbot *bot, const char *newname)
 		                      handler_list, struct cbot_handler)
 		{
 			copy = event; /* safe in case of modification */
+			copy.plugin = &hdlr->plugin->p;
 			hdlr->handler((struct cbot_event *)&copy, hdlr->user);
 		}
 	}
@@ -325,20 +329,15 @@ const char *cbot_get_name(struct cbot *bot)
 	return bot->name;
 }
 
+static void cbot_unload_all_plugins(struct cbot *bot);
+
 /**
    @brief Free up all resources held by a cbot instance.
    @param cbot The bot to delete.
  */
 void cbot_delete(struct cbot *cbot)
 {
-	struct cbot_handler *hdlr, *next;
-	for (int i = 0; i < _CBOT_NUM_EVENT_TYPES_; i++) {
-		sc_list_for_each_safe(hdlr, next, &cbot->handlers[i],
-		                      handler_list, struct cbot_handler)
-		{
-			cbot_deregister(cbot, hdlr);
-		}
-	}
+	cbot_unload_all_plugins(cbot);
 	free_init_channels(cbot);
 	if (cbot->privDb) {
 		int rv = sqlite3_close(cbot->privDb);
@@ -351,6 +350,7 @@ void cbot_delete(struct cbot *cbot)
 	free(cbot->backend_name);
 	free(cbot->plugin_dir);
 	free(cbot->db_file);
+	sc_lwt_free(cbot->lwt_ctx);
 	free(cbot);
 	EVP_cleanup();
 }
@@ -365,17 +365,20 @@ void cbot_delete(struct cbot *cbot)
  * @param type The type of event to register a handler for.
  * @param handler Handler to register.
  */
-struct cbot_handler *cbot_register(struct cbot *bot, enum cbot_event_type type,
+struct cbot_handler *cbot_register(struct cbot_plugin *plugin,
+                                   enum cbot_event_type type,
                                    cbot_handler_t handler, void *user,
                                    char *regex)
 {
+	struct cbot_plugpriv *priv = plugpriv(plugin);
 	struct cbot_handler *hdlr = calloc(1, sizeof(*hdlr));
 	hdlr->handler = handler;
 	hdlr->user = user;
 	if (regex)
 		hdlr->regex = sc_regex_compile(regex);
-	sc_list_insert_end(&bot->handlers[type], &hdlr->handler_list);
-	sc_list_init(&hdlr->plugin_list); // TODO add when plugins implemented
+	sc_list_insert_end(&priv->bot->handlers[type], &hdlr->handler_list);
+	sc_list_insert_end(&priv->handlers, &hdlr->plugin_list);
+	hdlr->plugin = priv;
 	return hdlr;
 }
 
@@ -403,6 +406,7 @@ static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,
 			event.indices = NULL;
 			event.num_captures = 0;
 			copy = event; /* safe in case of modification */
+			copy.plugin = &hdlr->plugin->p;
 			hdlr->handler((struct cbot_event *)&copy, hdlr->user);
 		} else {
 			result = sc_regex_exec(hdlr->regex, event.message,
@@ -412,6 +416,7 @@ static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,
 				event.num_captures =
 				        sc_regex_num_captures(hdlr->regex);
 				copy = event;
+				copy.plugin = &hdlr->plugin->p;
 				hdlr->handler((struct cbot_event *)&copy,
 				              hdlr->user);
 				free(indices);
@@ -476,6 +481,7 @@ void cbot_handle_user_event(struct cbot *bot, const char *channel,
 	                       struct cbot_handler)
 	{
 		copy = event; /* safe in case of modification */
+		copy.plugin = &hdlr->plugin->p;
 		hdlr->handler((struct cbot_event *)&copy, hdlr->user);
 	}
 }
@@ -494,6 +500,7 @@ void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
 	                       struct cbot_handler)
 	{
 		copy = event; /* safe in case of modification */
+		copy.plugin = &hdlr->plugin->p;
 		hdlr->handler((struct cbot_event *)&copy, hdlr->user);
 	}
 }
@@ -505,27 +512,46 @@ void cbot_handle_nick_event(struct cbot *bot, const char *old_username,
 /**
    @brief Private function to load a single plugin.
  */
-static bool cbot_load_plugin(struct cbot *bot, const char *filename,
-                             const char *loader)
+static struct cbot_plugpriv *cbot_load_plugin(struct cbot *bot,
+                                              const char *filename,
+                                              const char *name,
+                                              config_setting_t *conf)
 {
 	void *plugin_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
+	struct cbot_plugin_ops *ops;
+	struct cbot_plugpriv *priv;
+	int rv;
 
-	printf("attempting to load function %s from %s\n", loader, filename);
+	printf("attempting to load symbol ops from %s\n", filename);
 
 	if (plugin_handle == NULL) {
 		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
 		return false;
 	}
 
-	cbot_plugin_t plugin = dlsym(plugin_handle, loader);
+	ops = dlsym(plugin_handle, "ops");
 
-	if (plugin == NULL) {
+	if (ops == NULL) {
 		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
 		return false;
 	}
-
-	plugin(bot);
-	return true;
+	priv = calloc(1, sizeof(*priv));
+	priv->p.ops = ops;
+	priv->p.bot = bot;
+	priv->bot = bot;
+	priv->name = strdup(name);
+	priv->handle = plugin_handle;
+	sc_list_init(&priv->list);
+	sc_list_init(&priv->handlers);
+	rv = ops->load(&priv->p, conf);
+	if (rv < 0) {
+		free(priv->name);
+		dlclose(plugin_handle);
+		free(priv);
+		return NULL;
+	}
+	sc_list_insert_end(&bot->plugins, &priv->list);
+	return priv;
 }
 
 /**
@@ -534,16 +560,13 @@ static bool cbot_load_plugin(struct cbot *bot, const char *filename,
 int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 {
 	struct sc_charbuf name;
-	struct sc_charbuf loader;
 	const char *plugin_name;
 	config_setting_t *entry;
 	int i, rv = 0;
 	sc_cb_init(&name, 256);
-	sc_cb_init(&loader, 256);
 
 	for (i = 0; i < config_setting_length(group); i++) {
 		sc_cb_clear(&name);
-		sc_cb_clear(&loader);
 		entry = config_setting_get_elem(group, i);
 		if (!entry || !config_setting_is_group(entry)) {
 			fprintf(stderr,
@@ -562,14 +585,38 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 		}
 
 		sc_cb_printf(&name, "%s/%s.so", bot->plugin_dir, plugin_name);
-		sc_cb_printf(&loader, "%s_load", plugin_name);
-		cbot_load_plugin(bot, name.buf, loader.buf);
+		cbot_load_plugin(bot, name.buf, plugin_name, entry);
 	}
 
 out:
 	sc_cb_destroy(&name);
-	sc_cb_destroy(&loader);
 	return rv;
+}
+
+void cbot_unload_plugin(struct cbot_plugin *plugin)
+{
+	struct cbot_plugpriv *priv = plugpriv(plugin);
+	struct cbot_handler *hdlr, *n;
+	if (plugin->ops->unload)
+		plugin->ops->unload(plugin);
+	sc_list_for_each_safe(hdlr, n, &priv->handlers, plugin_list,
+	                      struct cbot_handler)
+	{
+		cbot_deregister(priv->bot, hdlr);
+	}
+	dlclose(priv->handle);
+	free(priv->name);
+	free(priv);
+}
+
+static void cbot_unload_all_plugins(struct cbot *bot)
+{
+	struct cbot_plugpriv *priv, *n;
+	sc_list_for_each_safe(priv, n, &bot->plugins, list,
+	                      struct cbot_plugpriv)
+	{
+		cbot_unload_plugin(&priv->p);
+	}
 }
 
 struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot)

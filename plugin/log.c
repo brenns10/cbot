@@ -81,7 +81,13 @@ static void cbot_log(struct cbot_message_event *event, void *user)
 	sc_cb_destroy(&filename);
 }
 
-void log_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)cbot_log, NULL, NULL);
+	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)cbot_log, NULL,
+	              NULL);
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

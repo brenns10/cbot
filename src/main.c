@@ -28,5 +28,6 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 
 	cbot_run(bot);
+	cbot_delete(bot);
 	return EXIT_SUCCESS;
 }

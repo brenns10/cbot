@@ -19,8 +19,13 @@ static void become(struct cbot_message_event *event, void *user)
 	free(name);
 }
 
-void become_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)become, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)become, NULL,
 	              "become (\\w+)");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

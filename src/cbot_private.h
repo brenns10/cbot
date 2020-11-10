@@ -16,11 +16,15 @@
 
 #include "cbot/cbot.h"
 
+struct cbot_plugpriv;
+
 struct cbot_handler {
 	/* Function called by CBot */
 	cbot_handler_t handler;
 	/* User data for the handler */
 	void *user;
+	/* Plugin owning this */
+	struct cbot_plugpriv *plugin;
 	/* Optionally, a regex which must match in order to be called. */
 	struct sc_regex *regex;
 	/* List containing all handlers for this event. */
@@ -29,13 +33,18 @@ struct cbot_handler {
 	struct sc_list_head plugin_list;
 };
 
-struct cbot_plugin {
+struct cbot_plugpriv {
+	struct cbot_plugin p;
 	/* Name of the plugin */
 	char *name;
+	/* Redundant, but the plugin could modify p.bot */
+	struct cbot *bot;
 	/* List of handlers provided */
 	struct sc_list_head handlers;
 	/* List of plugins */
-	struct sc_list_head plugins;
+	struct sc_list_head list;
+	/* dlopen handle */
+	void *handle;
 };
 
 struct cbot_backend_ops {
@@ -69,6 +78,7 @@ struct cbot {
 	struct sc_list_head init_channels;
 
 	struct sc_list_head handlers[_CBOT_NUM_EVENT_TYPES_];
+	struct sc_list_head plugins;
 	uint8_t hash[20];
 	struct cbot_backend_ops *backend_ops;
 	void *backend;

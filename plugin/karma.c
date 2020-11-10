@@ -214,17 +214,22 @@ static void karma_forget(struct cbot_message_event *event, void *user)
  * @param bot Bot we're loading into.
  * @param registrar Function to call to register handlers.
  */
-void karma_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 #define KARMA_WORD     "^ \t\n"
 #define NOT_KARMA_WORD " \t\n"
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_check, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)karma_check, NULL,
 	              "karma(\\s+([" KARMA_WORD "]+))?");
-	cbot_register(bot, CBOT_MESSAGE, (cbot_handler_t)karma_change, NULL,
+	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)karma_change, NULL,
 	              ".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_set, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)karma_set, NULL,
 	              "set-karma +([" KARMA_WORD
 	              "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)karma_forget, NULL,
-	              "forget[ -]me");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)karma_forget,
+	              NULL, "forget[ -]me");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

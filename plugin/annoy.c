@@ -50,10 +50,15 @@ static void stop(struct cbot_message_event *event, void *user)
 	bot = NULL;
 }
 
-void annoy_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)start, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)start, NULL,
 	              "be annoying");
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)stop, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)stop, NULL,
 	              "stop it!?");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

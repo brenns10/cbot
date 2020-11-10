@@ -45,8 +45,13 @@ static void magic8(struct cbot_message_event *event, void *user)
 	          event->username);
 }
 
-void magic8_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)magic8, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)magic8, NULL,
 	              "(magic8|8ball).+");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

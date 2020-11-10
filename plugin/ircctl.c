@@ -38,10 +38,15 @@ static void join_handler(struct cbot_message_event *event, void *user)
 	free(hash);
 }
 
-void ircctl_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)op_handler, NULL,
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)op_handler, NULL,
 	              "op +(.*) +" HASH);
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)join_handler, NULL,
-	              "join +(.*) +" HASH);
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)join_handler,
+	              NULL, "join +(.*) +" HASH);
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};

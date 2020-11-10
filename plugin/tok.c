@@ -29,7 +29,13 @@ static void tok(struct cbot_message_event *event, void *user)
 	cbot_tok_destroy(&tok);
 }
 
-void tok_load(struct cbot *bot)
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(bot, CBOT_ADDRESSED, (cbot_handler_t)tok, NULL, "tok .*");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)tok, NULL,
+	              "tok .*");
+	return 0;
 }
+
+struct cbot_plugin_ops ops = {
+	.load = load,
+};
