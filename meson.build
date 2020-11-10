@@ -10,6 +10,7 @@ sources = [
   'src/cbot_irc.c',
   'src/db.c',
   'src/tok.c',
+  'src/fmt.c',
   #'src/main.c',
 ]
 
@@ -83,15 +84,13 @@ plugins = [
   'help',
   'ircctl',
   'karma',
-  'lod',
   'log',
-  'magic8',
   'name',
-  'sadness',
   'become',
   'who',
   'annoy',
   'tok',
+  'reply',
 ]
 plugin_libs = []
 foreach f: plugins

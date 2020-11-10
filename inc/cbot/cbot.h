@@ -320,4 +320,13 @@ int cbot_tokenize(const char *msg, struct cbot_tok *result);
  */
 void cbot_tok_destroy(struct cbot_tok *tokens);
 
+/******************
+ * Dynamic Formatting API
+ ******************/
+
+typedef int (*cbot_formatter_t)(struct sc_charbuf *, char *, void *);
+
+int cbot_format(struct sc_charbuf *buf, const char *fmt,
+                cbot_formatter_t formatter, void *user);
+
 #endif // CBOT_H
