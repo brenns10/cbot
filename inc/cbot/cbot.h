@@ -329,4 +329,42 @@ typedef int (*cbot_formatter_t)(struct sc_charbuf *, char *, void *);
 int cbot_format(struct sc_charbuf *buf, const char *fmt,
                 cbot_formatter_t formatter, void *user);
 
+/******************
+ * DB API
+ ******************/
+
+/**
+ * This struct is necessary to register a table with cbot. It enables you to
+ * update your table schema in a backward-compatible way. As you make changes to
+ * your schema, you increment its version, and you add an alter statement to the
+ * alters array. On startup, the bot checks for the existence of the table, and
+ * its current schema version. If the version is below your specified version,
+ * it will run each alter statement in sequence, bringing your table up-to-date.
+ *
+ * If your table change is backward compatible, you must set the alters array
+ * member to NULL. The migration will continue until the first NULL alter
+ * statement, at which point it will fail. You must include an entry in your
+ * changelog documentation which instructs the user on how to migrate past this
+ * point.
+ */
+struct cbot_db_table {
+	const char *name;
+	const char *create;
+	const char **alters;
+	unsigned int version;
+};
+
+/**
+ * @brief Register a database table. This should be called during plugin init.
+ *
+ * See documentation for struct cbot_db_table for the details on the
+ * registration process and how the struct should be filled in.
+ *
+ * @param plugin The plugin registering this table.
+ * @param tbl The table object. This should point to memory which is valid for
+ *    the entire lifetime of the bot, ideally static memory.
+ */
+int cbot_db_register(struct cbot_plugin *plugin,
+                     const struct cbot_db_table *tbl);
+
 #endif // CBOT_H

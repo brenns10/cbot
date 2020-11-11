@@ -20,8 +20,6 @@ struct cbot_backend_ops *all_ops[] = {
 	&cli_ops,
 };
 
-#define plugpriv(plug) ((struct cbot_plugpriv *)plug)
-
 /********
  * Functions which plugins can call to perform actions. These are generally
  * delegated to the backends.
@@ -262,6 +260,16 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 	if (rv < 0)
 		goto out;
 
+	bot->lwt_ctx = sc_lwt_init();
+	bot->lwt = sc_lwt_create_task(
+	        bot->lwt_ctx, (void (*)(void *))bot->backend_ops->run, bot);
+
+	rv = cbot_db_init(bot);
+	if (rv < 0) {
+		rv = -1;
+		goto out;
+	}
+
 	pluggroup = config_lookup(&conf, "plugins");
 	if (!pluggroup || !config_setting_is_group(pluggroup)) {
 		fprintf(stderr,
@@ -271,24 +279,6 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 	}
 	cbot_load_plugins(bot, pluggroup);
 
-	rv = sqlite3_open_v2("cbot_priv", &bot->privDb,
-	                     SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
-	                             SQLITE_OPEN_MEMORY,
-	                     NULL);
-	if (rv != SQLITE_OK) {
-		rv = -1;
-		goto out;
-	}
-
-	rv = cbot_db_create_tables(bot);
-	if (rv < 0) {
-		rv = -1;
-		goto out;
-	}
-
-	bot->lwt_ctx = sc_lwt_init();
-	bot->lwt = sc_lwt_create_task(
-	        bot->lwt_ctx, (void (*)(void *))bot->backend_ops->run, bot);
 out:
 	/* only things to cleanup are the config, everything else ought to be
 	 * cleaned up by cbot_delete() */

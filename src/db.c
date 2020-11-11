@@ -38,6 +38,8 @@ static inline char *cbot_sqlite3_column_text(struct sqlite3_stmt *stmt,
 #define CBOTDB_OUTPUT(type, column_index, struct_field)                        \
 	STRUCT->struct_field = cbot_sqlite_column(type)(STMT, column_index)
 
+#define CBOTDB_NOBIND() goto OUT_LABEL;
+
 #define CBOTDB_BIND_ARG(sqlite_type, name)                                     \
 	RV = sqlite3_bind_parameter_index(STMT, "$" #name);                    \
 	if (RV == 0) {                                                         \
@@ -232,35 +234,6 @@ int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic)
 	CBOTDB_NO_RESULT();
 }
 
-int cbot_db_create_tables(struct cbot *bot)
-{
-	int rv;
-	char *errmsg = NULL;
-	char *stmts = "CREATE TABLE user ( "
-	              " id INTEGER PRIMARY KEY ASC, "
-	              " nick TEXT NOT NULL UNIQUE, "
-	              " realname TEXT, "
-	              " host TEXT "
-	              "); "
-	              "CREATE TABLE channel ( "
-	              " id INTEGER PRIMARY KEY ASC, "
-	              " name TEXT NOT NULL UNIQUE, "
-	              " topic TEXT "
-	              "); "
-	              "CREATE TABLE membership ( "
-	              " user_id INT NOT NULL, "
-	              " channel_id INT NOT NULL, "
-	              " UNIQUE(user_id, channel_id) "
-	              "); ";
-	rv = sqlite3_exec(bot->privDb, stmts, NULL, NULL, &errmsg);
-	if (rv != SQLITE_OK) {
-		fprintf(stderr, "sqlite error creating tables: %s\n", errmsg);
-		sqlite3_free(errmsg);
-		return -1;
-	}
-	return 0;
-}
-
 void cbot_user_info_free(struct cbot_user_info *info)
 {
 	free(info->username);
@@ -287,4 +260,203 @@ int cbot_add_membership(struct cbot *bot, char *nick, char *chan)
 		return -1;
 	rv = cbot_db_upsert_membership(bot, user_id, chan_id);
 	return rv;
+}
+
+int cbot_clear_memberships(struct cbot *bot)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void, "DELETE FROM membership;");
+	CBOTDB_NOBIND();
+	CBOTDB_NO_RESULT();
+}
+
+/******
+ * Table registration and migration
+ */
+
+int create_schema_registry(struct cbot *bot)
+{
+	int rv;
+	char *errmsg = NULL;
+	char *stmts = "CREATE TABLE IF NOT EXISTS cbot_schema_registry ( "
+	              " id INTEGER PRIMARY KEY ASC, "
+	              " name TEXT NOT NULL UNIQUE, "
+	              " version INTEGER NOT NULL "
+	              "); ";
+	rv = sqlite3_exec(bot->privDb, stmts, NULL, NULL, &errmsg);
+	if (rv != SQLITE_OK) {
+		fprintf(stderr, "sqlite error creating tables: %s\n", errmsg);
+		sqlite3_free(errmsg);
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ * returns -1 if the table does not exist, returns -2 on error
+ */
+static int get_schema_version(struct cbot *bot, char *name)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void,
+	                        "SELECT version FROM cbot_schema_registry "
+	                        "WHERE name=$name;");
+	CBOTDB_BIND_ARG(text, name);
+	CBOTDB_SINGLE_INTEGER_RESULT();
+}
+
+static int query_and_update_schema_version(struct cbot *bot, const char *name,
+                                           unsigned int version,
+                                           const char *query)
+{
+	int rv = 0;
+	char *errmsg = NULL;
+	struct sc_charbuf cb;
+	sc_cb_init(&cb, 1024);
+
+	sc_cb_printf(&cb,
+	             "BEGIN TRANSACTION; %s "
+	             "INSERT INTO cbot_schema_registry(name, version) "
+	             "VALUES (\"%s\", %u) ON CONFLICT(name) DO UPDATE "
+	             "SET version=excluded.version; "
+	             "COMMIT;",
+	             query, name, version);
+
+	rv = sqlite3_exec(bot->privDb, cb.buf, NULL, NULL, &errmsg);
+	if (rv != SQLITE_OK) {
+		fprintf(stderr, "table registration error: %s\n", errmsg);
+		sqlite3_free(errmsg);
+		rv = -1;
+		goto out;
+	}
+	rv = 0;
+
+out:
+	sc_cb_destroy(&cb);
+	return rv;
+}
+
+int cbot_db_register_internal(struct cbot *bot, const struct cbot_db_table *tbl)
+{
+	int s_ver = get_schema_version(bot, (char *)tbl->name);
+	int rv;
+	unsigned int u_ver;
+
+	if (s_ver < 0) {
+		printf("cbot_db: create table \"%s\" version %u\n", tbl->name,
+		       tbl->version);
+		rv = query_and_update_schema_version(bot, tbl->name,
+		                                     tbl->version, tbl->create);
+		return rv;
+	}
+
+	u_ver = (unsigned int)s_ver;
+	if (u_ver > tbl->version) {
+		fprintf(stderr,
+		        "table %s has newer version (%u) than supported (%u)\n",
+		        tbl->name, u_ver, tbl->version);
+		return -1;
+	} else if (u_ver == tbl->version) {
+		printf("cbot_db: table \"%s\" version %u is up-to-date\n",
+		       tbl->name, tbl->version);
+		return 0;
+	}
+
+	for (; u_ver < tbl->version; u_ver++) {
+		printf("cbot_db: alter table \"%s\" from version %u to %u\n",
+		       tbl->name, u_ver, u_ver + 1);
+		rv = query_and_update_schema_version(bot, tbl->name, u_ver + 1,
+		                                     tbl->alters[u_ver]);
+		if (rv < 0) {
+			return rv;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * In case we would like to allow plugin-specific processing, this allows us
+ * to do it. The internal function above should be used for non-plugin
+ * processing.
+ */
+int cbot_db_register(struct cbot_plugin *plugin,
+                     const struct cbot_db_table *tbl)
+{
+	return cbot_db_register_internal(plugpriv(plugin)->bot, tbl);
+}
+
+/******
+ * Initialization and exit routines.
+ */
+
+const char *tbl_user_alters[] = {};
+
+struct cbot_db_table tbl_user = {
+	.name = "user",
+	.version = 0,
+	.create = "CREATE TABLE user ( "
+	          " id INTEGER PRIMARY KEY ASC, "
+	          " nick TEXT NOT NULL UNIQUE, "
+	          " realname TEXT, "
+	          " host TEXT "
+	          ");",
+	.alters = tbl_user_alters,
+};
+
+const char *tbl_channel_alters[] = {};
+
+struct cbot_db_table tbl_channel = {
+	.name = "channel",
+	.version = 0,
+	.create = "CREATE TABLE channel ( "
+	          " id INTEGER PRIMARY KEY ASC, "
+	          " name TEXT NOT NULL UNIQUE, "
+	          " topic TEXT "
+	          ");",
+	.alters = tbl_channel_alters,
+};
+
+const char *tbl_membership_alters[] = {};
+
+const struct cbot_db_table tbl_membership = {
+	.name = "membership",
+	.version = 0,
+	.create = "CREATE TABLE membership ( "
+	          " user_id INT NOT NULL, "
+	          " channel_id INT NOT NULL, "
+	          " UNIQUE(user_id, channel_id) "
+	          ");",
+	.alters = tbl_membership_alters,
+};
+
+int cbot_db_init(struct cbot *bot)
+{
+	int rv;
+	rv = sqlite3_open_v2(bot->db_file, &bot->privDb,
+	                     SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+	if (rv != SQLITE_OK) {
+		return -1;
+	}
+
+	rv = create_schema_registry(bot);
+	if (rv < 0) {
+		return rv;
+	}
+
+	rv = cbot_db_register_internal(bot, &tbl_user);
+	if (rv < 0)
+		return rv;
+
+	rv = cbot_db_register_internal(bot, &tbl_channel);
+	if (rv < 0)
+		return rv;
+
+	rv = cbot_db_register_internal(bot, &tbl_membership);
+	if (rv < 0)
+		return rv;
+
+	rv = cbot_clear_memberships(bot);
+	if (rv < 0)
+		return rv;
+
+	return 0;
 }

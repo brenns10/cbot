@@ -112,11 +112,15 @@ void *base64_decode(const char *str, int explen);
 int cbot_add_membership(struct cbot *bot, char *nick, char *chan);
 int cbot_clear_channel_memberships(struct cbot *bot, char *chan);
 int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic);
-int cbot_db_create_tables(struct cbot *bot);
+int cbot_db_init(struct cbot *bot);
+int cbot_db_register_internal(struct cbot *bot,
+                              const struct cbot_db_table *tbl);
 
 #define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 
 void run_cbot_irc(int argc, char *argv[]);
 void run_cbot_cli(int argc, char **argv);
+
+#define plugpriv(plug) ((struct cbot_plugpriv *)plug)
 
 #endif // CBOT_PRIVATE_H
