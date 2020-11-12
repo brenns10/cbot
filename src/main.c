@@ -2,6 +2,7 @@
  * main.c: Main CBot entry point
  */
 
+#include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,7 @@ int main(int argc, char *argv[])
 		printf("usage: %s CONFIG_FILE\n", argv[0]);
 		return EXIT_FAILURE;
 	}
+	curl_global_init(0);
 
 	bot = cbot_create();
 	if (!bot)

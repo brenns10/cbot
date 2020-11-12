@@ -264,6 +264,10 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 	bot->lwt = sc_lwt_create_task(
 	        bot->lwt_ctx, (void (*)(void *))bot->backend_ops->run, bot);
 
+	rv = cbot_curl_init(bot);
+	if (rv < 0)
+		goto out;
+
 	rv = cbot_db_init(bot);
 	if (rv < 0) {
 		rv = -1;

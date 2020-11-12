@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
+#include <curl/curl.h>
 #include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
@@ -85,6 +86,9 @@ struct cbot {
 	sqlite3 *privDb;
 	struct sc_lwt_ctx *lwt_ctx;
 	struct sc_lwt *lwt;
+
+	CURLM *curlm;
+	struct sc_lwt *curl_lwt;
 };
 
 struct cbot *cbot_create(void);
@@ -115,6 +119,11 @@ int cbot_set_channel_topic(struct cbot *bot, char *chan, char *topic);
 int cbot_db_init(struct cbot *bot);
 int cbot_db_register_internal(struct cbot *bot,
                               const struct cbot_db_table *tbl);
+
+/******
+ * Curl functions !
+ ******/
+int cbot_curl_init(struct cbot *bot);
 
 #define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 

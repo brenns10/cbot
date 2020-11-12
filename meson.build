@@ -11,6 +11,7 @@ sources = [
   'src/db.c',
   'src/tok.c',
   'src/fmt.c',
+  'src/curl.c',
   #'src/main.c',
 ]
 
@@ -29,7 +30,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.5.1',
+  version: '>=0.8.0',
 )
 libsc_argparse_dep = dependency(
   'libsc-argparse',
@@ -48,6 +49,7 @@ sqlite_dep = dependency(
   fallback: ['sqlite', 'sqlite_dep'],
 )
 config_dep = dependency('libconfig')
+curl_dep = dependency('libcurl')
 
 cbot_deps = [
     libsc_collections_dep,
@@ -59,6 +61,7 @@ cbot_deps = [
     dl_dep,
     sqlite_dep,
     config_dep,
+    curl_dep,
 ]
 
 libcbot = shared_library(
@@ -93,6 +96,7 @@ plugins = [
   'reply',
   'sqlkarma',
   'sqlknow',
+  'weather',
 ]
 plugin_libs = []
 foreach f: plugins

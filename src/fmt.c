@@ -5,19 +5,6 @@
 
 #include "cbot/cbot.h"
 
-static int sc_cb_memcpy(struct sc_charbuf *buf, const char *src, ssize_t count)
-{
-	int orig_cap = buf->capacity;
-	while (buf->length + count >= buf->capacity)
-		buf->capacity *= 2;
-	if (buf->capacity != orig_cap)
-		buf->buf = realloc(buf->buf, buf->capacity);
-	memcpy(buf->buf + buf->length, src, count);
-	buf->length += count;
-	buf->buf[buf->length] = '\0';
-	return 0;
-}
-
 int cbot_format(struct sc_charbuf *buf, const char *fmt,
                 cbot_formatter_t formatter, void *user)
 {
