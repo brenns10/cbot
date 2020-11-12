@@ -6,6 +6,7 @@
 #define CBOT_H
 
 #include <libconfig.h>
+#include <sqlite3.h>
 #include <stddef.h>
 
 #include "sc-collections.h"
@@ -366,5 +367,10 @@ struct cbot_db_table {
  */
 int cbot_db_register(struct cbot_plugin *plugin,
                      const struct cbot_db_table *tbl);
+
+/**
+ * @brief Return the database connection.
+ */
+sqlite3 *cbot_db_conn(struct cbot *bot);
 
 #endif // CBOT_H

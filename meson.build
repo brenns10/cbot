@@ -105,3 +105,4 @@ foreach f: plugins
 endforeach
 
 install_headers('inc/cbot/cbot.h', subdir : 'cbot')
+install_headers('inc/cbot/db.h', subdir : 'cbot')
