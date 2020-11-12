@@ -38,23 +38,6 @@ static inline irc_session_t *bot_session(const struct cbot *bot)
 	return bot_irc(bot)->session;
 }
 
-static struct join_rq *join_rq_new(struct cbot_irc_backend *irc,
-                                   const char *chan)
-{
-	struct join_rq *rq;
-	rq = calloc(1, sizeof(*rq));
-	rq->channel = strdup(chan);
-	sc_list_insert_end(&irc->join_rqs, &rq->list);
-	return rq;
-}
-
-static void join_rq_delete(struct cbot_irc_backend *irc, struct join_rq *rq)
-{
-	sc_list_remove(&rq->list);
-	free(rq->channel);
-	free(rq);
-}
-
 static struct names_rq *names_rq_new(struct cbot_irc_backend *irc,
                                      const char *chan)
 {
@@ -71,25 +54,6 @@ static void names_rq_delete(struct cbot_irc_backend *irc, struct names_rq *rq)
 	sc_list_remove(&rq->list);
 	free(rq->channel);
 	sc_cb_destroy(&rq->names);
-	free(rq);
-}
-
-static struct topic_rq *topic_rq_new(struct cbot_irc_backend *irc,
-                                     const char *chan)
-{
-	struct topic_rq *rq;
-	rq = calloc(1, sizeof(*rq));
-	rq->channel = strdup(chan);
-	sc_list_insert_end(&irc->topic_rqs, &rq->list);
-	return rq;
-}
-
-static void topic_rq_delete(struct cbot_irc_backend *irc, struct topic_rq *rq)
-{
-	sc_list_remove(&rq->list);
-	free(rq->channel);
-	if (rq->topic)
-		free(rq->topic);
 	free(rq);
 }
 
@@ -136,19 +100,6 @@ static void add_all_names(struct cbot *bot, struct names_rq *rq)
 	} while ((nick = strtok(NULL, " ")) != NULL);
 }
 
-static void join_maybe_done(struct cbot_irc_backend *irc, struct join_rq *rq)
-{
-	if (rq->received_names && rq->received_topics) {
-		add_all_names(irc->bot, rq->names_rq);
-		if (rq->topic_rq->topic)
-			cbot_set_channel_topic(irc->bot, rq->channel,
-			                       rq->topic_rq->topic);
-		names_rq_delete(irc, rq->names_rq);
-		topic_rq_delete(irc, rq->topic_rq);
-		join_rq_delete(irc, rq);
-	}
-}
-
 static void event_rpl_namreply(irc_session_t *session, const char *origin,
                                const char **params, unsigned int count)
 {
@@ -173,42 +124,16 @@ void event_rpl_endofnames(irc_session_t *session, const char *origin,
 		        params[1]);
 		return;
 	}
-	if (rq->join_rq) {
-		rq->join_rq->received_names = true;
-		join_maybe_done(irc, rq->join_rq);
-	} else {
-		/*
-		 * This is in response to an explicit join request sent by us.
-		 * For some reason. So clear the existing memberships and
-		 * refresh from this response.
-		 */
-		cbot_clear_channel_memberships(bot, rq->channel);
-		add_all_names(bot, rq);
-		names_rq_delete(irc, rq);
-	}
+	cbot_clear_channel_memberships(bot, rq->channel);
+	add_all_names(bot, rq);
+	names_rq_delete(irc, rq);
 }
 
 void event_rpl_topic(irc_session_t *session, const char *origin,
                      const char **params, unsigned int count)
 {
-	/* TODO: notopic? */
-	struct cbot_irc_backend *irc = session_irc(session);
 	struct cbot *bot = session_bot(session);
-	struct topic_rq *rq = lookup_by_str(&irc->topic_rqs, params[1]);
-	if (!rq) {
-		fprintf(stderr, "ERR: unsolicited RPL_TOPIC for %s\n",
-		        params[1]);
-		return;
-	}
-	if (params[2])
-		rq->topic = strdup(params[2]);
-	if (rq->join_rq) {
-		rq->join_rq->received_topics = true;
-		join_maybe_done(irc, rq->join_rq);
-	} else {
-		cbot_set_channel_topic(bot, rq->channel, rq->topic);
-		topic_rq_delete(irc, rq);
-	}
+	cbot_set_channel_topic(bot, (char *)params[1], (char *)params[2]);
 }
 
 void event_numeric(irc_session_t *session, unsigned int event,
@@ -292,14 +217,11 @@ static void cbot_irc_join(const struct cbot *cbot, const char *channel,
 {
 	irc_session_t *session = bot_session(cbot);
 	struct cbot_irc_backend *irc = bot_irc(cbot);
-	struct join_rq *join_rq;
 
-	/* Joining triggers a request for join, as well as names and topic */
-	join_rq = join_rq_new(irc, channel);
-	join_rq->names_rq = names_rq_new(irc, channel);
-	join_rq->names_rq->join_rq = join_rq;
-	join_rq->topic_rq = topic_rq_new(irc, channel);
-	join_rq->topic_rq->join_rq = join_rq;
+	/* Joining triggers a request for names, which we need to be prepared
+	 * to handle */
+	names_rq_new(irc, channel);
+	/* topic replies we gracefully handle, same with join replies */
 
 	irc_cmd_join(session, channel, password);
 	maybe_schedule(cbot);
@@ -328,20 +250,10 @@ void event_action(irc_session_t *session, const char *event, const char *origin,
 void event_join(irc_session_t *session, const char *event, const char *origin,
                 const char **params, unsigned int count)
 {
-	struct join_rq *rq;
 	log_event(session, event, origin, params, count);
 	struct cbot_irc_backend *irc = session_irc(session);
 	struct cbot *bot = irc->bot;
-	if (strcmp(origin, bot->name) == 0) {
-		rq = lookup_by_str(&irc->join_rqs, params[0]);
-		if (!rq) {
-			fprintf(stderr, "ERR: unsolicited self JOIN %s\n",
-			        params[0]);
-		} else {
-			rq->received_join = true;
-			join_maybe_done(irc, rq);
-		}
-	} else {
+	if (strcmp(origin, bot->name) != 0) {
 		cbot_handle_user_event(bot, params[0], origin, CBOT_JOIN);
 	}
 	printf("Event handled by CBot.\n");

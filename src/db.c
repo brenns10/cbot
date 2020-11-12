@@ -65,8 +65,8 @@ static inline char *cbot_sqlite3_column_text(struct sqlite3_stmt *stmt,
 	(void)COUNT;  /* mark unused to shut up compiler */                    \
 	RV = sqlite3_prepare_v2(bot->privDb, QUERY, -1, &STMT, NULL);          \
 	if (RV != SQLITE_OK) {                                                 \
-		fprintf(stderr, "prepare: %s(%d): %s\n", sqlite3_errstr(RV),   \
-		        RV, sqlite3_errmsg(bot->privDb));                      \
+		fprintf(stderr, "prepare(%s): %s(%d): %s\n", __func__,         \
+		        sqlite3_errstr(RV), RV, sqlite3_errmsg(bot->privDb));  \
 		return -1;                                                     \
 	}
 
@@ -215,9 +215,10 @@ int cbot_get_members(struct cbot *bot, char *chan, struct sc_list_head *head)
 int cbot_clear_channel_memberships(struct cbot *bot, char *chan)
 {
 	CBOTDB_QUERY_FUNC_BEGIN(bot, void,
-	                        "DELETE FROM membership m "
-	                        " INNER JOIN channel c ON c.id=m.channel_id "
-	                        "WHERE c.name=$chan;");
+	                        "DELETE FROM membership "
+	                        " WHERE channel_id in ("
+	                        "  SELECT c.id FROM channel c WHERE name=$chan"
+	                        ");");
 	CBOTDB_BIND_ARG(text, chan);
 	CBOTDB_NO_RESULT();
 }
