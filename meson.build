@@ -91,6 +91,7 @@ plugins = [
   'annoy',
   'tok',
   'reply',
+  'sqlkarma',
 ]
 plugin_libs = []
 foreach f: plugins
