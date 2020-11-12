@@ -401,7 +401,7 @@ static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,
 		} else {
 			result = sc_regex_exec(hdlr->regex, event.message,
 			                       &indices);
-			if (result != -1) {
+			if (result != -1 && event.message[result] == '\0') {
 				event.indices = indices;
 				event.num_captures =
 				        sc_regex_num_captures(hdlr->regex);
