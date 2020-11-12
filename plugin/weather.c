@@ -8,11 +8,13 @@
 #include <curl/curl.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
+#include <sc-regex.h>
 
 #include "cbot/cbot.h"
 #include "cbot/curl.h"
 
-char *url = "https://wttr.in/San%20Francisco?format=4";
+char *defloc = "San Francisco";
+char *urlfmt = "https://wttr.in/%s?format=4";
 
 static ssize_t write_cb(char *data, size_t size, size_t nmemb, void *user)
 {
@@ -42,16 +44,29 @@ static void sc_cb_rstrip(struct sc_charbuf *buf, char *seq)
 struct weather_req {
 	struct cbot *bot;
 	char *channel;
+	char *loc;
 };
+
+static char *mkurl(CURL *easy, char *location)
+{
+	char *encoded = curl_easy_escape(easy, location, 0);
+	struct sc_charbuf buf;
+	sc_cb_init(&buf, 256);
+	sc_cb_printf(&buf, urlfmt, encoded);
+	curl_free(encoded);
+	return buf.buf;
+}
 
 static void do_weather(void *data)
 {
 	struct sc_charbuf buf;
 	struct weather_req *req = data;
 	struct cbot *bot = req->bot;
+	char *url = NULL;
 	CURLcode rv;
 	sc_cb_init(&buf, 256);
 	CURL *easy = curl_easy_init();
+	url = mkurl(easy, *req->loc ? req->loc : defloc);
 	curl_easy_setopt(easy, CURLOPT_URL, url);
 	// curl_easy_setopt(easy, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, write_cb);
@@ -66,7 +81,9 @@ static void do_weather(void *data)
 out:
 	sc_cb_destroy(&buf);
 	free(req->channel);
+	free(req->loc);
 	free(req);
+	free(url);
 	curl_easy_cleanup(easy);
 }
 
@@ -75,13 +92,14 @@ static void weather(struct cbot_message_event *evt, void *user)
 	struct weather_req *req = calloc(1, sizeof(*req));
 	req->bot = evt->bot;
 	req->channel = strdup(evt->channel);
+	req->loc = sc_regex_get_capture(evt->message, evt->indices, 0);
 	sc_lwt_create_task(cbot_get_lwt_ctx(evt->bot), do_weather, req);
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)weather, NULL,
-	              "weather");
+	              "weather *(.*)");
 	return 0;
 }
 
