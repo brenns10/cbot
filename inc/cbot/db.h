@@ -137,7 +137,7 @@ static inline char *cbot_sqlite3_column_text(struct sqlite3_stmt *stmt,
 		fprintf(stderr, "prepare(%s): %s(%d): %s\n", __func__,         \
 		        sqlite3_errstr(RV), RV,                                \
 		        sqlite3_errmsg(cbot_db_conn(bot)));                    \
-		return -1;                                                     \
+		goto OUT_LABEL;                                                \
 	}
 
 /******
