@@ -3,47 +3,66 @@ cbot
 
 CBot is an IRC chatbot written entirely in C!
 
+Why would you do that? Because I can.
+
 Features
 --------
 
 * Plugin based architecture: all bot features are implemented as dynamically
   loaded plugins.
-* Plugins handle events that they match based on regular expression (which is my
-  own regex implementation!)
-* Plugins can perform the following actions:
-  * Send to a channel or user.
-  * Send an "action" message (`/me does something`)
-* Plugins can handle the following events:
-  * Normal channel message.
-  * Action message in a channel.
-  * User joining and leaving a channel.
-
-Future Work
------------
-
-* Handle/send invitations to channels.
-* Handle kick messages.  Maybe kick people?
-* Be able to send messages.
-* Be able to join/leave channels.
-* Provide list of users in a channel.
-* Allow plugins to keep state.
+* Plugins can handle events such as:
+  - channel & direct messages (filtered by regex)
+  - user joins / leaves, and nickname changes
+* Plugins can respond to events by:
+  - sending channel and direct messages
+  - joining channels
+  - setting user "op" mode
+  - changing bot nickname
+* The bot and plugins can be configured via a
+  [libconfig](http://hyperrealm.github.io/libconfig/) file, allowing for lots of
+  flexibility.
+* Plugins can store data in a persistent sqlite database. CBot comes with a
+  straightforward schema migration system, and a set of macros which can help
+  write query functions.
+* The entire bot framework is based on a lightweight threading system and event
+  loop. This allows asynchronous I/O code, such as HTTP requests, to
+  cooperatively multitask with the IRC loop without launching true OS threads
+  and dealing with concurrency.
+* Several small utility APIs exist to assist in writing plugins:
+  - Dynamic arrays, hash table, linked list, string builder via `sc-collections`
+  - Tokenizing API for turning messages into command arguments via a simple
+    quoting system
+  - Argument parsing API via `sc-argparse`, in case you want to go full UNIX
+  - String templating/formatting API based on callbacks
 
 Plugin List
 -----------
 
 - name: Responds to questions about CBot with a link to the github.
 - help: An outdated command listing.
-- karma: Tracks the karma of various words.
+- [sql]karma: Tracks the karma of various words. The SQL variation uses
+  persistent storage
 - greet: Say hi back to people, as well as greet when they enter a channel, and
   say bad things when they leave.
 - sadness: Responds to some forms of insult with odd comebacks.
 - emote: CBot will echo what you said in an ACTION (`/me`) message.
+- sqlknow: Stores knowledge about various terms: `know that X is Y`, and
+  regurgitates this knowledge on command: `what is X?`
+- become: users can change the bot nickname...
+- who: lists out the users in the channel, beware
+- tok: a simple demo of "command tokenizing"
+- log: message logging
+- reply: a configurable plugin for triggering responses to messages matching
+  regex
 
-Building and Running
---------------------
+Building
+--------
 
-This project uses the Meson build system. The following commands will build the
-project:
+This project uses the Meson build system. It also depends on libconfig and
+openssl, which need to be installed on your system. On Ubuntu, the proper
+minimal packages would probably be `meson libconfig-dev libssl-dev`.  There are
+additional dependencies which can be compiled if not installed, see below. The
+following commands will build the project:
 
     meson build
     ninja -C build
@@ -52,64 +71,24 @@ The first command creates a build directory, and the second command runs the
 "ninja" build system (Meson's backend) in the build directory. Compiled output
 is placed into the build directory (both the `cbot` binary and all plugins).
 
-Meson will automatically download and build the following dependencies:
+Meson will automatically download and build the following dependencies, if they
+are not installed on your system:
 
-- `libircclient`
-- `sc-regex`, `sc-collections`, `sc-argparse`
+- `libircclient` (Ubuntu package is `libircclient-dev`)
+- `sc-regex`, `sc-collections`, `sc-argparse`, `sc-lwt`: no distribution
+  packages, these must be built from source
+- `sqlite3` (Ubuntu package in `libsqlite3-dev`)
 
-To run, invoke `build/cbot` with the following arguments:
+Running
+-------
 
-1. Either `cli` or `irc`, depending on whether you want to run locally or on a
-   real IRC server.
-2. If you chose the `irc` backend, you must specify:
-   - `--host [hostname]` - the IRC server host
-   - `--port [port]` - the IRC server port
-   - `--chan [chan]` - channel to join on startup
-3. Regardless of your backend, you can specify:
-   - `--name [name]` - a name for the bot (other than cbot)
-   - `--plugin-dir [dir]` - tell the program where your plugins reside
-4. Finally, provide a list of plugins to load. See the list above. Note that you
-   should provide the names without the `.so` extension.
+`build/cbot` takes a single argument, a configuration file. See `sample.cfg` for
+a sample which you can modify for IRC connections or CLI experimentation.
 
 Plugin API
 ----------
 
-Here's a brief rundown of how to write a plugin:
-
-- Create `[somename].c`.
-- Inside, write a function `void [somename]_load(cbot_t *bot, cbot_register_t
-  registrar)`. For now, leave it blank. Make sure to also `#include
-  "cbot/cbot.h"` at the top.
-- Now, create a handler function. This is the heart of a plugin. It handles an
-  *event* by taking some *action* on it. So, it will have the following
-  signature: `void give_me_a_name(cbot_event_t event, cbot_actions_t actions)`.
-- The event argument is a struct with:
-  - `const cbot_t* bot` - a pointer to the bot
-  - `cbot_event_type_t type` - the type of event (described later)
-  - `const char *channel` - the channel name associated with the event
-  - `const char *username` - the username associated with the event
-- The action argument has two functions in it:
-  - `send`, which has signature `void send(const cbot_t *bot, const char *dest,
-    const char *format, ...)`. It is like `printf` in that it accepts a format
-    string and a variable number of arguments. It can send to a channel or a
-    user.
-  - `me`, which has the same signature as `send`. Its only difference is that it
-    sends an "action" or `/me` message.
-- After you've written your handler function (or at least declared it), go back
-  to your `[somename]_load` function. Put the following function call in it:
-
-      ```
-      registrar(bot, CBOT_CHANNEL_MSG, give_me_a_name);
-      ```
-
-- The argument `CBOT_CHANNEL_MSG` tells cbot that this handles a message in a
-  channel. You can handle the following additional events:
-  - `CBOT_CHANNEL_ACTION`: an action message in a channel
-  - `CBOT_JOIN`: a person joining a channel (could be CBot itself)!
-  - `CBOT_PART`: a person leaving a channel
-- The `give_me_a_name` function will be called for every channel message.
-- Put the C file in the `plugins/` directory, and use the makefile to build!
-  Tada!
+See [doc/00-Plugins.md](doc/00-Plugins.md) for details.
 
 License
 -------
