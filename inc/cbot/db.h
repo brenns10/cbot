@@ -246,7 +246,8 @@ static inline char *cbot_sqlite3_column_text(struct sqlite3_stmt *stmt,
  *   failure, otherwise it will be the integer result from the query. This
  *   function ought not to be used if the query result could be negative, as
  *   there will be no way to tell the difference between a negative result and
- *   an error in the query.
+ *   an error in the query. In cases where negative is allowed, use
+ *   CBOTDB_SINGLE_INTPTR_RESULT().
  */
 #define CBOTDB_SINGLE_INTEGER_RESULT()                                         \
 	RV = sqlite3_step(STMT);                                               \
@@ -254,6 +255,28 @@ static inline char *cbot_sqlite3_column_text(struct sqlite3_stmt *stmt,
 		RV = -1;                                                       \
 	} else if (RV == SQLITE_ROW) {                                         \
 		RV = sqlite3_column_int(STMT, 0);                              \
+	} else {                                                               \
+		fprintf(stderr, "step: %d\n", RV);                             \
+		RV = -1;                                                       \
+	}                                                                      \
+	goto OUT_LABEL; /* try to avoid unused label warning */                \
+	OUT_LABEL:                                                             \
+	sqlite3_finalize(STMT);                                                \
+	return RV;
+
+/**
+ * @brief End a function which returns a single integer value, into a pointer.
+ * @param ptr Name of the pointer to store the result into
+ * @returns The integer return value of the query function will be negative on
+ *   failure, otherwise it will be 0 and ptr will be set.
+ */
+#define CBOTDB_SINGLE_INTPTR_RESULT(ptr)                                       \
+	RV = sqlite3_step(STMT);                                               \
+	if (RV == SQLITE_DONE) {                                               \
+		RV = -1;                                                       \
+	} else if (RV == SQLITE_ROW) {                                         \
+		RV = 0;                                                        \
+		*ptr = sqlite3_column_int(STMT, 0);                            \
 	} else {                                                               \
 		fprintf(stderr, "step: %d\n", RV);                             \
 		RV = -1;                                                       \
