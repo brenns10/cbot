@@ -122,3 +122,5 @@ what you want to include in your string output.
 The `cbot_format()` API takes a formatter function, which gets called for each
 curly brace expansion and can append whatever it wants into the string builder /
 charbuf.
+
+See it in action in [plugin/reply.c](../plugin/reply.c).
