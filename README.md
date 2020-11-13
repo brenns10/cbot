@@ -57,40 +57,15 @@ Plugin List
 - reply: a configurable plugin for triggering responses to messages matching
   regex
 
-Building
---------
+Build & Run
+-----------
 
-This project uses the Meson build system. It also depends on libconfig and
-openssl, which need to be installed on your system. On Ubuntu, the proper
-minimal packages would probably be `meson libconfig-dev libssl-dev`.  There are
-additional dependencies which can be compiled if not installed, see below. The
-following commands will build the project:
-
-    meson build
-    ninja -C build
-
-The first command creates a build directory, and the second command runs the
-"ninja" build system (Meson's backend) in the build directory. Compiled output
-is placed into the build directory (both the `cbot` binary and all plugins).
-
-Meson will automatically download and build the following dependencies, if they
-are not installed on your system:
-
-- `libircclient` (Ubuntu package is `libircclient-dev`)
-- `sc-regex`, `sc-collections`, `sc-argparse`, `sc-lwt`: no distribution
-  packages, these must be built from source
-- `sqlite3` (Ubuntu package in `libsqlite3-dev`)
-
-Running
--------
-
-`build/cbot` takes a single argument, a configuration file. See `sample.cfg` for
-a sample which you can modify for IRC connections or CLI experimentation.
+See [doc/Install.md](doc/Install.md) for details on build / install.
 
 Plugin API
 ----------
 
-See [doc/Plugins.md](doc/Plugins.md) for details.
+See [doc/Plugins.md](doc/Plugins.md) for a details on plugin development.
 
 License
 -------
