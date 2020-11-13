@@ -213,3 +213,6 @@ You should be able to type "hello" and get a response from cbot:
     >
 
 And that's it, you've written your first plugin!
+
+Next up, take a browse through [Plugins-2.md](Plugins-2.md) to learn some
+advanced topics and APIs which help you make great plugins.
