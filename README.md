@@ -42,6 +42,8 @@ Plugin List
 - help: An outdated command listing.
 - [sql]karma: Tracks the karma of various words. The SQL variation uses
   persistent storage
+- know: You can tell cbot to "know" what things are and ask it later. EG "cbot
+  know that Taylor Swift is awesome", and then "cbot what is Taylor Swift?"
 - greet: Say hi back to people, as well as greet when they enter a channel, and
   say bad things when they leave.
 - sadness: Responds to some forms of insult with odd comebacks.
@@ -88,7 +90,7 @@ a sample which you can modify for IRC connections or CLI experimentation.
 Plugin API
 ----------
 
-See [doc/00-Plugins.md](doc/00-Plugins.md) for details.
+See [doc/Plugins.md](doc/Plugins.md) for details.
 
 License
 -------
