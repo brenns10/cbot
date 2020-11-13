@@ -32,15 +32,21 @@ void cbot_curl_run(void *data)
 	struct cbot *bot = data;
 	struct sc_lwt *cur = sc_lwt_current();
 	struct curl_waiting *waiting;
-	int nhdl;
+	struct timespec ts;
+	int nhdl, maxfd;
+	long millis;
+	bool block;
 	fd_set in_fd, out_fd, err_fd;
-	int maxfd = 0;
 	CURLMcode rv;
 	CURLMsg *msg;
 
 	bot->curl_lwt = cur;
 
 	while (true) {
+		/*
+		 * First, we should mark each file descriptor that curl would
+		 * like us to wait on, in case we end up blocking.
+		 */
 		FD_ZERO(&in_fd);
 		FD_ZERO(&out_fd);
 		FD_ZERO(&err_fd);
@@ -57,9 +63,30 @@ void cbot_curl_run(void *data)
 			if (flags)
 				sc_lwt_wait_fd(cur, i, flags, NULL);
 		}
-		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
-		sc_lwt_yield();
 
+		/*
+		 * Sometimes, curl doesn't actually want to block, or wants us
+		 * to block but do a timeout. We need to ask it how long it
+		 * wants to wait.
+		 */
+		block = true;
+		millis = 0;
+		curl_multi_timeout(bot->curlm, &millis);
+		if (millis > 0) {
+			ts.tv_sec = millis / 1000;
+			ts.tv_nsec = millis * 1000000;
+			sc_lwt_settimeout(cur, &ts);
+		} else if (millis == 0) {
+			block = false;
+		}
+
+		/* Only block if curl gave a non-zero timeout */
+		if (block) {
+			sc_lwt_set_state(cur, SC_LWT_BLOCKED);
+			sc_lwt_yield();
+		}
+
+		/* Now actually drive curl connections forward. */
 		rv = curl_multi_perform(bot->curlm, &nhdl);
 		if (rv != CURLM_OK) {
 			printf("curlm error %d: %s\n", rv,
@@ -67,6 +94,10 @@ void cbot_curl_run(void *data)
 			/* TODO cleanup */
 		}
 
+		/*
+		 * Finally, we must read messages from CURL about which
+		 * connections were completed, etc.
+		 */
 		do {
 			msg = curl_multi_info_read(bot->curlm, &nhdl);
 			if (msg && msg->msg == CURLMSG_DONE) {
@@ -78,6 +109,9 @@ void cbot_curl_run(void *data)
 			}
 		} while (msg);
 
+		/*
+		 * Clear file descriptors for this thread until next time.
+		 */
 		sc_lwt_remove_all(cur);
 	}
 }
