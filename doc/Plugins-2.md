@@ -70,7 +70,7 @@ Note that if a plugin would like to call ANY function which would block (such as
 libcurl) then it should make sure that it is async-safe and integrated with
 sc-lwt, and they need to do it off the main lwt.
 
-A great basic lwt example is [plugins/annoy.c](../plugins/annoy.c).
+A great basic lwt example is [plugin/annoy.c](../plugin/annoy.c).
 
 HTTP Requests: libcurl
 ----------------------
@@ -91,7 +91,7 @@ without writing tons of callbacks.
 
 [2]: https://curl.se/libcurl/c/libcurl-easy.html
 
-Check out [plugins/weather.c](../plugins/weather.c) for a curl example.
+Check out [plugin/weather.c](../plugin/weather.c) for a curl example.
 
 Tokenizing
 ----------
