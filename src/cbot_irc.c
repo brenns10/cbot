@@ -335,6 +335,7 @@ static void cbot_irc_run(struct cbot *bot)
 		irc_process_select_descriptors(session, &in_fd, &out_fd);
 		sc_lwt_remove_all(cur);
 	}
+	sc_lwt_early_term();
 }
 
 static int cbot_irc_configure(struct cbot *bot, config_setting_t *group)
