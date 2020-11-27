@@ -141,9 +141,9 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 		rep = calloc(1, sizeof(*rep) + 1 * sizeof(char *));
 		rep->count = 1;
 		rep->replies[0] = strdup(resp);
-		rep->hdlr = cbot_register(priv->plugin, kind,
-		                          (cbot_handler_t)handle_match, rep,
-		                          (char *)trigger);
+		rep->hdlr = cbot_register2(priv->plugin, kind,
+		                           (cbot_handler_t)handle_match, rep,
+		                           (char *)trigger, flags);
 		sc_list_insert_end(&priv->replies, &rep->list);
 		return rep;
 	}
