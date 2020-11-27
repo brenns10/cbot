@@ -82,6 +82,8 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 	struct rep *rep;
 	const char *trigger, *resp;
 	int reply_count, rv, i, addressed = false, kind = CBOT_MESSAGE;
+	int insensitive = false;
+	int flags = 0;
 
 	rv = config_setting_lookup_string(conf, "trigger", &trigger);
 	if (rv == CONFIG_FALSE) {
@@ -96,6 +98,13 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 		addressed = false;
 	if (addressed)
 		kind = CBOT_ADDRESSED;
+
+	rv = config_setting_lookup_bool(conf, "insensitive", &insensitive);
+	if (rv == CONFIG_FALSE)
+		insensitive = false;
+	if (insensitive)
+		flags |= SC_RE_INSENSITIVE;
+
 	rv = config_setting_lookup_string(conf, "response", &resp);
 	if (rv == CONFIG_FALSE) {
 		replies = config_setting_lookup(conf, "responses");
@@ -110,9 +119,9 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 		reply_count = config_setting_length(replies);
 		rep = calloc(1, sizeof(*rep) + reply_count * sizeof(char *));
 		rep->count = reply_count;
-		rep->hdlr = cbot_register(priv->plugin, kind,
-		                          (cbot_handler_t)handle_match, rep,
-		                          (char *)trigger);
+		rep->hdlr = cbot_register2(priv->plugin, kind,
+		                           (cbot_handler_t)handle_match, rep,
+		                           (char *)trigger, flags);
 		for (i = 0; i < reply_count; i++) {
 			el = config_setting_get_elem(replies, i);
 			resp = config_setting_get_string(el);
