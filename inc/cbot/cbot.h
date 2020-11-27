@@ -209,6 +209,9 @@ typedef void (*cbot_handler_t)(struct cbot_event *event, void *user);
 
 /**
  * @brief Register a handler for an event
+ *
+ * This function may soon be deprecated in favor of cbot_register2.
+ *
  * @param plugin The plugin of this event
  * @param event Event type you are registering to handle
  * @param handler Event handler callback
@@ -221,6 +224,25 @@ struct cbot_handler *cbot_register(struct cbot_plugin *plugin,
                                    enum cbot_event_type type,
                                    cbot_handler_t handler, void *user,
                                    char *regex);
+
+/**
+ * @brief Register a handler for an event
+ *
+ * This function may soon be deprecated in favor of cbot_register2.
+ *
+ * @param plugin The plugin of this event
+ * @param event Event type you are registering to handle
+ * @param handler Event handler callback
+ * @param user User pointer for this function
+ * @param regex Regular expression (if applicable)
+ * @param re_flags Flags passed to sc_regex_compile2()
+ * @returns The "cbot_handler" pointer - an opaque type which is used to
+ *   deregister a plugin.
+ */
+struct cbot_handler *cbot_register2(struct cbot_plugin *plugin,
+                                    enum cbot_event_type type,
+                                    cbot_handler_t handler, void *user,
+                                    char *regex, int re_flags);
 
 /**
  * @brief Deregister an existing handler

@@ -25,7 +25,7 @@ libircclient_dep = dependency(
 libsc_regex_dep = dependency(
   'libsc-regex',
   fallback: ['sc-regex', 'libsc_regex_dep'],
-  version: '>=0.3.2',
+  version: '>=0.4.0',
 )
 libsc_collections_dep = dependency(
   'libsc-collections',
