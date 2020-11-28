@@ -10,6 +10,7 @@
 
 #include <curl/curl.h>
 #include <libconfig.h>
+#include <microhttpd.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <sc-regex.h>
@@ -96,6 +97,9 @@ struct cbot {
 
 	CURLM *curlm;
 	struct sc_lwt *curl_lwt;
+
+	struct MHD_Daemon *http;
+	struct sc_lwt *http_lwt;
 };
 
 struct cbot *cbot_create(void);
@@ -137,5 +141,7 @@ void run_cbot_irc(int argc, char *argv[]);
 void run_cbot_cli(int argc, char **argv);
 
 #define plugpriv(plug) ((struct cbot_plugpriv *)plug)
+
+int cbot_http_init(struct cbot *bot);
 
 #endif // CBOT_PRIVATE_H

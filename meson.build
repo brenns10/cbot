@@ -17,6 +17,7 @@ sources = [
   'src/signal/api.c',
   'src/signal/jmsg.c',
   'src/signal/mention.c',
+  'src/http.c',
 ]
 
 inc = include_directories('inc')
@@ -62,6 +63,7 @@ sqlite_dep = dependency(
 )
 config_dep = dependency('libconfig')
 curl_dep = dependency('libcurl')
+uhttp_dep = dependency('libmicrohttpd')
 
 cbot_deps = [
     libsc_collections_dep,
@@ -74,6 +76,7 @@ cbot_deps = [
     sqlite_dep,
     config_dep,
     curl_dep,
+    uhttp_dep,
 ]
 
 libcbot = shared_library(

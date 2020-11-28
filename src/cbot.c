@@ -417,6 +417,12 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		goto out;
 	}
 
+	rv = cbot_http_init(bot);
+	if (rv < 0) {
+		rv = -1;
+		goto out;
+	}
+
 	pluggroup = config_lookup(&conf, "plugins");
 	if (!pluggroup || !config_setting_is_group(pluggroup)) {
 		CL_CRIT("cbot: \"plugins\" section missing or wrong type\n");
