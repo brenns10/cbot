@@ -12,6 +12,7 @@ sources = [
   'src/tok.c',
   'src/fmt.c',
   'src/curl.c',
+  'src/http.c',
   #'src/main.c',
 ]
 
@@ -40,7 +41,7 @@ libsc_argparse_dep = dependency(
 libsc_lwt_dep = dependency(
   'libsc-lwt',
   fallback: ['sc-lwt', 'libsc_lwt_dep'],
-  version: '>=0.2.0',
+  version: '>=0.3.0',
 )
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
@@ -50,6 +51,7 @@ sqlite_dep = dependency(
 )
 config_dep = dependency('libconfig')
 curl_dep = dependency('libcurl')
+uhttp_dep = dependency('libmicrohttpd')
 
 cbot_deps = [
     libsc_collections_dep,
@@ -62,6 +64,7 @@ cbot_deps = [
     sqlite_dep,
     config_dep,
     curl_dep,
+    uhttp_dep,
 ]
 
 libcbot = shared_library(
