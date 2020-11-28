@@ -284,7 +284,7 @@ static void cbot_irc_run(struct cbot *bot)
 {
 	irc_session_t *session = bot_session(bot);
 	struct cbot_irc_backend *irc = bot_irc(bot);
-	fd_set in_fd, out_fd;
+	fd_set in_fd, out_fd, err_fd;
 	int maxfd;
 	struct sc_lwt_poll poll[16];
 	struct sc_lwt *cur = sc_lwt_current();
@@ -299,20 +299,11 @@ static void cbot_irc_run(struct cbot *bot)
 	}
 
 	while (1) {
-		FD_ZERO(&in_fd);
-		FD_ZERO(&out_fd);
+		sc_lwt_clear_fds(&in_fd, &out_fd, &err_fd);
 		maxfd = 0;
 		irc_add_select_descriptors(session, &in_fd, &out_fd, &maxfd);
-		for (int i = 0; i <= maxfd; i++) {
-			int flags = 0;
-			if (FD_ISSET(i, &in_fd))
-				flags |= SC_LWT_W_IN;
-			if (FD_ISSET(i, &out_fd))
-				flags |= SC_LWT_W_OUT;
-			if (flags) {
-				sc_lwt_wait_fd(cur, i, flags, NULL);
-			}
-		}
+		sc_lwt_add_select_fds(cur, &in_fd, &out_fd, &err_fd, maxfd,
+		                      NULL);
 		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 		sc_lwt_yield();
 		count = sc_lwt_ready_fds(cur, poll, nelem(poll));
@@ -323,15 +314,8 @@ static void cbot_irc_run(struct cbot *bot)
 		} else if (count == nelem(poll)) {
 			fprintf(stderr, "warn: may have missed an fd\n");
 		}
-		FD_ZERO(&in_fd);
-		FD_ZERO(&out_fd);
-		for (int i = 0; i < count; i++) {
-			if (poll[i].event & SC_LWT_W_IN) {
-				FD_SET(poll[i].fd, &in_fd);
-			} else if (poll[i].event & SC_LWT_W_OUT) {
-				FD_SET(poll[i].fd, &out_fd);
-			}
-		}
+		sc_lwt_clear_fds(&in_fd, &out_fd, &err_fd);
+		sc_lwt_populate_ready_fds(cur, &in_fd, &out_fd, &err_fd, maxfd);
 		irc_process_select_descriptors(session, &in_fd, &out_fd);
 		sc_lwt_remove_all(cur);
 	}

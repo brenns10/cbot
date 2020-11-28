@@ -41,7 +41,7 @@ libsc_argparse_dep = dependency(
 libsc_lwt_dep = dependency(
   'libsc-lwt',
   fallback: ['sc-lwt', 'libsc_lwt_dep'],
-  version: '>=0.3.0',
+  version: '>=0.4.0',
 )
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
