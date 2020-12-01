@@ -109,6 +109,12 @@ void cbot_delete(struct cbot *obj);
 
 void cbot_set_nick(struct cbot *bot, const char *newname);
 
+struct cbot_handler *cbot_register_priv(struct cbot *bot,
+                                        struct cbot_plugpriv *priv,
+                                        enum cbot_event_type type,
+                                        cbot_handler_t handler, void *user,
+                                        char *regex, int re_flags);
+
 /* Functions which backends can call, to trigger various types of events */
 void cbot_handle_message(struct cbot *bot, const char *channel,
                          const char *user, const char *message, bool action,

@@ -12,29 +12,81 @@
 
 #define PORT 8888
 
+static int method_to_event(const char *method)
+{
+	if (strcmp(method, "GET") == 0)
+		return CBOT_HTTP_GET;
+	return -1;
+}
+
+static struct cbot_handler *lookup_handler(struct sc_list_head *lh,
+                                           size_t **indices, const char *method,
+                                           const char *url)
+{
+	struct cbot_handler *h;
+	ssize_t result;
+	sc_list_for_each_entry(h, lh, handler_list, struct cbot_handler)
+	{
+		// No regex matches everything. This probably shouldn't be
+		// allowed...
+		if (!h->regex)
+			return h;
+		result = sc_regex_exec(h->regex, url, indices);
+		if (result != -1 && url[result] == '\0')
+			return h;
+	}
+	return NULL;
+}
+
 static int hdlr(void *cls, struct MHD_Connection *connection, const char *url,
                 const char *method, const char *version,
                 const char *upload_data, size_t *upload_data_size,
                 void **con_cls)
 {
 	static int aptr;
-	const char *me = "<html><body>Hello browser</body></html>";
-	struct MHD_Response *response;
-	enum MHD_Result ret;
+	int evt;
+	struct cbot *bot = (struct cbot *)cls;
+	struct cbot_handler *h = NULL;
+	size_t *indices = NULL;
+	struct cbot_http_event event;
 
-	if (0 != strcmp(method, "GET"))
-		return MHD_NO; /* unexpected method */
-	if (&aptr != *con_cls) {
-		/* do never respond on first call */
+	evt = method_to_event(method);
+
+	if (evt != -1)
+		h = lookup_handler(&bot->handlers[evt], &indices, method, url);
+
+	if (!h)
+		h = lookup_handler(&bot->handlers[CBOT_HTTP_ANY], &indices,
+		                   method, url);
+
+	if (!h) {
+		/* No registered handler! Return NO. */
+		return MHD_NO;
+	} else if (*con_cls != &aptr) {
+		/* We have a registered handler. Continue the connection. */
 		*con_cls = &aptr;
 		return MHD_YES;
 	}
-	*con_cls = NULL; /* reset when done */
-	response = MHD_create_response_from_buffer(strlen(me), (void *)me,
-	                                           MHD_RESPMEM_PERSISTENT);
-	ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
-	MHD_destroy_response(response);
-	return ret;
+
+	/* We have a handler, and the request data has arrived. Dispatch the
+	 * handler. */
+	event.bot = bot;
+	event.plugin = &h->plugin->p;
+	event.num_captures = 0;
+	if (h->regex)
+		event.num_captures = sc_regex_num_captures(h->regex);
+	event.url = url;
+	event.indices = indices;
+	event.connection = connection;
+	event.method = method;
+	event.version = version;
+	event.upload_data = upload_data;
+	event.upload_data_size = *upload_data_size;
+	h->handler((struct cbot_event *)&event, h->user);
+
+	free(indices);
+	*con_cls = NULL; /* reset con_cls when done */
+	return MHD_YES;  /* TODO: get return value from handler */
 }
 
 static void cbot_http_run(void *data)
@@ -74,13 +126,28 @@ static void cbot_http_run(void *data)
 	}
 }
 
+static void cbot_http_root(struct cbot_http_event *evt, void *unused)
+{
+	const char *me = "<html><body>Hello, browser.</body></html>";
+	struct MHD_Response *resp;
+	cbot_send(evt->bot, "stdin", "Got request for \"%s\"", evt->url);
+	resp = MHD_create_response_from_buffer(strlen(me), (void *)me,
+	                                       MHD_RESPMEM_PERSISTENT);
+	MHD_queue_response(evt->connection, MHD_HTTP_OK, resp);
+	MHD_destroy_response(resp);
+}
+
 int cbot_http_init(struct cbot *bot)
 {
-	bot->http = MHD_start_daemon(MHD_USE_EPOLL, PORT, NULL, NULL, hdlr, bot,
+	bot->http = MHD_start_daemon(MHD_USE_EPOLL, PORT, NULL, NULL,
+	                             (MHD_AccessHandlerCallback)hdlr, bot,
 	                             MHD_OPTION_END);
 	if (!bot->http) {
 		return -1;
 	}
 	bot->lwt = sc_lwt_create_task(bot->lwt_ctx, cbot_http_run, bot);
+
+	cbot_register_priv(bot, NULL, CBOT_HTTP_ANY,
+	                   (cbot_handler_t)cbot_http_root, NULL, "/", 0);
 	return 0;
 }
