@@ -44,11 +44,15 @@ static int hdlr(void *cls, struct MHD_Connection *connection, const char *url,
                 void **con_cls)
 {
 	static int aptr;
+	const char *notfound = "<html><body><h1>Not Found</h1>"
+	                       "<p>CBot ain't got that URL</p></body></html>";
 	int evt;
 	struct cbot *bot = (struct cbot *)cls;
 	struct cbot_handler *h = NULL;
 	size_t *indices = NULL;
 	struct cbot_http_event event;
+	struct MHD_Response *resp;
+	enum MHD_Result ret;
 
 	evt = method_to_event(method);
 
@@ -60,8 +64,15 @@ static int hdlr(void *cls, struct MHD_Connection *connection, const char *url,
 		                   method, url);
 
 	if (!h) {
-		/* No registered handler! Return NO. */
-		return MHD_NO;
+		/* No registered handler! Return 404. */
+		resp = MHD_create_response_from_buffer(strlen(notfound),
+		                                       (void *)notfound,
+		                                       MHD_RESPMEM_PERSISTENT);
+		MHD_add_response_header(resp, "Content-Type",
+		                        "text/html; charset=utf-8");
+		ret = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, resp);
+		MHD_destroy_response(resp);
+		return ret;
 	} else if (*con_cls != &aptr) {
 		/* We have a registered handler. Continue the connection. */
 		*con_cls = &aptr;
@@ -133,6 +144,8 @@ static void cbot_http_root(struct cbot_http_event *evt, void *unused)
 	cbot_send(evt->bot, "stdin", "Got request for \"%s\"", evt->url);
 	resp = MHD_create_response_from_buffer(strlen(me), (void *)me,
 	                                       MHD_RESPMEM_PERSISTENT);
+	MHD_add_response_header(resp, "Content-Type",
+	                        "text/html; charset=utf-8");
 	MHD_queue_response(evt->connection, MHD_HTTP_OK, resp);
 	MHD_destroy_response(resp);
 }
