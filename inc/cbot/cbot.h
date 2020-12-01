@@ -35,6 +35,10 @@ enum cbot_event_type {
 	/* The bot's name changes */
 	CBOT_BOT_NAME,
 
+	/* HTTP Requests */
+	CBOT_HTTP_ANY,
+	CBOT_HTTP_GET,
+
 	_CBOT_NUM_EVENT_TYPES_
 
 };
@@ -73,6 +77,23 @@ struct cbot_nick_event {
 	enum cbot_event_type type; /* CBOT_NICK, CBOT_BOT_NAME */
 	const char *old_username;
 	const char *new_username;
+};
+struct cbot_http_event {
+	struct cbot *bot;
+	struct cbot_plugin *plugin;
+	enum cbot_event_type type; /* CBOT_HTTP_{ANY,GET,...} */
+
+	/* URL match */
+	size_t *indices;
+	int num_captures;
+
+	/* MHD info */
+	struct MHD_Connection *connection;
+	const char *url;
+	const char *method;
+	const char *version;
+	const char *upload_data;
+	size_t upload_data_size;
 };
 
 struct cbot_user_info {
