@@ -285,10 +285,9 @@ static void cbot_irc_run(struct cbot *bot)
 	irc_session_t *session = bot_session(bot);
 	struct cbot_irc_backend *irc = bot_irc(bot);
 	fd_set in_fd, out_fd;
-	int maxfd;
+	int maxfd, count, rv;
 	struct sc_lwt_poll poll[16];
 	struct sc_lwt *cur = sc_lwt_current();
-	int count;
 
 	// Start the connection process!
 	if (irc_connect(session, irc->host, irc->port, irc->password, bot->name,
@@ -302,7 +301,11 @@ static void cbot_irc_run(struct cbot *bot)
 		FD_ZERO(&in_fd);
 		FD_ZERO(&out_fd);
 		maxfd = 0;
-		irc_add_select_descriptors(session, &in_fd, &out_fd, &maxfd);
+		rv = irc_add_select_descriptors(session, &in_fd, &out_fd, &maxfd);
+		if (rv != 0) {
+			fprintf(stderr, "cbot_irc: irc error: %s\n", irc_strerror(irc_errno(session)));
+			break;
+		}
 		for (int i = 0; i <= maxfd; i++) {
 			int flags = 0;
 			if (FD_ISSET(i, &in_fd))
@@ -332,9 +335,14 @@ static void cbot_irc_run(struct cbot *bot)
 				FD_SET(poll[i].fd, &out_fd);
 			}
 		}
-		irc_process_select_descriptors(session, &in_fd, &out_fd);
+		rv = irc_process_select_descriptors(session, &in_fd, &out_fd);
 		sc_lwt_remove_all(cur);
+		if (rv != 0) {
+			fprintf(stderr, "cbot_irc: irc error: %s\n", irc_strerror(irc_errno(session)));
+			break;
+		}
 	}
+	fprintf(stderr, "cbot_irc: savagely killing other LWTs on shutdown\n");
 	sc_lwt_early_term();
 }
 
