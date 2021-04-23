@@ -281,7 +281,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		rv = -1;
 		goto out;
 	}
-	cbot_load_plugins(bot, pluggroup);
+	rv = cbot_load_plugins(bot, pluggroup);
 
 out:
 	/* only things to cleanup are the config, everything else ought to be
@@ -522,14 +522,14 @@ static struct cbot_plugpriv *cbot_load_plugin(struct cbot *bot,
 
 	if (plugin_handle == NULL) {
 		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
-		return false;
+		return NULL;
 	}
 
 	ops = dlsym(plugin_handle, "ops");
 
 	if (ops == NULL) {
 		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
-		return false;
+		return NULL;
 	}
 	priv = calloc(1, sizeof(*priv));
 	priv->p.ops = ops;
@@ -544,6 +544,7 @@ static struct cbot_plugpriv *cbot_load_plugin(struct cbot *bot,
 		free(priv->name);
 		dlclose(plugin_handle);
 		free(priv);
+		fprintf(stderr, "loader failed with code %d\n", rv);
 		return NULL;
 	}
 	sc_list_insert_end(&bot->plugins, &priv->list);
@@ -558,6 +559,7 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 	struct sc_charbuf name;
 	const char *plugin_name;
 	config_setting_t *entry;
+	struct cbot_plugpriv *priv;
 	int i, rv = 0;
 	sc_cb_init(&name, 256);
 
@@ -581,7 +583,11 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 		}
 
 		sc_cb_printf(&name, "%s/%s.so", bot->plugin_dir, plugin_name);
-		cbot_load_plugin(bot, name.buf, plugin_name, entry);
+		priv = cbot_load_plugin(bot, name.buf, plugin_name, entry);
+		if (!priv) {
+			rv = -1;
+			goto out;
+		}
 	}
 
 out:
