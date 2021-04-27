@@ -18,6 +18,7 @@
 struct cbot_backend_ops *all_ops[] = {
 	&irc_ops,
 	&cli_ops,
+	&signal_ops,
 };
 
 /********

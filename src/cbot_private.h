@@ -63,6 +63,7 @@ struct cbot_backend_ops {
 
 extern struct cbot_backend_ops irc_ops;
 extern struct cbot_backend_ops cli_ops;
+extern struct cbot_backend_ops signal_ops;
 
 struct cbot_channel_conf {
 	char *name;

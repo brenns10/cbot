@@ -1,0 +1,4 @@
+[wrap-git]
+directory = nosj.git
+url = https://github.com/brenns10/nosj
+revision = master

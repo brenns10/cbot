@@ -12,6 +12,7 @@ sources = [
   'src/tok.c',
   'src/fmt.c',
   'src/curl.c',
+  'src/cbot_signal.c',
   #'src/main.c',
 ]
 
@@ -42,6 +43,11 @@ libsc_lwt_dep = dependency(
   fallback: ['sc-lwt', 'libsc_lwt_dep'],
   version: '>=0.2.0',
 )
+libnosj_dep = dependency(
+  'libnosj',
+  fallback: ['nosj', 'libnosj_dep'],
+  version: '>=0.1.0',
+)
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : true)
 sqlite_dep = dependency(
@@ -56,6 +62,7 @@ cbot_deps = [
     libsc_regex_dep,
     libsc_argparse_dep,
     libsc_lwt_dep,
+    libnosj_dep,
     libircclient_dep,
     crypto_dep,
     dl_dep,
