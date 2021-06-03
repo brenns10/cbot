@@ -301,9 +301,11 @@ static void cbot_irc_run(struct cbot *bot)
 		FD_ZERO(&in_fd);
 		FD_ZERO(&out_fd);
 		maxfd = 0;
-		rv = irc_add_select_descriptors(session, &in_fd, &out_fd, &maxfd);
+		rv = irc_add_select_descriptors(session, &in_fd, &out_fd,
+		                                &maxfd);
 		if (rv != 0) {
-			fprintf(stderr, "cbot_irc: irc error: %s\n", irc_strerror(irc_errno(session)));
+			fprintf(stderr, "cbot_irc: irc error: %s\n",
+			        irc_strerror(irc_errno(session)));
 			break;
 		}
 		for (int i = 0; i <= maxfd; i++) {
@@ -338,7 +340,8 @@ static void cbot_irc_run(struct cbot *bot)
 		rv = irc_process_select_descriptors(session, &in_fd, &out_fd);
 		sc_lwt_remove_all(cur);
 		if (rv != 0) {
-			fprintf(stderr, "cbot_irc: irc error: %s\n", irc_strerror(irc_errno(session)));
+			fprintf(stderr, "cbot_irc: irc error: %s\n",
+			        irc_strerror(irc_errno(session)));
 			break;
 		}
 	}
