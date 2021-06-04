@@ -8,7 +8,14 @@
 
 #include <nosj.h>
 
+#include "sc-collections.h"
 #include "cbot_private.h"
+
+const char MENTION_PLACEHOLDER[] = {0xEF, 0xBF, 0xBC, 0x00};
+
+#define MENTION_ERR   0
+#define MENTION_USER  1
+#define MENTION_GROUP 2
 
 struct cbot_signal_backend {
 
@@ -180,10 +187,20 @@ static void jmsg_free(struct jmsg *jm)
 	free(jm);
 }
 
+static inline size_t jmsg_lookup_at(struct jmsg *jm, size_t n, char *key)
+{
+	return json_lookup(jm->orig, jm->tok, n, key);
+}
+
+static inline size_t jmsg_lookup(struct jmsg *jm, char *key)
+{
+	return jmsg_lookup_at(jm, 0, key);
+}
+
 
 static char *jmsg_lookup_stringnul(struct jmsg *jm, char *key, char val)
 {
-	size_t res = json_lookup(jm->orig, jm->tok, 0, key);
+	size_t res = jmsg_lookup(jm, key);
 	char *str, *f;
 	if (res == 0)
 		return NULL;
@@ -211,17 +228,15 @@ static char *jmsg_lookup_string(struct jmsg *jm, char *key)
 /* Utility functions */
 
 /*
- * Adds a prefix to the beginning of a string. Uses realloc(), so beware.
+ * Adds a prefix to the beginning of a string. Frees string and replaces it
  */
-static char *realloc_with_prefix(char *string, const char *prefix)
+static char *format_mention(char *string, const char *prefix)
 {
-	int str_len = strlen(string);
-	int prefix_len = strlen(prefix);
-	int len = str_len + prefix_len + 1;
-	string = realloc(string, len);
-	memmove(string + prefix_len, string, str_len + 1);
-	memcpy(string, prefix, prefix_len);
-	return string;
+	struct sc_charbuf cb;
+	sc_cb_init(&cb, 64);
+	sc_cb_printf(&cb, "@(%s:%s)", prefix, string);
+	free(string);
+	return cb.buf;
 }
 
 /*
@@ -236,30 +251,172 @@ static const char *startswith(const char *str, const char *pfx)
 }
 
 /*
- * Return a newly allocated string with necessary escaping for JSON.
+ * Parse a mention text.
  */
-static char *json_quote(const char *instr)
+static char *get_mention(const char *string, int *kind, int *offset)
 {
-	size_t i, j;
-	int additional = 0;
-	char *outstr = NULL;
-	for (i = 0; instr[i]; i++)
-		if (instr[i] == '"' || instr[i] == '\n' || instr[i] == '\\')
-			additional++;
+	const char *start, *end;
+	char *out;
 
-	outstr = malloc(i + additional + 1);
-	for (i = 0, j = 0; instr[i]; i++) {
-		if (instr[i] == '"' || instr[i] == '\\') {
-			outstr[j++] = '\\';
-			outstr[j++] = instr[i];
-		} else if (instr[i] == '\n') {
-			outstr[j++] = '\\';
-			outstr[j++] = 'n';
+	if ((start = startswith(string, "@(uuid:"))) {
+		*kind = MENTION_USER;
+	} else if ((start = startswith(string, "@(group:"))) {
+		*kind = MENTION_GROUP;
+	} else {
+		*kind = MENTION_ERR;
+		if (offset)
+			*offset = 1;
+		return strdup("@???");
+	}
+	end = strchr(start, ')');
+	if (!end) {
+		*kind = MENTION_ERR;
+		if (offset)
+			*offset = 1;
+		return strdup("@???");
+	}
+	out = malloc(end - start + 1);
+	memcpy(out, start, end - start);
+	out[end - start] = '\0';
+	if (offset)
+		*offset = end - string + 1;
+	return out;
+}
+
+/*
+ * Return a newly allocated string with mentions "replaced"
+ *
+ * Signald gives us messages with mentions in a strange format. The mentions
+ * come in a JSON array, and their "start" field doesn't seem accurate. However,
+ * each mention is replaced with MENTION_PLACEHOLDER, so we simply iterate over
+ * each placeholder, grab a mention from the JSON list, and insert our
+ * placeholder:
+ *
+ *   @(uuid:blah)
+ *
+ * Our placeholder can be translated back at the end (see below). To preserve
+ * mentions which may contain @, we also identify the @ sign and double it.
+ */
+static char *insert_mentions(const char *str, struct jmsg *jm, size_t list)
+{
+	const char *next, *at;
+	size_t uuid_idx;
+	struct sc_charbuf cb;
+	sc_cb_init(&cb, jm->origlen);
+
+	if (list != 0)
+		list = jm->tok[list].child;
+
+	for (;;) {
+		/* find next occurrence of either a mention or @ (which needs
+		 * escaping) */
+		next = strstr(str, MENTION_PLACEHOLDER);
+		at = strchr(str, '@');
+
+		/* Choose the first one, or if neither found, terminate loop */
+		if (!next && !at)
+			break;
+		else if (next && at && (at < next))
+			next = at;
+		else if (!next)
+			next = at;
+
+		sc_cb_memcpy(&cb, str, next - str);
+
+		/* Escape @ */
+		if (*next == '@') {
+			sc_cb_concat(&cb, "@@");
+			str = next + 1;
+			continue;
+		}
+
+		if (list == 0) {
+			fprintf(stderr, "cbot signal: too few JSON mentions\n");
+			sc_cb_concat(&cb, "???");
+			str = next + sizeof(MENTION_PLACEHOLDER) - 1;
+			continue;
+		}
+		sc_cb_concat(&cb, "@(uuid:");
+		uuid_idx = jmsg_lookup_at(jm, list, "uuid");
+		if (jm->tok[uuid_idx].type != JSON_STRING) {
+			fprintf(stderr, "cbot signal: BADLY FORMATTED MENTION\n");
 		} else {
-			outstr[j++] = instr[i];
+			/* In general this isn't safe to manually access cb.buf, but
+			 * in our case we preallocated it to be the size of the
+			 * original JSON message, which means it must have space
+			 * for a subset of it.
+			 */
+			json_string_load(jm->orig, jm->tok, uuid_idx, cb.buf + cb.length);
+			cb.length += jm->tok[uuid_idx].length;
+			cb.buf[cb.length] = '\0';
+		}
+		sc_cb_append(&cb, ')');
+		list = jm->tok[list].next;
+		str = next + sizeof(MENTION_PLACEHOLDER) - 1;
+	}
+
+	if (jm->tok[list].next != 0) {
+		fprintf(stderr, "WARNING: unconsumed mention in JSON\n");
+	}
+	sc_cb_memcpy(&cb, str, strlen(str) + 1);
+	return cb.buf;
+}
+
+/*
+ * Return a newly allocated string with necessary escaping for JSON. Return a
+ * second string (in mentions) which contains all mention JSON elements.
+ *
+ * This is called with a message text just before sending it.
+ *
+ * Beyond obvious JSON escaping, this function detects any mention placeholder
+ * mention text:
+ *   @(uuid:UUUID)
+ * That text is removed and a JSON array element is created in "mentions" to
+ * represent it.
+ *
+ * Duplicated "@@" are resolved back to "@" - this is to reverse the escaping
+ * done by insert_mentions() above.
+ */
+static char *json_quote_and_mention(const char *instr, char **mentions)
+{
+	size_t i = 0;
+	struct sc_charbuf cb;
+	struct sc_charbuf mb;
+
+	sc_cb_init(&cb, strlen(instr));
+	sc_cb_init(&mb, 128);
+	for (i = 0; instr[i]; i++) {
+		if (instr[i] == '"' || instr[i] == '\\') {
+			sc_cb_append(&cb, '\\');
+			sc_cb_append(&cb, instr[i]);
+		} else if (instr[i] == '\n') {
+			sc_cb_append(&cb, '\\');
+			sc_cb_append(&cb, 'n');
+		} else if (instr[i] == '@' && instr[i + 1] == '@') {
+			sc_cb_append(&cb, '@');
+			i++;
+		} else if (instr[i] == '@' && instr[i + 1] != '@') {
+			int kind, offset;
+			char *mention;
+			mention = get_mention(instr + i, &kind, &offset);
+			if (kind != MENTION_USER) {
+				sc_cb_append(&cb, '@');
+			} else {
+				if (mb.length)
+					sc_cb_append(&mb, ',');
+				sc_cb_printf(&mb, "{\"length\": 0,\"start\": %d,\"uuid\":\"%s\"}", cb.length, mention);
+				// Rather than use the MENTION_PLACEHOLDER, my
+				// experiments indicate it's acceptable to
+				// specify a zero-length placeholder
+				i += offset - 1;
+			}
+			free(mention);
+		} else {
+			sc_cb_append(&cb, instr[i]);
 		}
 	}
-	return outstr;
+	*mentions = mb.buf;
+	return cb.buf;
 }
 
 /* Signald / Signal API functions */
@@ -376,7 +533,8 @@ out1:
  */
 static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 {
-	char *msgb, *srcb, *group;
+	char *msgb, *srcb, *group, *repl;
+	size_t mention_index;
 
 	if (jmsg_parse(jm) != 0)
 		return -1;
@@ -385,16 +543,21 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	if (!msgb)
 		return 0;
 
-	srcb = jmsg_lookup_string(jm, "data.source.number");
+	mention_index = jmsg_lookup(jm, "data.dataMessage.mentions");
+	repl = insert_mentions(msgb, jm, mention_index);
+	free(msgb);
+	msgb = repl;
+
+	srcb = jmsg_lookup_string(jm, "data.source.uuid");
 	if (!srcb) {
 		free(msgb);
 		return 0;
 	}
-	srcb = realloc_with_prefix(srcb, "number:");
+	srcb = format_mention(srcb, "uuid");
 
 	group = jmsg_lookup_string(jm, "data.dataMessage.groupV2.id");
 	if (group)
-		group = realloc_with_prefix(group, "group:");
+		group = format_mention(group, "group");
 
 	cbot_handle_message(sig->bot, group? group : srcb, srcb, msgb, false);
 	free(group);
@@ -437,6 +600,7 @@ const static char fmt_send_group[] = (
 	    "\"username\":\"%s\","
 	    "\"recipientGroupId\":\"%s\","
 	    "\"messageBody\":\"%s\","
+	    "\"mentions\":[%s],"
 	    "\"type\":\"send\","
 	    "\"version\":\"v1\""
 	"}\n"
@@ -446,9 +610,10 @@ const static char fmt_send_single[] = (
 	"\n{"
 	    "\"username\":\"%s\","
 	    "\"recipientAddress\":{"
-	        "\"number\":\"%s\""
+	        "\"uuid\":\"%s\""
 	    "},"
 	    "\"messageBody\":\"%s\","
+	    "\"mentions\":[%s],"
 	    "\"type\":\"send\","
 	    "\"version\":\"v1\""
 	"}\n"
@@ -457,16 +622,27 @@ const static char fmt_send_single[] = (
 static void cbot_signal_send(const struct cbot *bot, const char *to, const char *msg)
 {
 	struct cbot_signal_backend *sig = bot->backend;
-	const char *dest_payload;
-	char *quoted = json_quote(msg);
+	char *dest_payload;
+	char *quoted, *mentions;
+	int kind;
+
+	quoted = json_quote_and_mention(msg, &mentions);
 	printf("SEND: %s\n", msg);
-	if ((dest_payload = startswith(to, "phone:")))
-		fprintf(sig->ws, fmt_send_single, sig->sender, dest_payload, quoted);
-	else if ((dest_payload = startswith(to, "group:")))
-		fprintf(sig->ws, fmt_send_group, sig->sender, dest_payload, quoted);
-	else
-		fprintf(stderr, "error: invalid signal destination \"%s\"\n", to);
+
+	dest_payload = get_mention(to, &kind, NULL);
+	switch (kind) {
+		case MENTION_USER:
+			fprintf(sig->ws, fmt_send_single, sig->sender, dest_payload, quoted, mentions);
+			break;
+		case MENTION_GROUP:
+			fprintf(sig->ws, fmt_send_group, sig->sender, dest_payload, quoted, mentions);
+			break;
+		default:
+			fprintf(stderr, "error: invalid signal destination \"%s\"\n", to);
+	}
+	free(dest_payload);
 	free(quoted);
+	free(mentions);
 }
 
 struct cbot_backend_ops signal_ops = {
