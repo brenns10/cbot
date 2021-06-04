@@ -247,7 +247,7 @@ static char *json_quote(const char *instr)
 		if (instr[i] == '"' || instr[i] == '\n' || instr[i] == '\\')
 			additional++;
 
-	outstr = malloc(i + additional);
+	outstr = malloc(i + additional + 1);
 	for (i = 0, j = 0; instr[i]; i++) {
 		if (instr[i] == '"' || instr[i] == '\\') {
 			outstr[j++] = '\\';
