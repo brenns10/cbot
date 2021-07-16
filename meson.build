@@ -49,7 +49,7 @@ libnosj_dep = dependency(
   version: '>=0.1.0',
 )
 crypto_dep = dependency('libcrypto')
-dl_dep = cc.find_library('dl', required : true)
+dl_dep = cc.find_library('dl', required : false)
 sqlite_dep = dependency(
   'sqlite3',
   fallback: ['sqlite', 'sqlite_dep'],
