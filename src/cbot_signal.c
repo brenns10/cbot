@@ -429,11 +429,11 @@ static void sig_get_profile(struct cbot_signal_backend *sig, char *phone)
 	fprintf(sig->ws, "\n{\"account\":\"%s\",\"address\":{\"number\":\"%s\"},\"type\":\"get_profile\",\"version\":\"v1\"}\n", sig->sender, phone);
 
 	jm = sig_read_parse_jmsg(sig);
-	if (!jm != 0) {
+	if (!jm) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		goto out;
 	}
-	name = jmsg_lookup_stringnul(jm, "data.name", ' ');
+	name = jmsg_lookup_stringnulat(jm, 0, "data.name", ' ');
 
 	printf("%s\n", jm->orig);
 	printf("name: \"%s\"\n", name);

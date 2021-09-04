@@ -46,7 +46,7 @@ libsc_lwt_dep = dependency(
 libnosj_dep = dependency(
   'libnosj',
   fallback: ['nosj', 'libnosj_dep'],
-  version: '>=0.1.0',
+  version: '>=1.0.0',
 )
 crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : false)
