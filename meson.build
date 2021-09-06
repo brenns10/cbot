@@ -1,6 +1,6 @@
 project(
   'cbot', 'c',
-  version : '0.4.0',
+  version : '0.4.1',
 )
 
 sources = [
@@ -113,6 +113,7 @@ foreach f: plugins
       include_directories : inc, install : true,
       dependencies : [libcbot_dep] + cbot_deps,
       name_prefix : '',
+      install_dir : get_option('libexecdir') / 'cbot',
     )
   ]
 endforeach
