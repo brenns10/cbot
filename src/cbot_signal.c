@@ -82,15 +82,14 @@ static int async_read(int fd, char *data, size_t nbytes)
 }
 
 /**
- * Read into bufs->orig, until we hit a character c. This character is assumed
- * to be a message terminator, and is replaced with a null terminator. The
- * number of bytes read (including that character c which became the NUL
- * terminator) is returned. Any extra data which came from the final read (after
- * c) is copied into the spill buffer, and the spill buffer is drained before
- * doing any further reading.
+ * Read until we reach a newline, and place the resulting data into a newly
+ * allocated struct jmsg. The newline is stripped and replaced with a nul
+ * terminator. Any extra data which came from the final read is copied into a
+ * "spill buffer", and before reading on the next call, this buffer will be
+ * drained.
  *
- * In other words, a very basic buffered I/O system built on the async_read()
- * primitive.
+ * In other words, this is a very basic line-buffered I/O system built on the
+ * async_read() primitive, which returns lines ready to be JSON parsed.
  */
 static struct jmsg *sig_read_jmsg(struct cbot_signal_backend *sig)
 {
@@ -198,9 +197,9 @@ static inline size_t jmsg_lookup(struct jmsg *jm, char *key)
 }
 
 
-static char *jmsg_lookup_stringnul(struct jmsg *jm, char *key, char val)
+static char *jmsg_lookup_stringnulat(struct jmsg *jm, size_t start, char *key, char val)
 {
-	size_t res = jmsg_lookup(jm, key);
+	size_t res = jmsg_lookup_at(jm, start, key);
 	char *str, *f;
 	if (res == 0)
 		return NULL;
@@ -222,7 +221,12 @@ static char *jmsg_lookup_stringnul(struct jmsg *jm, char *key, char val)
 
 static char *jmsg_lookup_string(struct jmsg *jm, char *key)
 {
-	return jmsg_lookup_stringnul(jm, key, '\0');
+	return jmsg_lookup_stringnulat(jm, 0, key, '\0');
+}
+
+static char *jmsg_lookup_string_at(struct jmsg *jm, size_t start, char *key)
+{
+	return jmsg_lookup_stringnulat(jm, start, key, '\0');
 }
 
 /* Utility functions */
@@ -444,6 +448,39 @@ out:
 		jmsg_free(jm);
 }
 
+// TODO: return the list rather than printing it
+static void sig_list_groups(struct cbot_signal_backend *sig)
+{
+	struct jmsg *jm = NULL;
+	size_t ix;
+	char *title;
+	fprintf(sig->ws, "\n{\"account\":\"%s\",\"type\":\"list_groups\",\"version\":\"v1\"}\n", sig->sender);
+
+	jm = sig_read_parse_jmsg(sig);
+	if (!jm) {
+		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
+		return;
+	}
+	printf("%s\n", jm->orig);
+
+	ix = jmsg_lookup(jm, "data.groups");
+	if (ix == 0) {
+		printf("Key 'groups' not found in response: %s\n", jm->orig);
+		jmsg_free(jm);
+		return;
+	}
+	json_array_for_each(ix, jm->tok, ix)
+	{
+		title = jmsg_lookup_string_at(jm, ix, "title");
+		if (!title) {
+			printf("Failed to read title of group\n");
+			break;
+		}
+		printf("Group: \"%s\"\n", title);
+	}
+	jmsg_free(jm);
+}
+
 static void sig_subscribe(struct cbot_signal_backend *sig)
 {
 	char fmt[] = "\n{\"type\":\"subscribe\",\"username\":\"%s\"}\n";
@@ -575,6 +612,8 @@ static void cbot_signal_run(struct cbot *bot)
 	sc_lwt_wait_fd(cur, sig->fd, SC_LWT_W_IN, NULL);
 
 	sig_expect(sig, "version");
+
+	sig_list_groups(sig);
 
 	sig_subscribe(sig);
 	sig_expect(sig, "subscribed");
