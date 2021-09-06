@@ -1,6 +1,6 @@
 project(
   'cbot', 'c',
-  version : '0.3.0',
+  version : '0.4.0',
 )
 
 sources = [
@@ -31,7 +31,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.8.0',
+  version: '>=0.8.1',
 )
 libsc_argparse_dep = dependency(
   'libsc-argparse',
@@ -41,7 +41,7 @@ libsc_argparse_dep = dependency(
 libsc_lwt_dep = dependency(
   'libsc-lwt',
   fallback: ['sc-lwt', 'libsc_lwt_dep'],
-  version: '>=0.5.0',
+  version: '>=0.5.1',
 )
 libnosj_dep = dependency(
   'libnosj',
