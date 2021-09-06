@@ -4,6 +4,26 @@ Changelog
 Unreleased
 ----------
 
+0.4.0 (2021-09-06)
+------------------
+
+A ton more changes. Up to this point, cbot really hasn't had a real version
+scheme or release system. However, this release changes that. I'm preparing cbot
+to be deployed via container, and so I want to package it for Alpine. This
+requires that I have regular source tarball releases. Each release tarball
+contains all necessary subprojects bundled, to make it easy to build offline and
+by verifying a single checksum.
+
+Here's a selection of changes included in the release:
+
+* Add sc-lwt and begin using lightweight threads. Plugins and other code can
+  launch a background thread to do some I/O without blocking the main thread.
+* Add sqlite database integration, allowing state to be saved. We also add a DB
+  API to simplify this.
+* Add curl integration which allows us to query APIs in plugins.
+* Add a super bare-bones Signal backend. This should be considered very alpha
+  quality.
+
 0.3.0 (2020-05-07)
 ------------------
 

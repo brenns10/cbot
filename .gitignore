@@ -13,3 +13,4 @@ run_local.sh
 *.cfg
 *.sqlite3
 !sample.cfg
+cbot-*.tar.gz
