@@ -4,17 +4,26 @@
 # This is different from git archive in that it includes some untracked files.
 # We would like to package all of the subprojects as fallbacks, so that they can
 # be used without downloading anything.
+#
+# usage:
+# ./make-release.sh
+#     make release from HEAD, using "git describe" for the version
+#
+# ./make-release.sh tag
+#     make release from tag
+
 set -euo pipefail
 
-RELEASE=v0.4.0
+RELEASE=${1:-$(git describe --tags)}
+RELNOV=$(echo $RELEASE | sed 's/^v//')
 WORK=$(pwd)
 
-git worktree add /tmp/cbot-$RELEASE HEAD
+git worktree add /tmp/cbot-$RELEASE $RELEASE
 pushd /tmp/cbot-$RELEASE
 
 meson subprojects download
 meson subprojects foreach rm -rf .git
 
-tar --exclude-vcs --transform "s,^\.,cbot-$RELEASE," -czvf $WORK/cbot-$RELEASE.tar.gz .
+tar --exclude-vcs --transform "s,^\.,cbot-$RELNOV," -czvf $WORK/cbot-$RELNOV.tar.gz .
 popd
 git worktree remove /tmp/cbot-$RELEASE
