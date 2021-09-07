@@ -18,10 +18,21 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	struct sockaddr_un addr;
 	int rv;
 	const char *phone;
+	const char *signald_socket;
 
 	rv = config_setting_lookup_string(group, "phone", &phone);
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr, "cbot signal: key \"phone\" wrong type or not exists\n");
+		return -1;
+	}
+
+	rv = config_setting_lookup_string(group, "signald_socket", &signald_socket);
+	if (rv == CONFIG_FALSE) {
+		fprintf(stderr, "cbot signal: key \"signald_socket\" wrong type or not exists\n");
+		return -1;
+	}
+	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
+		fprintf(stderr, "cbot signal: signald socket path too long\n");
 		return -1;
 	}
 
@@ -42,7 +53,8 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	}
 	setvbuf(backend->ws, NULL, _IONBF, 0);
 
-	addr = (struct sockaddr_un){ AF_UNIX, "/var/run/signald/signald.sock" };
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, signald_socket, sizeof(addr.sun_path));
 	rv = connect(backend->fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (rv) {
 		perror("connect");
