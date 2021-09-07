@@ -13,7 +13,6 @@ sources = [
   'src/fmt.c',
   'src/curl.c',
   'src/cbot_signal.c',
-  #'src/main.c',
 ]
 
 inc = include_directories('inc')
