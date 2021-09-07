@@ -12,7 +12,10 @@ sources = [
   'src/tok.c',
   'src/fmt.c',
   'src/curl.c',
-  'src/cbot_signal.c',
+  'src/signal/backend.c',
+  'src/signal/api.c',
+  'src/signal/jmsg.c',
+  'src/signal/mention.c',
 ]
 
 inc = include_directories('inc')
