@@ -119,9 +119,63 @@ static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 #define MENTION_USER  1
 #define MENTION_GROUP 2
 
-char *format_mention(char *string, const char *prefix);
-char *get_mention(const char *string, int *kind, int *offset);
-char *insert_mentions(const char *str, struct jmsg *jm, size_t list);
+/**
+ * Formats a mention placeholder.
+ * @param string The value of the mention
+ * @param prefix The prefix to apply (e.g. uuid, group)
+ * @returns A newly allocated string with the mention text.
+ */
+char *mention_format(char *string, const char *prefix);
+
+/**
+ * Parse a mention placeholder text.
+ * @param string Input text starting at the mention
+ * @param[out] kind The kind of message: MENTION_ERR for error.
+ * @param[out] offset If provided, will be filled with the number of characters
+ * of thismention.
+ * @return The value of the mention (a new string which must be freed)
+ */
+char *mention_parse(const char *string, int *kind, int *offset);
+
+/**
+ * Return a newly allocated string with mentions "replaced"
+ *
+ * Signald gives us messages with mentions in a strange format. The mentions
+ * come in a JSON array, and their "start" field doesn't seem accurate. However,
+ * each mention is replaced with MENTION_PLACEHOLDER, so we simply iterate over
+ * each placeholder, grab a mention from the JSON list, and insert our
+ * placeholder:
+ *
+ *   @(uuid:blah)
+ *
+ * Our placeholder can be translated back at the end (see below). To preserve
+ * mentions which may contain @, we also identify the @ sign and double it.
+ * @param str Message string
+ * @param jm The JSON message buffer
+ * @param list The index of the array to read menitons from
+ * @return A newly allocated string with mentions expanded to placeholders.
+ */
+char *mention_from_json(const char *str, struct jmsg *jm, size_t list);
+
+/**
+ * Return a newly allocated string with necessary escaping for JSON. Return a
+ * second string (in mentions) which contains all mention JSON elements.
+ *
+ * This is called with a message text just before sending it.
+ *
+ * Beyond obvious JSON escaping, this function detects any mention placeholder
+ * mention text:
+ *   @(uuid:UUUID)
+ * That text is removed and a JSON array element is created in "mentions" to
+ * represent it.
+ *
+ * Duplicated "@@" are resolved back to "@" - this is to reverse the escaping
+ * done by mention_from_json() above.
+ *
+ * @param instr Input string
+ * @param[out] mentions Will be populated with a newly allocated string of JSON
+ * mentions as an array.
+ */
 char *json_quote_and_mention(const char *instr, char **mentions);
 
 /***** api.c *****/

@@ -9,10 +9,7 @@
 
 const char MENTION_PLACEHOLDER[] = {0xEF, 0xBF, 0xBC, 0x00};
 
-/*
- * Adds a prefix to the beginning of a string. Frees string and replaces it
- */
-char *format_mention(char *string, const char *prefix)
+char *mention_format(char *string, const char *prefix)
 {
 	struct sc_charbuf cb;
 	sc_cb_init(&cb, 64);
@@ -32,10 +29,7 @@ static const char *startswith(const char *str, const char *pfx)
 	return NULL;
 }
 
-/*
- * Parse a mention text.
- */
-char *get_mention(const char *string, int *kind, int *offset)
+char *mention_parse(const char *string, int *kind, int *offset)
 {
 	const char *start, *end;
 	char *out;
@@ -65,21 +59,7 @@ char *get_mention(const char *string, int *kind, int *offset)
 	return out;
 }
 
-/*
- * Return a newly allocated string with mentions "replaced"
- *
- * Signald gives us messages with mentions in a strange format. The mentions
- * come in a JSON array, and their "start" field doesn't seem accurate. However,
- * each mention is replaced with MENTION_PLACEHOLDER, so we simply iterate over
- * each placeholder, grab a mention from the JSON list, and insert our
- * placeholder:
- *
- *   @(uuid:blah)
- *
- * Our placeholder can be translated back at the end (see below). To preserve
- * mentions which may contain @, we also identify the @ sign and double it.
- */
-char *insert_mentions(const char *str, struct jmsg *jm, size_t list)
+char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 {
 	const char *next, *at;
 	size_t uuid_idx;
@@ -144,21 +124,6 @@ char *insert_mentions(const char *str, struct jmsg *jm, size_t list)
 	return cb.buf;
 }
 
-/*
- * Return a newly allocated string with necessary escaping for JSON. Return a
- * second string (in mentions) which contains all mention JSON elements.
- *
- * This is called with a message text just before sending it.
- *
- * Beyond obvious JSON escaping, this function detects any mention placeholder
- * mention text:
- *   @(uuid:UUUID)
- * That text is removed and a JSON array element is created in "mentions" to
- * represent it.
- *
- * Duplicated "@@" are resolved back to "@" - this is to reverse the escaping
- * done by insert_mentions() above.
- */
 char *json_quote_and_mention(const char *instr, char **mentions)
 {
 	size_t i = 0;
@@ -180,7 +145,7 @@ char *json_quote_and_mention(const char *instr, char **mentions)
 		} else if (instr[i] == '@' && instr[i + 1] != '@') {
 			int kind, offset;
 			char *mention;
-			mention = get_mention(instr + i, &kind, &offset);
+			mention = mention_parse(instr + i, &kind, &offset);
 			if (kind != MENTION_USER) {
 				sc_cb_append(&cb, '@');
 			} else {

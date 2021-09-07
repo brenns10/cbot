@@ -80,7 +80,7 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		return 0;
 
 	mention_index = jmsg_lookup(jm, "data.dataMessage.mentions");
-	repl = insert_mentions(msgb, jm, mention_index);
+	repl = mention_from_json(msgb, jm, mention_index);
 	free(msgb);
 	msgb = repl;
 
@@ -89,11 +89,11 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		free(msgb);
 		return 0;
 	}
-	srcb = format_mention(srcb, "uuid");
+	srcb = mention_format(srcb, "uuid");
 
 	group = jmsg_lookup_string(jm, "data.dataMessage.groupV2.id");
 	if (group)
-		group = format_mention(group, "group");
+		group = mention_format(group, "group");
 
 	cbot_handle_message(sig->bot, group? group : srcb, srcb, msgb, false);
 	free(group);
@@ -137,7 +137,7 @@ static void cbot_signal_send(const struct cbot *bot, const char *to, const char 
 	char *dest_payload;
 	int kind;
 
-	dest_payload = get_mention(to, &kind, NULL);
+	dest_payload = mention_parse(to, &kind, NULL);
 	switch (kind) {
 		case MENTION_USER:
 			sig_send_single(sig, dest_payload, msg);
