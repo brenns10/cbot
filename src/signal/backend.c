@@ -120,7 +120,7 @@ static void cbot_signal_run(struct cbot *bot)
 	sig_set_name(sig, bot->name);
 
 	while (1) {
-		jm = sig_read_jmsg(sig);
+		jm = jmsg_read(sig);
 		if (!jm)
 			break;
 		printf("\"%s\"\n", jm->orig);

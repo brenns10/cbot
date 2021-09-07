@@ -12,12 +12,12 @@ void sig_get_profile(struct cbot_signal_backend *sig, char *phone)
 
 	fprintf(sig->ws, "\n{\"account\":\"%s\",\"address\":{\"number\":\"%s\"},\"type\":\"get_profile\",\"version\":\"v1\"}\n", sig->sender, phone);
 
-	jm = sig_read_parse_jmsg(sig);
+	jm = jmsg_read_parse(sig);
 	if (!jm) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		goto out;
 	}
-	name = jmsg_lookup_stringnulat(jm, 0, "data.name", ' ');
+	name = jmsg_lookup_string(jm, "data.name");
 
 	printf("%s\n", jm->orig);
 	printf("name: \"%s\"\n", name);
@@ -36,7 +36,7 @@ void sig_list_groups(struct cbot_signal_backend *sig)
 	char *title;
 	fprintf(sig->ws, "\n{\"account\":\"%s\",\"type\":\"list_groups\",\"version\":\"v1\"}\n", sig->sender);
 
-	jm = sig_read_parse_jmsg(sig);
+	jm = jmsg_read_parse(sig);
 	if (!jm) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		return;
@@ -79,7 +79,7 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type)
 {
 	struct jmsg *jm;
 	size_t ix_type;
-	jm = sig_read_parse_jmsg(sig);
+	jm = jmsg_read_parse(sig);
 	if (!jm) {
 		fprintf(stderr, "sig_expect: error reading jmsg\n");
 		return;

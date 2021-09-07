@@ -43,31 +43,74 @@ struct jmsg {
 	size_t toklen;
 };
 
-struct jmsg *sig_read_jmsg(struct cbot_signal_backend *sig);
+/**
+ * Read a JSON message from Signald.
+ *
+ * This may yield to the event loop waiting for input. It reads until a full
+ * line is received, and buffers any remaining data transparently.
+ *
+ * @param sig Signal backend
+ * @return NULL on error, otherwise a struct jmsg ready to parse
+ */
+struct jmsg *jmsg_read(struct cbot_signal_backend *sig);
+
+/**
+ * Parse a JSON message.
+ * @param sig Signal backend
+ * @return -1 on error, otherwise 0 and the message is ready for use
+ */
 int jmsg_parse(struct jmsg *jm);
-struct jmsg *sig_read_parse_jmsg(struct cbot_signal_backend *sig);
+
+/**
+ * Combine the read and parse steps together into one.
+ * @param sig Signal backend
+ * @return NULL on error, otherwise a struct jmsg ready to use
+ */
+struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig);
+
+/**
+ * Free a JSON message object, in whatever lifetime state it may be.
+ * @param jm Message to free.
+ */
 void jmsg_free(struct jmsg *jm);
 
-static inline size_t jmsg_lookup_at(struct jmsg *jm, size_t n, char *key)
+/**
+ * Lookup @c key within the object at index @c n in the message @c jm.
+ * @param jm JSON message
+ * @param n The index of the object to look in
+ * @param key The key to search - may be a JSON object expression.
+ */
+static inline size_t jmsg_lookup_at(struct jmsg *jm, size_t n, const char *key)
 {
 	return json_lookup(jm->orig, jm->tok, n, key);
 }
 
-static inline size_t jmsg_lookup(struct jmsg *jm, char *key)
+/**
+ * Lookup @c key in the top-level object of JSON message @c jm.
+ * @param jm JSON message
+ * @param key The key to search - may be a JSON object expression.
+ */
+static inline size_t jmsg_lookup(struct jmsg *jm, const char *key)
 {
 	return jmsg_lookup_at(jm, 0, key);
 }
 
-char *jmsg_lookup_stringnulat(struct jmsg *jm, size_t start, char *key, char val);
+/**
+ * Lookup @c key in an object it index @c n. Return it as a string.
+ * @param jm JSON message
+ * @param n The index of the object to look in
+ * @param key The key to search - may be a JSON object expression.
+ */
+char *jmsg_lookup_string_at(struct jmsg *jm, size_t n, const char *key);
 
-static inline char *jmsg_lookup_string(struct jmsg *jm, char *key)
+/**
+ * Lookup @c key in the top-level object of JSON message @c jm.
+ * @param jm JSON message
+ * @param key The key to search - may be a JSON object expression.
+ */
+static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 {
-	return jmsg_lookup_stringnulat(jm, 0, key, '\0');
-}
-
-static inline char *jmsg_lookup_string_at(struct jmsg *jm, size_t start, char *key)
-{
-	return jmsg_lookup_stringnulat(jm, start, key, '\0');
+	return jmsg_lookup_string_at(jm, 0, key);
 }
 
 /***** mention.c *****/

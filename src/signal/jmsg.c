@@ -35,17 +35,7 @@ static int async_read(int fd, char *data, size_t nbytes)
 	}
 }
 
-/**
- * Read until we reach a newline, and place the resulting data into a newly
- * allocated struct jmsg. The newline is stripped and replaced with a nul
- * terminator. Any extra data which came from the final read is copied into a
- * "spill buffer", and before reading on the next call, this buffer will be
- * drained.
- *
- * In other words, this is a very basic line-buffered I/O system built on the
- * async_read() primitive, which returns lines ready to be JSON parsed.
- */
-struct jmsg *sig_read_jmsg(struct cbot_signal_backend *sig)
+struct jmsg *jmsg_read(struct cbot_signal_backend *sig)
 {
 	int rv, foundidx;
 	struct sc_charbuf cb;
@@ -121,10 +111,10 @@ int jmsg_parse(struct jmsg *jm)
 	return 0;
 }
 
-struct jmsg *sig_read_parse_jmsg(struct cbot_signal_backend *sig)
+struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig)
 {
 	struct jmsg *jm;
-	jm = sig_read_jmsg(sig);
+	jm = jmsg_read(sig);
 	if (!jm || jmsg_parse(jm) != 0) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		return NULL;
@@ -140,24 +130,15 @@ void jmsg_free(struct jmsg *jm)
 	free(jm);
 }
 
-char *jmsg_lookup_stringnulat(struct jmsg *jm, size_t start, char *key, char val)
+char *jmsg_lookup_string_at(struct jmsg *jm, size_t start, const char *key)
 {
 	size_t res = jmsg_lookup_at(jm, start, key);
-	char *str, *f;
+	char *str;
 	if (res == 0)
 		return NULL;
 	if (jm->tok[res].type != JSON_STRING)
 		return NULL;
 	str = malloc(jm->tok[res].length + 1);
 	json_string_load(jm->orig, jm->tok, res, str);
-	if (val) {
-		f = str;
-		do {
-			f = strchr(f, '\0');
-			if (!f || (f - str) >= jm->tok[res].length)
-				break;
-			*f = val;
-		} while (1);
-	}
 	return str;
 }
