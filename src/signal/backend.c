@@ -163,9 +163,17 @@ static void cbot_signal_send(const struct cbot *bot, const char *to, const char 
 	free(dest_payload);
 }
 
+static void cbot_signal_nick(const struct cbot *bot, const char *newnick)
+{
+	struct cbot_signal_backend *sig = bot->backend;
+	sig_set_name(sig, newnick);
+	cbot_set_nick((struct cbot *)bot, newnick);
+}
+
 struct cbot_backend_ops signal_ops = {
 	.name = "signal",
 	.configure = cbot_signal_configure,
 	.run = cbot_signal_run,
 	.send = cbot_signal_send,
+	.nick = cbot_signal_nick,
 };
