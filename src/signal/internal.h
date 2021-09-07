@@ -198,7 +198,7 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type);
  * @param sig Signal backend
  * @param phone Phone number of user
  */
-void sig_get_profile(struct cbot_signal_backend *sig, char *phone);
+void sig_get_profile(struct cbot_signal_backend *sig, const char *phone);
 
 /**
  * List the groups that we are a member of.
@@ -220,7 +220,7 @@ void sig_subscribe(struct cbot_signal_backend *sig);
  * @param sig Signal backend
  * @param name Name to set
  */
-void sig_set_name(struct cbot_signal_backend *sig, char *name);
+void sig_set_name(struct cbot_signal_backend *sig, const char *name);
 
 /**
  * Send a message to a group.

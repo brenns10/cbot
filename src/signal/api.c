@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-void sig_get_profile(struct cbot_signal_backend *sig, char *phone)
+void sig_get_profile(struct cbot_signal_backend *sig, const char *phone)
 {
 	struct jmsg *jm = NULL;
 	char *name = NULL;
@@ -68,7 +68,7 @@ void sig_subscribe(struct cbot_signal_backend *sig)
         sig_expect(sig, "subscribed");
 }
 
-void sig_set_name(struct cbot_signal_backend *sig, char *name)
+void sig_set_name(struct cbot_signal_backend *sig, const char *name)
 {
 	printf("SET {\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\",\"version\":\"v1\"}\n", sig->sender, name);
 	fprintf(sig->ws, "\n{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\",\"version\":\"v1\"}\n", sig->sender, name);
