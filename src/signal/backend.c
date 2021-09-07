@@ -114,6 +114,40 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	return 0;
 }
 
+static void cbot_init_user_grp(struct cbot_signal_backend *sig)
+{
+	struct sc_list_head head;
+	struct signal_group *grp;
+	struct signal_user *user;
+	int i;
+
+	sc_list_init(&head);
+	sig_list_groups(sig, &head);
+
+	sc_list_for_each_entry(grp, &head, list, struct signal_group)
+	{
+		printf("Group \"%s\"\n", grp->title);
+		printf("  Invite: %s\n", grp->invite_link);
+		printf("  Id:     %s\n", grp->id);
+		printf("  Members:\n");
+		for (i = 0; i < grp->n_members; i++)
+			printf("    Id: %s%s\n", grp->members[i].uuid,
+			       (grp->members[i].role == SIGNAL_ROLE_ADMINISTRATOR) ? " (admin)" : "");
+
+	}
+	sig_group_free_all(&head);
+
+	sc_list_init(&head);
+	sig_list_contacts(sig, &head);
+	sc_list_for_each_entry(user, &head, list, struct signal_user)
+	{
+		printf("User \"%s %s\"\n", user->first_name, user->last_name);
+		printf("  Id: %s\n", user->uuid);
+		printf("  Number: %s\n", user->number);
+	}
+	sig_user_free_all(&head);
+}
+
 static void cbot_signal_run(struct cbot *bot)
 {
 	struct sc_lwt *cur = sc_lwt_current();
@@ -124,7 +158,7 @@ static void cbot_signal_run(struct cbot *bot)
 
 	sig_expect(sig, "version");
 
-	sig_list_groups(sig);
+	cbot_init_user_grp(sig);
 
 	sig_subscribe(sig);
 	sig_expect(sig, "listen_started");
@@ -135,7 +169,6 @@ static void cbot_signal_run(struct cbot *bot)
 		jm = jmsg_read(sig);
 		if (!jm)
 			break;
-		printf("\"%s\"\n", jm->orig);
 		handle_incoming(sig, jm);
 		jmsg_free(jm);
 		jm = NULL;

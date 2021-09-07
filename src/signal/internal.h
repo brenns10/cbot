@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include <nosj.h>
+#include <sc-collections.h>
 
 struct cbot_signal_backend {
 
@@ -100,8 +101,15 @@ static inline size_t jmsg_lookup(struct jmsg *jm, const char *key)
  * @param jm JSON message
  * @param n The index of the object to look in
  * @param key The key to search - may be a JSON object expression.
+ * @param[out] len Optional length of string
  */
-char *jmsg_lookup_string_at(struct jmsg *jm, size_t n, const char *key);
+char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t n, const char *key, size_t *len);
+
+
+static inline char *jmsg_lookup_string_at(struct jmsg *jm, size_t n, const char *key)
+{
+	return jmsg_lookup_string_at_len(jm, n, key, NULL);
+}
 
 /**
  * Lookup @c key in the top-level object of JSON message @c jm.
@@ -118,6 +126,7 @@ static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 #define MENTION_ERR   0
 #define MENTION_USER  1
 #define MENTION_GROUP 2
+
 
 /**
  * Formats a mention placeholder.
@@ -180,6 +189,30 @@ char *json_quote_and_mention(const char *instr, char **mentions);
 
 /***** api.c *****/
 
+struct signal_member {
+	char *uuid;
+	enum signal_role {
+		SIGNAL_ROLE_DEFAULT,
+		SIGNAL_ROLE_ADMINISTRATOR,
+	} role;
+};
+struct signal_group {
+	struct sc_list_head list;
+	char *id;
+	char *title;
+	char *invite_link;
+	struct signal_member *members;
+	size_t n_members;
+};
+
+struct signal_user {
+	struct sc_list_head list;
+	char *first_name;
+	char *last_name;
+	char *number;
+	char *uuid;
+};
+
 /**
  * Read another message from signald, expecting one of type @c type.
  * The resulting message is discarded, so the assumption is that you only care
@@ -191,23 +224,43 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type);
 
 /**
  * Get the profile of a user (by phone number).
- *
- * Currently, this just prints it out. Future plans to make this into a real
- * API.
- *
  * @param sig Signal backend
  * @param phone Phone number of user
+ * @return User object
  */
-void sig_get_profile(struct cbot_signal_backend *sig, const char *phone);
+struct signal_user *sig_get_profile(struct cbot_signal_backend *sig, const char *phone);
+/** Get the profile of a user (by uuid). */
+struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig, const char *uuid);
+
+/**
+ * Call the list_contacts signald API.
+ * It's not clear the exact semantics of this, but my expectation is that it
+ * lists all users we have contacted via signal groups?
+ * @param sig Signal backend
+ * @param[out] list Linked list to attach all users to
+ */
+void sig_list_contacts(struct cbot_signal_backend *sig, struct sc_list_head *list);
+/** Free the user object */
+void sig_user_free(struct signal_user *user);
+/** Free all user objects in the list */
+void sig_user_free_all(struct sc_list_head *list);
+
+/** Lookup a user's number by UUID. */
+char *sig_get_number(struct cbot_signal_backend *sig, const char *uuid);
+/** Lookup a user's UUID by number. */
+char *sig_get_uuid(struct cbot_signal_backend *sig, const char *number);
 
 /**
  * List the groups that we are a member of.
- *
- * Currently, this just prints. Future plans to make this into a real API.
- *
  * @param sig Signal backend
+ * @param list List to hook them onto
  */
-void sig_list_groups(struct cbot_signal_backend *sig);
+int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list);
+/** Free a group object */
+void sig_group_free(struct signal_group *grp);
+/** Free all groups on the list */
+void sig_group_free_all(struct sc_list_head *list);
+
 
 /**
  * Subscribe to messages from Signald.

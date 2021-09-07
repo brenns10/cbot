@@ -130,7 +130,7 @@ void jmsg_free(struct jmsg *jm)
 	free(jm);
 }
 
-char *jmsg_lookup_string_at(struct jmsg *jm, size_t start, const char *key)
+char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t start, const char *key, size_t *len)
 {
 	size_t res = jmsg_lookup_at(jm, start, key);
 	char *str;
@@ -138,6 +138,8 @@ char *jmsg_lookup_string_at(struct jmsg *jm, size_t start, const char *key)
 		return NULL;
 	if (jm->tok[res].type != JSON_STRING)
 		return NULL;
+	if (len)
+		*len = jm->tok[res].length;
 	str = malloc(jm->tok[res].length + 1);
 	json_string_load(jm->orig, jm->tok, res, str);
 	return str;
