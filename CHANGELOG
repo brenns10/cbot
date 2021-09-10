@@ -7,7 +7,8 @@ Unreleased
 0.4.1 (2021-09-06)
 ------------------
 
-Plugins are now installed at libexecdir, e.g. /usr/libexec/cbot/foo.so.
+- Plugins are now installed at libexecdir, e.g. /usr/libexec/cbot/foo.so.
+- Added new aqi plugin
 
 0.4.0 (2021-09-06)
 ------------------
