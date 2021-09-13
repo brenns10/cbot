@@ -12,6 +12,7 @@ sources = [
   'src/tok.c',
   'src/fmt.c',
   'src/curl.c',
+  'src/log.c',
   'src/signal/backend.c',
   'src/signal/api.c',
   'src/signal/jmsg.c',

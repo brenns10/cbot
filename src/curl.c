@@ -20,6 +20,7 @@ struct curl_waiting {
 CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 {
 	struct curl_waiting wait;
+	bool first = true;
 	wait.handle = handle;
 	wait.done = false;
 	wait.thread = sc_lwt_current();
@@ -29,7 +30,8 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 	sc_lwt_set_state(bot->curl_lwt, SC_LWT_RUNNABLE);
 	sc_list_insert_end(&waitlist, &wait.list);
 	while (!wait.done) {
-		//printf("cbot curl: lwt sleeping waiting for the response\n");
+		CL_DEBUG("curl: %s request, yielding\n", first ? "enqueued" : "continue");
+		first = false;
 		/*
 		 * The LWT system may wake us up in the case of a shutdown.
 		 * The CURL thread will also get woken up, and it will do
@@ -38,7 +40,7 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 		 */
 		sc_lwt_set_state(wait.thread, SC_LWT_BLOCKED);
 		sc_lwt_yield();
-		//printf("cbot curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
+		CL_DEBUG("curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
 	}
 	return wait.result;
 }
@@ -47,7 +49,7 @@ void cbot_curl_run(void *data)
 {
 	struct cbot *bot = data;
 	struct sc_lwt *cur = sc_lwt_current();
-	struct curl_waiting *waiting;
+	struct curl_waiting *waiting, *next;
 	struct timespec ts;
 	int nhdl, maxfd;
 	long millis;
@@ -93,27 +95,19 @@ void cbot_curl_run(void *data)
 			ts.tv_sec = millis / 1000;
 			ts.tv_nsec = millis * 1000000;
 			sc_lwt_settimeout(cur, &ts);
+			CL_DEBUG("curlthread: set timeout %d millis\n", millis);
 		} else if (millis == 0) {
 			block = false;
 		}
 
 		/* Only block if curl gave a non-zero timeout */
 		if (block) {
+			CL_DEBUG("curlthread: yielding\n");
 			sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 			sc_lwt_yield();
+			CL_DEBUG("curlthread: wake up\n");
 			if (sc_lwt_shutting_down()) {
-				struct curl_waiting *next;
-				//printf("cbot curl ctl: wakeup and shut down\n");
-				sc_list_for_each_safe(waiting, next, &waitlist, list, struct curl_waiting)
-				{
-					//printf("cbot curl ctl: cancel and remove CURL handle+thread\n");
-					sc_list_remove(&waiting->list);
-					curl_multi_remove_handle(bot->curlm, waiting->handle);
-					waiting->result = CURLE_READ_ERROR;
-					waiting->done = true;
-					sc_lwt_set_state(waiting->thread,
-							SC_LWT_RUNNABLE);
-				}
+				CL_DEBUG("curlthread: shutting down\n");
 				break;
 			}
 		}
@@ -121,9 +115,9 @@ void cbot_curl_run(void *data)
 		/* Now actually drive curl connections forward. */
 		rv = curl_multi_perform(bot->curlm, &nhdl);
 		if (rv != CURLM_OK) {
-			printf("curlm error %d: %s\n", rv,
-			       curl_multi_strerror(rv));
-			/* TODO cleanup */
+			CL_CRIT("curlm error %d: %s\n", rv,
+			        curl_multi_strerror(rv));
+			break;
 		}
 
 		/*
@@ -151,6 +145,16 @@ void cbot_curl_run(void *data)
 		sc_lwt_remove_all(cur);
 	}
 
+	sc_list_for_each_safe(waiting, next, &waitlist, list, struct curl_waiting)
+	{
+		CL_DEBUG("curlthread: cancel and remove CURL handle+thread\n");
+		sc_list_remove(&waiting->list);
+		curl_multi_remove_handle(bot->curlm, waiting->handle);
+		waiting->result = CURLE_READ_ERROR;
+		waiting->done = true;
+		sc_lwt_set_state(waiting->thread,
+				SC_LWT_RUNNABLE);
+	}
 	curl_multi_cleanup(bot->curlm);
 	bot->curlm = NULL;
 }

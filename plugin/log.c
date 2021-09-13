@@ -39,7 +39,7 @@ static void write_string(FILE *f, const char *str)
  * - username: sender of the message
  * - message: content of message
  */
-static void cbot_log(struct cbot_message_event *event, void *user)
+static void cbot_log_message(struct cbot_message_event *event, void *user)
 {
 #define NSEC_PER_SEC 10000000000.0
 	struct timespec now;
@@ -83,7 +83,7 @@ static void cbot_log(struct cbot_message_event *event, void *user)
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)cbot_log, NULL,
+	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)cbot_log_message, NULL,
 	              NULL);
 	return 0;
 }

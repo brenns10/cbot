@@ -139,7 +139,7 @@ add_init_channel(struct cbot *bot, config_setting_t *elem, int idx)
 	int rv = config_setting_lookup_string(elem, "name", &cc);
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr,
-		        "cbot config: plugin %d missing \"name\" field\n", idx);
+		        "cbot config: cbot.channels[%d] missing \"name\" field\n", idx);
 		goto err_name;
 	}
 	chan->name = strdup(cc);
@@ -209,15 +209,50 @@ static void cbot_run_in_lwt(struct cbot *bot)
 {
 	struct timespec t;
 	bot->backend_ops->run(bot);
+	CL_DEBUG("Sending shutdown signal and waiting...\n");
 	sc_lwt_send_shutdown_signal();
 	t.tv_sec = 5;
 	t.tv_nsec = 0;
 	sc_lwt_settimeout(bot->lwt, &t);
 	sc_lwt_join();
 	if (sc_lwt_task_count() > 1) {
-		fprintf(stderr, "cbot: BUG: tasks running after join\n");
+		CL_CRIT("cbot: BUG: tasks running after join\n");
 		sc_lwt_early_term();
 	}
+}
+
+static void cbot_init_logging(struct cbot *bot, config_setting_t *group)
+{
+	FILE *f;
+	char *file = getenv("CBOT_LOG_FILE");
+	char *level = getenv("CBOT_LOG_LEVEL");
+	int levelno;
+	bool free_file = false;
+	bool free_level = false;
+	if (!file) {
+		file = conf_str_default(group, "log_file", ":stderr:");
+		free_file = true;
+	}
+	if (strcmp(file, ":stderr:") == 0)
+		cbot_set_log_file(stderr);
+	else if ((f = fopen(file, "r")))
+		cbot_set_log_file(f);
+	else
+		perror("cbot: non-fatal error setting up logging");
+
+	if (!level) {
+		level = conf_str_default(group, "log_level", "INFO");
+		free_level = true;
+	}
+	levelno = cbot_lookup_level(level);
+	cbot_set_log_level(cbot_lookup_level(level));
+
+	printf("cbot: logging to %s at level %d\n", file, levelno);
+
+	if (free_file)
+		free(file);
+	if (free_level)
+		free(level);
 }
 
 int cbot_load_config(struct cbot *bot, const char *conf_file)
@@ -245,6 +280,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 	bot->backend_name = conf_str_default(setting, "backend", "irc");
 	bot->plugin_dir = conf_str_default(setting, "plugin_dir", "build");
 	bot->db_file = conf_str_default(setting, "db", "db.sqlite3");
+	cbot_init_logging(bot, setting);
 
 	rv = add_channels(bot, setting);
 	if (rv < 0) {
@@ -259,7 +295,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		}
 	}
 	if (!bot->backend_ops) {
-		fprintf(stderr, "cbot: backend \"%s\" not found\n",
+		CL_CRIT("cbot: backend \"%s\" not found\n",
 		        bot->backend_name);
 		rv = -1;
 		goto out;
@@ -267,7 +303,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 
 	backgroup = config_lookup(&conf, bot->backend_name);
 	if (!backgroup || !config_setting_is_group(backgroup)) {
-		fprintf(stderr, "cbot: \"%s\" section missing or wrong type\n",
+		CL_CRIT("cbot: \"%s\" section missing or wrong type\n",
 		        bot->backend_name);
 		rv = -1;
 		goto out;
@@ -292,8 +328,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 
 	pluggroup = config_lookup(&conf, "plugins");
 	if (!pluggroup || !config_setting_is_group(pluggroup)) {
-		fprintf(stderr,
-		        "cbot: \"plugins\" section missing or wrong type\n");
+		CL_CRIT("cbot: \"plugins\" section missing or wrong type\n");
 		rv = -1;
 		goto out;
 	}
@@ -309,6 +344,7 @@ out:
 void cbot_run(struct cbot *bot)
 {
 	sc_lwt_run(bot->lwt_ctx);
+	CL_DEBUG("exiting run() loop, goodbye!");
 }
 
 void cbot_set_nick(struct cbot *bot, const char *newname)
@@ -352,8 +388,7 @@ void cbot_delete(struct cbot *cbot)
 	if (cbot->privDb) {
 		int rv = sqlite3_close(cbot->privDb);
 		if (rv != SQLITE_OK) {
-			fprintf(stderr,
-			        "error closing sqlite db on shutdown\n");
+			CL_CRIT("error closing sqlite db on shutdown\n");
 		}
 	}
 	free(cbot->name);
@@ -534,17 +569,17 @@ static struct cbot_plugpriv *cbot_load_plugin(struct cbot *bot,
 	struct cbot_plugpriv *priv;
 	int rv;
 
-	printf("attempting to load symbol ops from %s\n", filename);
+	CL_INFO("load plugin %s\n", filename);
 
 	if (plugin_handle == NULL) {
-		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
+		CL_CRIT("cbot_load_plugin: %s\n", dlerror());
 		return NULL;
 	}
 
 	ops = dlsym(plugin_handle, "ops");
 
 	if (ops == NULL) {
-		fprintf(stderr, "cbot_load_plugin: %s\n", dlerror());
+		CL_CRIT("cbot_load_plugin: %s\n", dlerror());
 		return NULL;
 	}
 	priv = calloc(1, sizeof(*priv));
@@ -560,7 +595,7 @@ static struct cbot_plugpriv *cbot_load_plugin(struct cbot *bot,
 		free(priv->name);
 		dlclose(plugin_handle);
 		free(priv);
-		fprintf(stderr, "loader failed with code %d\n", rv);
+		CL_CRIT("loader failed with code %d\n", rv);
 		return NULL;
 	}
 	sc_list_insert_end(&bot->plugins, &priv->list);
@@ -583,8 +618,7 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 		sc_cb_clear(&name);
 		entry = config_setting_get_elem(group, i);
 		if (!entry || !config_setting_is_group(entry)) {
-			fprintf(stderr,
-			        "cbot: entry %d in plugins is not a"
+			CL_CRIT("cbot: entry %d in plugins is not a"
 			        " group\n",
 			        i);
 			rv = -1;
@@ -592,8 +626,7 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group)
 		}
 		plugin_name = config_setting_name(entry);
 		if (!plugin_name) {
-			fprintf(stderr, "cbot: plugin entry %d missing name\n",
-			        i);
+			CL_CRIT("cbot: plugin entry %d missing name\n", i);
 			rv = -1;
 			goto out;
 		}

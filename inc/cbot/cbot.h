@@ -395,4 +395,32 @@ int cbot_db_register(struct cbot_plugin *plugin,
  */
 sqlite3 *cbot_db_conn(struct cbot *bot);
 
+/******************
+ * Logging API
+ ******************/
+
+enum cbot_log_level {
+	DEBUG = 10,
+	INFO = 20,
+	WARN = 30,
+	CRIT = 40,
+};
+
+void cbot_log(int level, const char *format, ...);
+void cbot_vlog(int level, const char *format, va_list args);
+
+void cbot_set_log_level(int level);
+int cbot_get_log_level(void);
+void cbot_set_log_file(FILE *f);
+int cbot_lookup_level(const char *str);
+
+#define CL_CRIT(...)			\
+	cbot_log(CRIT, " CRIT: " __VA_ARGS__)
+#define CL_WARN(...)			\
+	cbot_log(WARN, " WARN: "  __VA_ARGS__)
+#define CL_INFO(...)			\
+	cbot_log(INFO, " INFO: "  __VA_ARGS__)
+#define CL_DEBUG(...)			\
+	cbot_log(DEBUG, "DEBUG: " __VA_ARGS__)
+
 #endif // CBOT_H

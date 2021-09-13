@@ -156,7 +156,7 @@ int create_schema_registry(struct cbot *bot)
 	              "); ";
 	rv = sqlite3_exec(bot->privDb, stmts, NULL, NULL, &errmsg);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "sqlite error creating tables: %s\n", errmsg);
+		CL_CRIT("sqlite error creating tables: %s\n", errmsg);
 		sqlite3_free(errmsg);
 		return -1;
 	}
@@ -194,7 +194,7 @@ static int query_and_update_schema_version(struct cbot *bot, const char *name,
 
 	rv = sqlite3_exec(bot->privDb, cb.buf, NULL, NULL, &errmsg);
 	if (rv != SQLITE_OK) {
-		fprintf(stderr, "table registration error: %s\n", errmsg);
+		CL_CRIT("table registration error: %s\n", errmsg);
 		sqlite3_free(errmsg);
 		rv = -1;
 		goto out;
@@ -213,8 +213,8 @@ int cbot_db_register_internal(struct cbot *bot, const struct cbot_db_table *tbl)
 	unsigned int u_ver;
 
 	if (s_ver < 0) {
-		printf("cbot_db: create table \"%s\" version %u\n", tbl->name,
-		       tbl->version);
+		CL_INFO("db: create table \"%s\" version %u\n", tbl->name,
+		        tbl->version);
 		rv = query_and_update_schema_version(bot, tbl->name,
 		                                     tbl->version, tbl->create);
 		return rv;
@@ -222,19 +222,18 @@ int cbot_db_register_internal(struct cbot *bot, const struct cbot_db_table *tbl)
 
 	u_ver = (unsigned int)s_ver;
 	if (u_ver > tbl->version) {
-		fprintf(stderr,
-		        "table %s has newer version (%u) than supported (%u)\n",
+		CL_CRIT("table %s has newer version (%u) than supported (%u)\n",
 		        tbl->name, u_ver, tbl->version);
 		return -1;
 	} else if (u_ver == tbl->version) {
-		printf("cbot_db: table \"%s\" version %u is up-to-date\n",
-		       tbl->name, tbl->version);
+		CL_INFO("db: table \"%s\" version %u is up-to-date\n",
+		        tbl->name, tbl->version);
 		return 0;
 	}
 
 	for (; u_ver < tbl->version; u_ver++) {
-		printf("cbot_db: alter table \"%s\" from version %u to %u\n",
-		       tbl->name, u_ver, u_ver + 1);
+		CL_WARN("db: alter table \"%s\" from version %u to %u\n",
+		        tbl->name, u_ver, u_ver + 1);
 		rv = query_and_update_schema_version(bot, tbl->name, u_ver + 1,
 		                                     tbl->alters[u_ver]);
 		if (rv < 0) {
