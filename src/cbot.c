@@ -205,6 +205,21 @@ cleanup_channels:
 
 int cbot_load_plugins(struct cbot *bot, config_setting_t *group);
 
+static void cbot_run_in_lwt(struct cbot *bot)
+{
+	struct timespec t;
+	bot->backend_ops->run(bot);
+	sc_lwt_send_shutdown_signal();
+	t.tv_sec = 5;
+	t.tv_nsec = 0;
+	sc_lwt_settimeout(bot->lwt, &t);
+	sc_lwt_join();
+	if (sc_lwt_task_count() > 1) {
+		fprintf(stderr, "cbot: BUG: tasks running after join\n");
+		sc_lwt_early_term();
+	}
+}
+
 int cbot_load_config(struct cbot *bot, const char *conf_file)
 {
 	int rv, i;
@@ -263,7 +278,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 
 	bot->lwt_ctx = sc_lwt_init();
 	bot->lwt = sc_lwt_create_task(
-	        bot->lwt_ctx, (void (*)(void *))bot->backend_ops->run, bot);
+	        bot->lwt_ctx, (void (*)(void *))cbot_run_in_lwt, bot);
 
 	rv = cbot_curl_init(bot);
 	if (rv < 0)

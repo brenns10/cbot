@@ -7,23 +7,39 @@
 #include "cbot/curl.h"
 #include "cbot_private.h"
 
+struct sc_list_head waitlist;
+
 struct curl_waiting {
+	struct sc_list_head list;
 	CURL *handle;
 	struct sc_lwt *thread;
 	CURLcode result;
+	bool done;
 };
 
 CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 {
 	struct curl_waiting wait;
 	wait.handle = handle;
+	wait.done = false;
 	wait.thread = sc_lwt_current();
+	sc_list_init(&wait.list);
 	curl_easy_setopt(handle, CURLOPT_PRIVATE, (char *)&wait);
 	curl_multi_add_handle(bot->curlm, handle);
 	sc_lwt_set_state(bot->curl_lwt, SC_LWT_RUNNABLE);
-	sc_lwt_set_state(wait.thread, SC_LWT_BLOCKED);
-	sc_lwt_yield();
-	curl_multi_remove_handle(bot->curlm, handle);
+	sc_list_insert_end(&waitlist, &wait.list);
+	while (!wait.done) {
+		//printf("cbot curl: lwt sleeping waiting for the response\n");
+		/*
+		 * The LWT system may wake us up in the case of a shutdown.
+		 * The CURL thread will also get woken up, and it will do
+		 * cleanup, and then re-wake us up. So, if we're woken up
+		 * without the done flag set, we should continue to wait.
+		 */
+		sc_lwt_set_state(wait.thread, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		//printf("cbot curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
+	}
 	return wait.result;
 }
 
@@ -41,6 +57,7 @@ void cbot_curl_run(void *data)
 	CURLMsg *msg;
 
 	bot->curl_lwt = cur;
+	sc_list_init(&waitlist);
 
 	while (true) {
 		/*
@@ -84,6 +101,21 @@ void cbot_curl_run(void *data)
 		if (block) {
 			sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 			sc_lwt_yield();
+			if (sc_lwt_shutting_down()) {
+				struct curl_waiting *next;
+				//printf("cbot curl ctl: wakeup and shut down\n");
+				sc_list_for_each_safe(waiting, next, &waitlist, list, struct curl_waiting)
+				{
+					//printf("cbot curl ctl: cancel and remove CURL handle+thread\n");
+					sc_list_remove(&waiting->list);
+					curl_multi_remove_handle(bot->curlm, waiting->handle);
+					waiting->result = CURLE_READ_ERROR;
+					waiting->done = true;
+					sc_lwt_set_state(waiting->thread,
+							SC_LWT_RUNNABLE);
+				}
+				break;
+			}
 		}
 
 		/* Now actually drive curl connections forward. */
@@ -103,7 +135,11 @@ void cbot_curl_run(void *data)
 			if (msg && msg->msg == CURLMSG_DONE) {
 				curl_easy_getinfo(msg->easy_handle,
 				                  CURLINFO_PRIVATE, &waiting);
+				curl_multi_remove_handle(bot->curlm,
+				                         waiting->handle);
 				waiting->result = msg->data.result;
+				waiting->done = true;
+				sc_list_remove(&waiting->list);
 				sc_lwt_set_state(waiting->thread,
 				                 SC_LWT_RUNNABLE);
 			}
@@ -114,6 +150,9 @@ void cbot_curl_run(void *data)
 		 */
 		sc_lwt_remove_all(cur);
 	}
+
+	curl_multi_cleanup(bot->curlm);
+	bot->curlm = NULL;
 }
 
 int cbot_curl_init(struct cbot *bot)

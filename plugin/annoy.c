@@ -32,6 +32,8 @@ static void annoy_loop(void *data)
 		printf("sending annoing message to %s\n", channel);
 		cbot_send(bot, channel, "hello! im an annoying bot");
 		sc_lwt_sleep(&ts);
+		if (sc_lwt_shutting_down())
+			return;
 	}
 }
 

@@ -9,6 +9,8 @@ Unreleased
 
 - Plugins are now installed at libexecdir, e.g. /usr/libexec/cbot/foo.so.
 - Added new aqi plugin
+- Fixed shutdown behavior: any plugin/backend threads must gracefully handle the
+  sc-lwt shutdown signal.
 
 0.4.0 (2021-09-06)
 ------------------

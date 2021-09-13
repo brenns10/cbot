@@ -113,6 +113,7 @@ out_curl:
         free(query->channel);
         free(query->location);
         free(query);
+        curl_easy_cleanup(easy);
         aqi->query_count--;
 }
 

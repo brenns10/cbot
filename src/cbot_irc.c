@@ -345,8 +345,6 @@ static void cbot_irc_run(struct cbot *bot)
 			break;
 		}
 	}
-	fprintf(stderr, "cbot_irc: savagely killing other LWTs on shutdown\n");
-	sc_lwt_early_term();
 }
 
 static int cbot_irc_configure(struct cbot *bot, config_setting_t *group)

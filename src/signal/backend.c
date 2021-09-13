@@ -173,7 +173,7 @@ static void cbot_signal_run(struct cbot *bot)
 		jmsg_free(jm);
 		jm = NULL;
 	}
-	exit(EXIT_FAILURE);
+	fprintf(stderr, "cbot signal: jmsg_read() returned NULL, exiting\n");
 }
 
 static void cbot_signal_send(const struct cbot *bot, const char *to, const char *msg)

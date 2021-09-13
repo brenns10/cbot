@@ -1,4 +1,4 @@
 [wrap-git]
 directory = sc-lwt.git
 url = https://git.sr.ht/~brenns10/sc-lwt
-revision = v0.5.1
+revision = v0.6.0

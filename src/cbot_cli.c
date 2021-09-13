@@ -200,7 +200,6 @@ static void cbot_cli_run(struct cbot *bot)
 		cbot_handle_message(bot, "stdin", "shell", line, false);
 	}
 	free(line);
-	sc_lwt_early_term();
 }
 
 static int cbot_cli_configure(struct cbot *bot, config_setting_t *group)
