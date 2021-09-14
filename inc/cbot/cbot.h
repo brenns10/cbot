@@ -414,13 +414,9 @@ int cbot_get_log_level(void);
 void cbot_set_log_file(FILE *f);
 int cbot_lookup_level(const char *str);
 
-#define CL_CRIT(...)			\
-	cbot_log(CRIT, " CRIT: " __VA_ARGS__)
-#define CL_WARN(...)			\
-	cbot_log(WARN, " WARN: "  __VA_ARGS__)
-#define CL_INFO(...)			\
-	cbot_log(INFO, " INFO: "  __VA_ARGS__)
-#define CL_DEBUG(...)			\
-	cbot_log(DEBUG, "DEBUG: " __VA_ARGS__)
+#define CL_CRIT(...)  cbot_log(CRIT, " CRIT: " __VA_ARGS__)
+#define CL_WARN(...)  cbot_log(WARN, " WARN: " __VA_ARGS__)
+#define CL_INFO(...)  cbot_log(INFO, " INFO: " __VA_ARGS__)
+#define CL_DEBUG(...) cbot_log(DEBUG, "DEBUG: " __VA_ARGS__)
 
 #endif // CBOT_H

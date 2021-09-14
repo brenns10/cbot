@@ -7,7 +7,7 @@
 
 #include "internal.h"
 
-const char MENTION_PLACEHOLDER[] = {0xEF, 0xBF, 0xBC, 0x00};
+const char MENTION_PLACEHOLDER[] = { 0xEF, 0xBF, 0xBC, 0x00 };
 
 char *mention_format(char *string, const char *prefix)
 {
@@ -101,14 +101,16 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 		sc_cb_concat(&cb, "@(uuid:");
 		uuid_idx = jmsg_lookup_at(jm, list, "uuid");
 		if (jm->tok[uuid_idx].type != JSON_STRING) {
-			fprintf(stderr, "cbot signal: BADLY FORMATTED MENTION\n");
+			fprintf(stderr,
+			        "cbot signal: BADLY FORMATTED MENTION\n");
 		} else {
-			/* In general this isn't safe to manually access cb.buf, but
-			 * in our case we preallocated it to be the size of the
-			 * original JSON message, which means it must have space
-			 * for a subset of it.
+			/* In general this isn't safe to manually access cb.buf,
+			 * but in our case we preallocated it to be the size of
+			 * the original JSON message, which means it must have
+			 * space for a subset of it.
 			 */
-			json_string_load(jm->orig, jm->tok, uuid_idx, cb.buf + cb.length);
+			json_string_load(jm->orig, jm->tok, uuid_idx,
+			                 cb.buf + cb.length);
 			cb.length += jm->tok[uuid_idx].length;
 			cb.buf[cb.length] = '\0';
 		}
@@ -151,7 +153,10 @@ char *json_quote_and_mention(const char *instr, char **mentions)
 			} else {
 				if (mb.length)
 					sc_cb_append(&mb, ',');
-				sc_cb_printf(&mb, "{\"length\": 0,\"start\": %d,\"uuid\":\"%s\"}", cb.length, mention);
+				sc_cb_printf(&mb,
+				             "{\"length\": 0,\"start\": "
+				             "%d,\"uuid\":\"%s\"}",
+				             cb.length, mention);
 				// Rather than use the MENTION_PLACEHOLDER, my
 				// experiments indicate it's acceptable to
 				// specify a zero-length placeholder

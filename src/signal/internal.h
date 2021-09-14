@@ -1,8 +1,8 @@
 #ifndef CBOT_SIGNAL_INTERNAL_DOT_H
 #define CBOT_SIGNAL_INTERNAL_DOT_H
 
-#include <sys/types.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 #include <nosj.h>
 #include <sc-collections.h>
@@ -103,10 +103,11 @@ static inline size_t jmsg_lookup(struct jmsg *jm, const char *key)
  * @param key The key to search - may be a JSON object expression.
  * @param[out] len Optional length of string
  */
-char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t n, const char *key, size_t *len);
+char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t n, const char *key,
+                                size_t *len);
 
-
-static inline char *jmsg_lookup_string_at(struct jmsg *jm, size_t n, const char *key)
+static inline char *jmsg_lookup_string_at(struct jmsg *jm, size_t n,
+                                          const char *key)
 {
 	return jmsg_lookup_string_at_len(jm, n, key, NULL);
 }
@@ -126,7 +127,6 @@ static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 #define MENTION_ERR   0
 #define MENTION_USER  1
 #define MENTION_GROUP 2
-
 
 /**
  * Formats a mention placeholder.
@@ -228,9 +228,11 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type);
  * @param phone Phone number of user
  * @return User object
  */
-struct signal_user *sig_get_profile(struct cbot_signal_backend *sig, const char *phone);
+struct signal_user *sig_get_profile(struct cbot_signal_backend *sig,
+                                    const char *phone);
 /** Get the profile of a user (by uuid). */
-struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig, const char *uuid);
+struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig,
+                                            const char *uuid);
 
 /**
  * Call the list_contacts signald API.
@@ -239,7 +241,8 @@ struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig, con
  * @param sig Signal backend
  * @param[out] list Linked list to attach all users to
  */
-void sig_list_contacts(struct cbot_signal_backend *sig, struct sc_list_head *list);
+void sig_list_contacts(struct cbot_signal_backend *sig,
+                       struct sc_list_head *list);
 /** Free the user object */
 void sig_user_free(struct signal_user *user);
 /** Free all user objects in the list */
@@ -261,7 +264,6 @@ void sig_group_free(struct signal_group *grp);
 /** Free all groups on the list */
 void sig_group_free_all(struct sc_list_head *list);
 
-
 /**
  * Subscribe to messages from Signald.
  * @param sig Signal backend
@@ -281,7 +283,8 @@ void sig_set_name(struct cbot_signal_backend *sig, const char *name);
  * @param groupId Group ID to send to
  * @param msg Message (may contain mentioned usernames)
  */
-void sig_send_group(struct cbot_signal_backend *sig, const char *groupId, const char *msg);
+void sig_send_group(struct cbot_signal_backend *sig, const char *groupId,
+                    const char *msg);
 
 /**
  * Send a message to a single user recipient.
@@ -289,6 +292,7 @@ void sig_send_group(struct cbot_signal_backend *sig, const char *groupId, const 
  * @param uuid UUID of the user to send to
  * @param msg Message (may contain mentioned usernames)
  */
-void sig_send_single(struct cbot_signal_backend *sig, const char *uuid, const char *msg);
+void sig_send_single(struct cbot_signal_backend *sig, const char *uuid,
+                     const char *msg);
 
 #endif // CBOT_SIGNAL_INTERNAL_DOT_H

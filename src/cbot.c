@@ -139,7 +139,9 @@ add_init_channel(struct cbot *bot, config_setting_t *elem, int idx)
 	int rv = config_setting_lookup_string(elem, "name", &cc);
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr,
-		        "cbot config: cbot.channels[%d] missing \"name\" field\n", idx);
+		        "cbot config: cbot.channels[%d] missing \"name\" "
+		        "field\n",
+		        idx);
 		goto err_name;
 	}
 	chan->name = strdup(cc);
@@ -295,8 +297,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		}
 	}
 	if (!bot->backend_ops) {
-		CL_CRIT("cbot: backend \"%s\" not found\n",
-		        bot->backend_name);
+		CL_CRIT("cbot: backend \"%s\" not found\n", bot->backend_name);
 		rv = -1;
 		goto out;
 	}
@@ -313,8 +314,8 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		goto out;
 
 	bot->lwt_ctx = sc_lwt_init();
-	bot->lwt = sc_lwt_create_task(
-	        bot->lwt_ctx, (void (*)(void *))cbot_run_in_lwt, bot);
+	bot->lwt = sc_lwt_create_task(bot->lwt_ctx,
+	                              (void (*)(void *))cbot_run_in_lwt, bot);
 
 	rv = cbot_curl_init(bot);
 	if (rv < 0)

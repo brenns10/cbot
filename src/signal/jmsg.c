@@ -130,7 +130,8 @@ void jmsg_free(struct jmsg *jm)
 	free(jm);
 }
 
-char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t start, const char *key, size_t *len)
+char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t start, const char *key,
+                                size_t *len)
 {
 	size_t res = jmsg_lookup_at(jm, start, key);
 	char *str;

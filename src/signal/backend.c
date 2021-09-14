@@ -22,13 +22,16 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 
 	rv = config_setting_lookup_string(group, "phone", &phone);
 	if (rv == CONFIG_FALSE) {
-		fprintf(stderr, "cbot signal: key \"phone\" wrong type or not exists\n");
+		fprintf(stderr, "cbot signal: key \"phone\" wrong type or not "
+		                "exists\n");
 		return -1;
 	}
 
-	rv = config_setting_lookup_string(group, "signald_socket", &signald_socket);
+	rv = config_setting_lookup_string(group, "signald_socket",
+	                                  &signald_socket);
 	if (rv == CONFIG_FALSE) {
-		fprintf(stderr, "cbot signal: key \"signald_socket\" wrong type or not exists\n");
+		fprintf(stderr, "cbot signal: key \"signald_socket\" wrong "
+		                "type or not exists\n");
 		return -1;
 	}
 	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
@@ -107,7 +110,7 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	if (group)
 		group = mention_format(group, "group");
 
-	cbot_handle_message(sig->bot, group? group : srcb, srcb, msgb, false);
+	cbot_handle_message(sig->bot, group ? group : srcb, srcb, msgb, false);
 	free(group);
 	free(srcb);
 	free(msgb);
@@ -132,8 +135,10 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 		printf("  Members:\n");
 		for (i = 0; i < grp->n_members; i++)
 			printf("    Id: %s%s\n", grp->members[i].uuid,
-			       (grp->members[i].role == SIGNAL_ROLE_ADMINISTRATOR) ? " (admin)" : "");
-
+			       (grp->members[i].role ==
+			        SIGNAL_ROLE_ADMINISTRATOR)
+			               ? " (admin)"
+			               : "");
 	}
 	sig_group_free_all(&head);
 
@@ -176,7 +181,8 @@ static void cbot_signal_run(struct cbot *bot)
 	fprintf(stderr, "cbot signal: jmsg_read() returned NULL, exiting\n");
 }
 
-static void cbot_signal_send(const struct cbot *bot, const char *to, const char *msg)
+static void cbot_signal_send(const struct cbot *bot, const char *to,
+                             const char *msg)
 {
 	struct cbot_signal_backend *sig = bot->backend;
 	char *dest_payload;
@@ -184,14 +190,15 @@ static void cbot_signal_send(const struct cbot *bot, const char *to, const char 
 
 	dest_payload = mention_parse(to, &kind, NULL);
 	switch (kind) {
-		case MENTION_USER:
-			sig_send_single(sig, dest_payload, msg);
-			break;
-		case MENTION_GROUP:
-			sig_send_group(sig, dest_payload, msg);
-			break;
-		default:
-			fprintf(stderr, "error: invalid signal destination \"%s\"\n", to);
+	case MENTION_USER:
+		sig_send_single(sig, dest_payload, msg);
+		break;
+	case MENTION_GROUP:
+		sig_send_group(sig, dest_payload, msg);
+		break;
+	default:
+		fprintf(stderr, "error: invalid signal destination \"%s\"\n",
+		        to);
 	}
 	free(dest_payload);
 }

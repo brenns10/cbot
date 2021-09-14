@@ -42,12 +42,16 @@ static struct signal_user *__sig_parse_profile(struct jmsg *jm, size_t ix)
 	return user;
 }
 
-static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig, const char *ident, const char *kind)
+static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig,
+                                             const char *ident,
+                                             const char *kind)
 {
 	struct jmsg *jm = NULL;
 	struct signal_user *user;
 
-	fprintf(sig->ws, "\n{\"account\":\"%s\",\"address\":{\"%s\":\"%s\"},\"type\":\"get_profile\",\"version\":\"v1\"}\n",
+	fprintf(sig->ws,
+	        "\n{\"account\":\"%s\",\"address\":{\"%s\":\"%s\"},\"type\":"
+	        "\"get_profile\",\"version\":\"v1\"}\n",
 	        sig->sender, kind, ident);
 
 	jm = jmsg_read_parse(sig);
@@ -60,23 +64,28 @@ static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig, co
 	return user;
 }
 
-struct signal_user *sig_get_profile(struct cbot_signal_backend *sig, const char *phone)
+struct signal_user *sig_get_profile(struct cbot_signal_backend *sig,
+                                    const char *phone)
 {
 	return __sig_get_profile(sig, phone, "number");
 }
 
-struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig, const char *uuid)
+struct signal_user *sig_get_profile_by_uuid(struct cbot_signal_backend *sig,
+                                            const char *uuid)
 {
 	return __sig_get_profile(sig, uuid, "uuid");
 }
 
-void sig_list_contacts(struct cbot_signal_backend *sig, struct sc_list_head *head)
+void sig_list_contacts(struct cbot_signal_backend *sig,
+                       struct sc_list_head *head)
 {
 	struct jmsg *jm;
 	struct signal_user *user;
 	size_t ix;
-	fprintf(sig->ws, "\n{\"account\":\"%s\",\"type\":\"list_contacts\",\"version\":\"v1\"}\n",
-		sig->sender);
+	fprintf(sig->ws,
+	        "\n{\"account\":\"%s\",\"type\":\"list_contacts\",\"version\":"
+	        "\"v1\"}\n",
+	        sig->sender);
 	jm = jmsg_read_parse(sig);
 	ix = jmsg_lookup(jm, "data.profiles");
 	json_array_for_each(ix, jm->tok, ix)
@@ -115,7 +124,10 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 	int count = 0;
 	struct signal_group *group;
 	struct signal_member *memb;
-	fprintf(sig->ws, "\n{\"account\":\"%s\",\"type\":\"list_groups\",\"version\":\"v1\"}\n", sig->sender);
+	fprintf(sig->ws,
+	        "\n{\"account\":\"%s\",\"type\":\"list_groups\",\"version\":"
+	        "\"v1\"}\n",
+	        sig->sender);
 
 	jm = jmsg_read_parse(sig);
 	if (!jm) {
@@ -135,16 +147,19 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 		sc_list_init(&group->list);
 		group->id = jmsg_lookup_string_at(jm, ix, "id");
 		group->title = jmsg_lookup_string_at(jm, ix, "title");
-		group->invite_link = jmsg_lookup_string_at(jm, ix, "inviteLink");
+		group->invite_link =
+		        jmsg_lookup_string_at(jm, ix, "inviteLink");
 		jx = jmsg_lookup_at(jm, ix, "memberDetail");
-		group->members = calloc(jm->tok[jx].length, sizeof(struct signal_member));
+		group->members = calloc(jm->tok[jx].length,
+		                        sizeof(struct signal_member));
 		group->n_members = 0;
 		json_array_for_each(jx, jm->tok, jx)
 		{
 			memb = &group->members[group->n_members++];
 			memb->uuid = jmsg_lookup_string_at(jm, jx, "uuid");
 			kx = jmsg_lookup_at(jm, jx, "role");
-			if (json_string_match(jm->orig, jm->tok, kx, "ADMINISTRATOR"))
+			if (json_string_match(jm->orig, jm->tok, kx,
+			                      "ADMINISTRATOR"))
 				memb->role = SIGNAL_ROLE_ADMINISTRATOR;
 			else
 				memb->role = SIGNAL_ROLE_DEFAULT;
@@ -160,14 +175,20 @@ void sig_subscribe(struct cbot_signal_backend *sig)
 {
 	char fmt[] = "\n{\"type\":\"subscribe\",\"username\":\"%s\"}\n";
 	fprintf(sig->ws, fmt, sig->sender);
-        sig_expect(sig, "subscribed");
+	sig_expect(sig, "subscribed");
 }
 
 void sig_set_name(struct cbot_signal_backend *sig, const char *name)
 {
-	printf("SET {\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\",\"version\":\"v1\"}\n", sig->sender, name);
-	fprintf(sig->ws, "\n{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\",\"version\":\"v1\"}\n", sig->sender, name);
-        sig_expect(sig, "set_profile");
+	printf("SET "
+	       "{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\","
+	       "\"version\":\"v1\"}\n",
+	       sig->sender, name);
+	fprintf(sig->ws,
+	        "\n{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_"
+	        "profile\",\"version\":\"v1\"}\n",
+	        sig->sender, name);
+	sig_expect(sig, "set_profile");
 }
 
 void sig_expect(struct cbot_signal_backend *sig, const char *type)
@@ -181,67 +202,71 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type)
 	}
 	ix_type = json_object_get(jm->orig, jm->tok, 0, "type");
 	if (ix_type == 0)
-		fprintf(stderr, "sig_expect: no \"type\" field found in jmsg\n");
+		fprintf(stderr,
+		        "sig_expect: no \"type\" field found in jmsg\n");
 	else if (!json_string_match(jm->orig, jm->tok, ix_type, type))
-		fprintf(stderr, "sig_expect: expected message type %s, but got something else\n", type);
+		fprintf(stderr,
+		        "sig_expect: expected message type %s, but got "
+		        "something else\n",
+		        type);
 	jmsg_free(jm);
 }
 
-const static char fmt_send_group[] = (
-	"\n{"
-	    "\"username\":\"%s\","
-	    "\"recipientGroupId\":\"%s\","
-	    "\"messageBody\":\"%s\","
-	    "\"mentions\":[%s],"
-	    "\"type\":\"send\","
-	    "\"version\":\"v1\""
-	"}\n"
-);
+const static char fmt_send_group[] = ("\n{"
+                                      "\"username\":\"%s\","
+                                      "\"recipientGroupId\":\"%s\","
+                                      "\"messageBody\":\"%s\","
+                                      "\"mentions\":[%s],"
+                                      "\"type\":\"send\","
+                                      "\"version\":\"v1\""
+                                      "}\n");
 
-void sig_send_group(struct cbot_signal_backend *sig, const char *to, const char *msg)
+void sig_send_group(struct cbot_signal_backend *sig, const char *to,
+                    const char *msg)
 {
-        char *quoted, *mentions = NULL;
-        quoted = json_quote_and_mention(msg, &mentions);
-        fprintf(sig->ws, fmt_send_group, sig->sender, to, quoted, mentions);
-        free(quoted);
-        free(mentions);
+	char *quoted, *mentions = NULL;
+	quoted = json_quote_and_mention(msg, &mentions);
+	fprintf(sig->ws, fmt_send_group, sig->sender, to, quoted, mentions);
+	free(quoted);
+	free(mentions);
 }
 
-const static char fmt_send_single[] = (
-	"\n{"
-	    "\"username\":\"%s\","
-	    "\"recipientAddress\":{"
-	        "\"uuid\":\"%s\""
-	    "},"
-	    "\"messageBody\":\"%s\","
-	    "\"mentions\":[%s],"
-	    "\"type\":\"send\","
-	    "\"version\":\"v1\""
-	"}\n"
-);
+const static char fmt_send_single[] = ("\n{"
+                                       "\"username\":\"%s\","
+                                       "\"recipientAddress\":{"
+                                       "\"uuid\":\"%s\""
+                                       "},"
+                                       "\"messageBody\":\"%s\","
+                                       "\"mentions\":[%s],"
+                                       "\"type\":\"send\","
+                                       "\"version\":\"v1\""
+                                       "}\n");
 
-void sig_send_single(struct cbot_signal_backend *sig, const char *to, const char *msg)
+void sig_send_single(struct cbot_signal_backend *sig, const char *to,
+                     const char *msg)
 {
-        char *quoted, *mentions = NULL;
-        quoted = json_quote_and_mention(msg, &mentions);
-        fprintf(sig->ws, fmt_send_single, sig->sender, to, quoted, mentions);
-        free(quoted);
-        free(mentions);
+	char *quoted, *mentions = NULL;
+	quoted = json_quote_and_mention(msg, &mentions);
+	fprintf(sig->ws, fmt_send_single, sig->sender, to, quoted, mentions);
+	free(quoted);
+	free(mentions);
 }
 
-char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind, const char *val)
+char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind,
+                            const char *val)
 {
 	struct jmsg *jm;
 	char *ret;
 	fprintf(sig->ws,
-		"\n{\"account\":\"%s\",\"type\":\"resolve_address\","
-		"\"version\":\"v1\",\"partial\":{\"%s\":\"%s\"}}\n",
-		sig->sender, kind, val);
+	        "\n{\"account\":\"%s\",\"type\":\"resolve_address\","
+	        "\"version\":\"v1\",\"partial\":{\"%s\":\"%s\"}}\n",
+	        sig->sender, kind, val);
 
 	jm = jmsg_read_parse(sig);
-	printf("%s\n",jm->orig);
+	printf("%s\n", jm->orig);
 	if (!jm) {
-		fprintf(stderr, "sig_resolve_address: error reading or parsing\n");
+		fprintf(stderr,
+		        "sig_resolve_address: error reading or parsing\n");
 		return NULL;
 	}
 	if (strcmp(kind, "number") == 0)

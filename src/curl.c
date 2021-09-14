@@ -30,7 +30,8 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 	sc_lwt_set_state(bot->curl_lwt, SC_LWT_RUNNABLE);
 	sc_list_insert_end(&waitlist, &wait.list);
 	while (!wait.done) {
-		CL_DEBUG("curl: %s request, yielding\n", first ? "enqueued" : "continue");
+		CL_DEBUG("curl: %s request, yielding\n",
+		         first ? "enqueued" : "continue");
 		first = false;
 		/*
 		 * The LWT system may wake us up in the case of a shutdown.
@@ -145,15 +146,15 @@ void cbot_curl_run(void *data)
 		sc_lwt_remove_all(cur);
 	}
 
-	sc_list_for_each_safe(waiting, next, &waitlist, list, struct curl_waiting)
+	sc_list_for_each_safe(waiting, next, &waitlist, list,
+	                      struct curl_waiting)
 	{
 		CL_DEBUG("curlthread: cancel and remove CURL handle+thread\n");
 		sc_list_remove(&waiting->list);
 		curl_multi_remove_handle(bot->curlm, waiting->handle);
 		waiting->result = CURLE_READ_ERROR;
 		waiting->done = true;
-		sc_lwt_set_state(waiting->thread,
-				SC_LWT_RUNNABLE);
+		sc_lwt_set_state(waiting->thread, SC_LWT_RUNNABLE);
 	}
 	curl_multi_cleanup(bot->curlm);
 	bot->curlm = NULL;

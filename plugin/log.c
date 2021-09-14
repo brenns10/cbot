@@ -83,8 +83,8 @@ static void cbot_log_message(struct cbot_message_event *event, void *user)
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
-	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)cbot_log_message, NULL,
-	              NULL);
+	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)cbot_log_message,
+	              NULL, NULL);
 	return 0;
 }
 
