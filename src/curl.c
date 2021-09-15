@@ -67,22 +67,13 @@ void cbot_curl_run(void *data)
 		 * First, we should mark each file descriptor that curl would
 		 * like us to wait on, in case we end up blocking.
 		 */
-		FD_ZERO(&in_fd);
-		FD_ZERO(&out_fd);
-		FD_ZERO(&err_fd);
+		sc_lwt_fdgen_advance(cur);
+		sc_lwt_clear_fds(&in_fd, &out_fd, &err_fd);
 		maxfd = 0;
 		curl_multi_fdset(bot->curlm, &in_fd, &out_fd, &err_fd, &maxfd);
-		for (int i = 0; i <= maxfd; i++) {
-			int flags = 0;
-			if (FD_ISSET(i, &in_fd))
-				flags |= SC_LWT_W_IN;
-			if (FD_ISSET(i, &out_fd))
-				flags |= SC_LWT_W_OUT;
-			if (FD_ISSET(i, &err_fd))
-				flags |= SC_LWT_W_ERR;
-			if (flags)
-				sc_lwt_wait_fd(cur, i, flags, NULL);
-		}
+		sc_lwt_add_select_fds(cur, &in_fd, &out_fd, &err_fd, maxfd,
+		                      NULL);
+		sc_lwt_fdgen_purge(cur);
 
 		/*
 		 * Sometimes, curl doesn't actually want to block, or wants us
@@ -92,6 +83,8 @@ void cbot_curl_run(void *data)
 		block = true;
 		millis = 0;
 		curl_multi_timeout(bot->curlm, &millis);
+		/* Clear any previously held timeout for our thread */
+		sc_lwt_cleartimeout(cur);
 		if (millis > 0) {
 			ts.tv_sec = millis / 1000;
 			ts.tv_nsec = millis * 1000000;
