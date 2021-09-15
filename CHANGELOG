@@ -4,6 +4,14 @@ Changelog
 Unreleased
 ----------
 
+0.5.0 (2021-09-15)
+------------------
+
+- Add an AQI plugin
+- Add logging system
+- Significant cleanup of Signal backend
+- Improvements brought in from sc-lwt regarding epoll
+
 0.4.1 (2021-09-06)
 ------------------
 
