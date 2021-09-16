@@ -15,7 +15,8 @@ packages:
 sources:
   - https://github.com/brenns10/cbot
 secrets:
-- 9a311380-3dab-451c-8e29-0de4d2616a70
+- 9a311380-3dab-451c-8e29-0de4d2616a70 # github token
+- 7b922363-3ca0-4080-863f-5404a4e6796f # package key
 tasks:
   - ghsetup: |
       mkdir ghsetup && cd ghsetup
@@ -32,17 +33,40 @@ tasks:
       ninja -C build
   - source_release: |
       cd cbot
+      TAG=$(git describe --tags --exact HEAD | \
+            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            || echo "")
+      [ -z "$TAG" ] && exit 0
+      VER=$(echo $TAG | sed s/v//)
+      ./make-release.sh
+      mkdir -p ~/artifacts
+      mv cbot-$VER.tar.gz ~/artifacts/
+  - alpine_package: |
+      cd cbot
+      TAG=$(git describe --tags --exact HEAD | \
+            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            || echo "")
+      [ -z "$TAG" ] && exit 0
+      VER=$(echo $TAG | sed s/v//)
+      export PACKAGER_PRIVKEY=~/packager.key
+      cd deploy/alpine
+      cp ~/artifacts/cbot-$VER.tar.gz .
+      sed -i 's?source=.*$?source="'cbot-$VER.tar.gz'"?' APKBUILD
+      abuild checksum
+      abuild
+      mv packages/x86_64/cbot-$VER*.apk ~/artifacts/
+  - github_release: |
+      cd cbot
       source ~/.github_token.sh
       TAG=$(git describe --tags --exact HEAD | \
             grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
-      TAG=$(echo $TAG | sed s/v//)
-      ./make-release.sh
+      VER=$(echo $TAG | sed s/v//)
       # Get the blurb for the current release from CHANGELOG
       sed <CHANGELOG \
           -e '1,/^[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+ ([[:digit:]]\{4\}/d' \
           -e '/^[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+ ([[:digit:]]\{4\}/,$d' \
           -e '/^-\+$/d' \
           -e '/./,$!d' | tac | sed '/./,$!d' | tac > /tmp/changelog
-      gh release create v$TAG cbot-$TAG.tar.gz -t v$TAG -F /tmp/changelog
+      gh release create $TAG ~/artifacts/* -t $TAG -F /tmp/changelog

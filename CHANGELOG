@@ -1,6 +1,8 @@
 Changelog
 =========
 
+Be sure version number is updated in deploy/alpine/APKBUILD.
+
 Unreleased
 ----------
 

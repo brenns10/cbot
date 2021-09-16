@@ -1,0 +1,38 @@
+# Maintainer: Stephen Brennan <stephen@brennan.io>
+pkgname=cbot
+pkgver=0.5.1
+pkgrel=0
+pkgdesc="IRC and Signal chatbot"
+url="https://github.com/brenns10/cbot"
+arch="all"
+license="Revised BSD"
+depends="sqlite libconfig libcurl libmicrohttpd openssl libucontext"
+makedepends="meson git libc-dev sqlite-dev libconfig-dev curl-dev libmicrohttpd-dev openssl-dev libucontext-dev"
+checkdepends=""
+install=""
+#subpackages="$pkgname-dev $pkgname-doc"
+source="$pkgname-$pkgver.tar.gz::https://github.com/brenns10/cbot/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz"
+builddir="$srcdir/"
+
+build() {
+	meson \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--buildtype=plain \
+		$pkgname-$pkgver output \
+                -Ddefault_library=static
+        # default_library=static: any dependency we pull in via subproject
+        # should be build static and compiled into the binary
+	meson compile ${JOBS:+-j ${JOBS}} -C output
+}
+
+check() {
+	#meson test --no-rebuild -v -C output
+        true
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output --skip-subproject
+}

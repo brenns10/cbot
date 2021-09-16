@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.14
 RUN echo 'http://localhost:8080' >> /etc/apk/repositories
 ADD stephen@brennan.io.rsa.pub /etc/apk/keys/
 RUN apk add cbot openjdk8-jre gcompat
