@@ -1,0 +1,48 @@
+image: alpine/3.14
+packages:
+  - meson
+  - gcc
+  - git
+  - alpine-sdk
+  - libc-dev
+  - sqlite-dev
+  - libconfig-dev
+  - curl-dev
+  - libmicrohttpd-dev
+  - openssl-dev
+  - libucontext-dev
+  - sqlite
+sources:
+  - https://github.com/brenns10/cbot
+secrets:
+- 9a311380-3dab-451c-8e29-0de4d2616a70
+tasks:
+  - ghsetup: |
+      mkdir ghsetup && cd ghsetup
+      ghver=2.0.0
+      wget https://github.com/cli/cli/releases/download/v$ghver/gh_${ghver}_linux_amd64.tar.gz
+      tar xf gh_${ghver}_linux_amd64.tar.gz
+      sudo mv gh_${ghver}_linux_amd64/bin/gh /usr/bin/gh
+      cd .. && rm -r ghsetup
+  - setup: |
+      cd cbot
+      meson build
+  - build: |
+      cd cbot
+      ninja -C build
+  - source_release: |
+      cd cbot
+      source ~/.github_token.sh
+      TAG=$(git describe --tags --exact HEAD | \
+            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            || echo "")
+      [ -z "$TAG" ] && exit 0
+      TAG=$(echo $TAG | sed s/v//)
+      ./make-release.sh
+      # Get the blurb for the current release from CHANGELOG
+      sed <CHANGELOG \
+          -e '1,/^[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+ ([[:digit:]]\{4\}/d' \
+          -e '/^[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+ ([[:digit:]]\{4\}/,$d' \
+          -e '/^-\+$/d' \
+          -e '/./,$!d' | tac | sed '/./,$!d' | tac > /tmp/changelog
+      gh release create v$TAG cbot-$TAG.tar.gz -t v$TAG -F /tmp/changelog
