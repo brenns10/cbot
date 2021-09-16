@@ -6,6 +6,12 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.5.3 (2021-09-15)
+------------------
+
+- Test release for CI.
+- This release should include automatic Docker builds.
+
 0.5.2 (2021-09-15)
 ------------------
 
