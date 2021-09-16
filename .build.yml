@@ -12,11 +12,15 @@ packages:
   - openssl-dev
   - libucontext-dev
   - sqlite
+  - openjdk8
+  - docker
 sources:
   - https://github.com/brenns10/cbot
+  - https://gitlab.com/signald/signald
 secrets:
 - 9a311380-3dab-451c-8e29-0de4d2616a70 # github token
 - 7b922363-3ca0-4080-863f-5404a4e6796f # package key
+- 29e80069-2df8-4bd1-9801-313f2ac4a82b # docker hub
 tasks:
   - ghsetup: |
       mkdir ghsetup && cd ghsetup
@@ -54,7 +58,7 @@ tasks:
       sed -i 's?source=.*$?source="'cbot-$VER.tar.gz'"?' APKBUILD
       abuild checksum
       abuild
-      mv packages/x86_64/cbot-$VER*.apk ~/artifacts/
+      mv ~/packages/deploy/x86_64/cbot-$VER-r0.apk ~/artifacts/
   - github_release: |
       cd cbot
       source ~/.github_token.sh
@@ -70,3 +74,21 @@ tasks:
           -e '/^-\+$/d' \
           -e '/./,$!d' | tac | sed '/./,$!d' | tac > /tmp/changelog
       gh release create $TAG ~/artifacts/* -t $TAG -F /tmp/changelog
+  - docker_build: |
+      cd cbot
+      source ~/.github_token.sh
+      TAG=$(git describe --tags --exact HEAD | \
+            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            || echo "")
+      [ -z "$TAG" ] && exit 0
+      VER=$(echo $TAG | sed s/v//)
+      cd ../signald
+      git checkout 0.14.1
+      make installDist
+      cp -r build/install/signald ../cbot/deploy/signald
+      cd ../cbot/deploy
+      cp ~/artifacts/cbot-$VER-r0.apk cbot.apk
+      sudo service docker start
+      sudo docker login docker.io -u brenns10 --password-stdin < ~/.dockerpw
+      sudo docker build -t cbot .
+      sudo docker push cbot docker.io/brenns10/cbot:$TAG

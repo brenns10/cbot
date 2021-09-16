@@ -1,12 +1,12 @@
 FROM alpine:3.14
-RUN echo 'http://localhost:8080' >> /etc/apk/repositories
-ADD stephen@brennan.io.rsa.pub /etc/apk/keys/
-RUN apk add cbot openjdk8-jre gcompat
+COPY cbot.apk /
+RUN apk add --allow-untrusted ./cbot.apk openjdk8-jre gcompat && rm ./cbot.apk
 RUN adduser --disabled-password --uid 1002 cbot && \
     mkdir -p /var/run/signald && \
     chown cbot /var/run/signald
 COPY signald /opt/signald
-COPY --chmod=755 run.sh /bin/
+COPY run.sh /bin/
+RUN chmod 755 /bin/run.sh
 
 USER cbot
 WORKDIR /home/cbot
