@@ -1,6 +1,7 @@
 project(
   'cbot', 'c',
-  version : '0.5.1',
+  version : '0.5.2',
+  # be sure to update APKBUILD version too
 )
 
 sources = [
