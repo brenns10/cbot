@@ -77,6 +77,23 @@ out1:
 	return -1;
 }
 
+static bool should_continue_group(struct cbot_signal_backend *sig,
+                                  const char *grp)
+{
+	struct cbot *bot = sig->bot;
+	struct cbot_channel_conf *chan;
+
+	printf("signal: should continue %s ?\n", grp);
+
+	sc_list_for_each_entry(chan, &bot->init_channels, list,
+	                       struct cbot_channel_conf)
+	{
+		if (strcmp(chan->name, grp) == 0)
+			return true;
+	}
+	return false;
+}
+
 /*
  * Handles an incoming line from signald. This could be many types of API
  * message, so we don't return an error in case we don't find the right data
@@ -107,8 +124,13 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	srcb = mention_format(srcb, "uuid");
 
 	group = jmsg_lookup_string(jm, "data.dataMessage.groupV2.id");
-	if (group)
+	if (group) {
+		if (!should_continue_group(sig, group)) {
+			free(msgb);
+			return 0;
+		}
 		group = mention_format(group, "group");
+	}
 
 	cbot_handle_message(sig->bot, group ? group : srcb, srcb, msgb, false);
 	free(group);
