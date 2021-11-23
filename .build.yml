@@ -90,5 +90,6 @@ tasks:
       cp ~/artifacts/cbot-$VER-r0.apk cbot.apk
       sudo service docker start
       sudo docker login docker.io -u brenns10 --password-stdin < ~/.dockerpw
-      sudo docker build -t cbot .
-      sudo docker push cbot docker.io/brenns10/cbot:$TAG
+      sudo docker build -t cbot:$TAG .
+      sudo docker tag cbot:$TAG cbot:latest
+      sudo docker push -a docker.io/brenns10/cbot
