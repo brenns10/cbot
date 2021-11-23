@@ -37,8 +37,8 @@ tasks:
       ninja -C build
   - source_release: |
       cd cbot
-      TAG=$(git describe --tags --exact HEAD | \
-            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+      TAG=$(echo "$GITHUB_REF" | \
+            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
@@ -47,8 +47,8 @@ tasks:
       mv cbot-$VER.tar.gz ~/artifacts/
   - alpine_package: |
       cd cbot
-      TAG=$(git describe --tags --exact HEAD | \
-            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+      TAG=$(echo "$GITHUB_REF" | \
+            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
@@ -62,10 +62,10 @@ tasks:
   - github_release: |
       cd cbot
       set +x; source ~/.github_token.sh; set -x
-      TAG=$(git describe --tags --exact HEAD | \
-            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+      TAG=$(echo "$GITHUB_REF" | \
+            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
-      [ -z "$TAG" ] && exit 0
+      [[ "$GITHUB_REF" =~ ^refs/tags/.*$ ]] || exit 0
       VER=$(echo $TAG | sed s/v//)
       # Get the blurb for the current release from CHANGELOG
       sed <CHANGELOG \
@@ -77,8 +77,8 @@ tasks:
   - docker_build: |
       cd cbot
       set +x; source ~/.github_token.sh; set -x
-      TAG=$(git describe --tags --exact HEAD | \
-            grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+      TAG=$(echo "$GITHUB_REF" | \
+            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
