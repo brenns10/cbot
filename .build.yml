@@ -65,7 +65,7 @@ tasks:
       TAG=$(echo "$GITHUB_REF" | \
             grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
-      [[ "$GITHUB_REF" =~ ^refs/tags/.*$ ]] || exit 0
+      [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       # Get the blurb for the current release from CHANGELOG
       sed <CHANGELOG \
