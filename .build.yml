@@ -38,7 +38,7 @@ tasks:
   - source_release: |
       cd cbot
       TAG=$(echo "$GITHUB_REF" | \
-            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
@@ -48,7 +48,7 @@ tasks:
   - alpine_package: |
       cd cbot
       TAG=$(echo "$GITHUB_REF" | \
-            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
@@ -63,7 +63,7 @@ tasks:
       cd cbot
       set +x; source ~/.github_token.sh; set -x
       TAG=$(echo "$GITHUB_REF" | \
-            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
@@ -78,7 +78,7 @@ tasks:
       cd cbot
       set +x; source ~/.github_token.sh; set -x
       TAG=$(echo "$GITHUB_REF" | \
-            grep -o '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
+            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
