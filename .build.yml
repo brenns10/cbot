@@ -18,7 +18,7 @@ sources:
   - https://github.com/brenns10/cbot
   - https://gitlab.com/signald/signald
 secrets:
-- 9a311380-3dab-451c-8e29-0de4d2616a70 # github token
+- 0e302949-1e18-4853-a27a-d6b90c2c8be8 # github token
 - 7b922363-3ca0-4080-863f-5404a4e6796f # package key
 - 29e80069-2df8-4bd1-9801-313f2ac4a82b # docker hub
 tasks:
@@ -61,7 +61,7 @@ tasks:
       mv ~/packages/deploy/x86_64/cbot-$VER-r0.apk ~/artifacts/
   - github_release: |
       cd cbot
-      source ~/.github_token.sh
+      set +x; source ~/.github_token.sh; set -x
       TAG=$(git describe --tags --exact HEAD | \
             grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
@@ -76,7 +76,7 @@ tasks:
       gh release create $TAG ~/artifacts/* -t $TAG -F /tmp/changelog
   - docker_build: |
       cd cbot
-      source ~/.github_token.sh
+      set +x; source ~/.github_token.sh; set -x
       TAG=$(git describe --tags --exact HEAD | \
             grep '^v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
