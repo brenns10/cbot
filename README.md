@@ -1,6 +1,8 @@
 cbot
 ====
 
+[![builds.sr.ht status](https://builds.sr.ht/~brenns10/cbot/commits.svg)](https://builds.sr.ht/~brenns10/cbot/commits?)
+
 CBot is a chatbot written entirely in C!
 
 Why would you do that? Because I can.
