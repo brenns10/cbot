@@ -9,9 +9,8 @@
  *     cbot> [2]: yay
  */
 
+#include <libconfig.h>
 #include <stdlib.h>
-
-#include <sc-regex.h>
 
 #include "cbot/cbot.h"
 

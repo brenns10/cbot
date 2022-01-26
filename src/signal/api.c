@@ -1,9 +1,13 @@
 /*
  * Signal(d) API functions
  */
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "internal.h"
+#include "nosj.h"
+#include "sc-collections.h"
 
 void sig_user_free(struct signal_user *user)
 {

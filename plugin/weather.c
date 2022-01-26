@@ -1,14 +1,15 @@
 /*
  * weather.c: CBot plugin implementing weather queries
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <curl/curl.h>
+#include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <sc-regex.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "cbot/cbot.h"
 #include "cbot/curl.h"

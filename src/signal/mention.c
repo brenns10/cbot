@@ -1,11 +1,13 @@
 /*
  * Functions which help add and remove mentions to Signal messages.
  */
-#include <stdlib.h>
-
 #include <sc-collections.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "internal.h"
+#include "nosj.h"
 
 const char MENTION_PLACEHOLDER[] = { 0xEF, 0xBF, 0xBC, 0x00 };
 

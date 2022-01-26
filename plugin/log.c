@@ -4,13 +4,13 @@
 
 #define _XOPEN_SOURCE 700
 
+#include <bits/types/struct_tm.h>
+#include <libconfig.h>
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 
-#include "sc-collections.h"
-
 #include "cbot/cbot.h"
+#include "sc-collections.h"
 
 static void write_string(FILE *f, const char *str)
 {

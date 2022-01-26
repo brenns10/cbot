@@ -1,13 +1,14 @@
 /**
  * sqlknow.c: CBot plugin which remembers things
  */
+#include <libconfig.h>
 #include <stdlib.h>
-
-#include "sc-collections.h"
-#include "sc-regex.h"
 
 #include "cbot/cbot.h"
 #include "cbot/db.h"
+#include "sc-regex.h"
+
+struct cbot;
 
 const char *tbl_knowledge_alters[] = {};
 

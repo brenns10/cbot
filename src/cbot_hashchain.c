@@ -5,12 +5,14 @@
 
 #include <ctype.h>
 #include <inttypes.h>
-#include <stdbool.h>
-#include <string.h>
-
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/ossl_typ.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "cbot/cbot.h"
 #include "cbot_private.h"
 
 /**

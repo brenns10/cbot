@@ -1,8 +1,7 @@
 /**
  * help.c: CBot plugin which sends help text over direct messages
  */
-#include "sc-regex.h"
-
+#include <libconfig.h>
 #include <stdlib.h>
 
 #include "cbot/cbot.h"

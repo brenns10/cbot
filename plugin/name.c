@@ -2,6 +2,7 @@
  * name.c: CBot plugin which responds to questions about what CBot is, by
  * linking to the CBot repository
  */
+#include <libconfig.h>
 #include <sc-collections.h>
 #include <stdlib.h>
 

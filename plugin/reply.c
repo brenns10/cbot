@@ -2,12 +2,13 @@
  * reply.c: CBot plugin which replies to configured triggers with configured
  * responses
  */
-#include <stdlib.h>
-#include <string.h>
-
 #include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-regex.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "cbot/cbot.h"
 

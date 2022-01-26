@@ -1,7 +1,5 @@
-#include <stdlib.h>
-#include <string.h>
-
 #include <sc-collections.h>
+#include <string.h>
 
 #include "cbot/cbot.h"
 

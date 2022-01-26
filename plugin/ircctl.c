@@ -2,11 +2,11 @@
  * ircctl.c: CBot plugin which allows users to request IRC operations like
  * giving op privilege, or joining a channel
  */
+#include <libconfig.h>
 #include <stdlib.h>
 
-#include "sc-regex.h"
-
 #include "cbot/cbot.h"
+#include "sc-regex.h"
 
 #define HASH "([A-Za-z0-9+=/]+)"
 

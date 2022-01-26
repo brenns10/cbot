@@ -6,9 +6,9 @@
  * U> cbot become newbot
  * newbot> your wish is my command
  */
-#include <stdlib.h>
-
+#include <libconfig.h>
 #include <sc-regex.h>
+#include <stdlib.h>
 
 #include "cbot/cbot.h"
 

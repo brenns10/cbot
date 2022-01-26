@@ -2,18 +2,23 @@
  * cbot.c: core CBot implementation
  */
 
-#include <assert.h>
 #include <ctype.h>
 #include <dlfcn.h>
 #include <libconfig.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <openssl/evp.h>
 #include <sc-collections.h>
 #include <sqlite3.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
+#include "cbot/cbot.h"
 #include "cbot_private.h"
+#include "sc-lwt.h"
+#include "sc-regex.h"
 
 struct cbot_backend_ops *all_ops[] = {
 	&irc_ops,

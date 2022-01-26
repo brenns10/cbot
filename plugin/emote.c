@@ -8,11 +8,11 @@
  * (above the /me is just used to demonstrate what CBot is doing)
  */
 
+#include <libconfig.h>
 #include <stdlib.h>
 
-#include "sc-regex.h"
-
 #include "cbot/cbot.h"
+#include "sc-regex.h"
 
 static void emote(struct cbot_message_event *event, void *user)
 {

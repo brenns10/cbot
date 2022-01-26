@@ -5,14 +5,12 @@
 #ifndef CBOT_IRC_H
 #define CBOT_IRC_H
 
+#include <sc-collections.h>
 #include <stdbool.h>
 
+#include "cbot/cbot.h"
 #include "libirc_rfcnumeric.h"
 #include "libircclient.h"
-
-#include <sc-collections.h>
-
-#include "cbot/cbot.h"
 
 struct names_rq {
 	struct sc_list_head list;

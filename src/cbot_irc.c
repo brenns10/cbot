@@ -2,21 +2,18 @@
  * cbot_irc.c: IRC backend for CBot
  */
 
-#include <stdarg.h>
+#include <libconfig.h>
+#include <sc-collections.h>
+#include <sc-lwt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 
-#include <sc-argparse.h>
-#include <sc-collections.h>
-#include <sc-lwt.h>
-
-#include "libirc_rfcnumeric.h"
-#include "libircclient.h"
-
-#include "cbot_handlers.h"
+#include "cbot/cbot.h"
 #include "cbot_irc.h"
 #include "cbot_private.h"
+#include "libircclient.h"
 
 static inline struct cbot *session_bot(irc_session_t *session)
 {

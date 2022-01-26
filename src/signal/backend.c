@@ -1,16 +1,19 @@
 /*
  * CBot backend implementations for Signal
  */
-#include <errno.h>
+#include <libconfig.h>
+#include <sc-collections.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-
-#include <sc-collections.h>
+#include <unistd.h>
 
 #include "../cbot_private.h"
 #include "internal.h"
+#include "sc-lwt.h"
 
 static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 {

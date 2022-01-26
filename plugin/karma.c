@@ -2,14 +2,14 @@
  * karma.c: CBot plugin which tracks karma (++ and --)
  */
 
-#include <assert.h>
+#include <libconfig.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "sc-regex.h"
+#include <sys/types.h>
 
 #include "cbot/cbot.h"
+#include "sc-regex.h"
 
 /**
  * A type representing a single karma entry, which is a word, number pair.

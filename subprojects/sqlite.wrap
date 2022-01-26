@@ -9,4 +9,3 @@ patch_hash = 2265bbd1cdec8b60c62d9f3a7025cd9c7362d282f3dcda7065e698454096c242
 
 [provide]
 sqlite3 = sqlite_dep
-

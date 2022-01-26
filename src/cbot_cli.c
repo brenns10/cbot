@@ -2,14 +2,17 @@
  * cbot_cli.c: CBot backend for command line
  */
 
+#include <libconfig.h>
+#include <sc-lwt.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-#include <sc-argparse.h>
-#include <sc-lwt.h>
-
+#include "cbot/cbot.h"
 #include "cbot_private.h"
+#include "sc-collections.h"
 
 /***************
  * CBot Backend Callbacks

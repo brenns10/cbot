@@ -4,12 +4,15 @@
  */
 #include <assert.h>
 #include <errno.h>
+#include <sc-lwt.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-#include <sc-lwt.h>
-
 #include "internal.h"
+#include "nosj.h"
+#include "sc-collections.h"
 
 static int async_read(int fd, char *data, size_t nbytes)
 {
