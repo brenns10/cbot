@@ -11,6 +11,12 @@ repos:
         language: system
         files: "^.*\\.[ch]$"
         entry: ./.iwyu.sh
+    -   id: clang-tidy
+        name: "Run clang-tidy"
+        language: system
+        files: "^.*\\.c$"
+        exclude: "plugin/help.h"
+        entry: clang-tidy --checks=-*,clang-analyzer-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,performance-* --warnings-as-errors=*
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
     hooks:

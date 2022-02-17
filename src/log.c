@@ -11,8 +11,9 @@ static FILE *current_log_file;
 
 void cbot_vlog(int level, const char *format, va_list args)
 {
+	/* clang-tidy decided args is uninitialized? */
 	if (current_log_file && level >= current_log_level)
-		vfprintf(current_log_file, format, args);
+		vfprintf(current_log_file, format, args); // NOLINT
 }
 
 void cbot_log(int level, const char *format, ...)

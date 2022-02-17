@@ -119,6 +119,7 @@ struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig)
 	struct jmsg *jm;
 	jm = jmsg_read(sig);
 	if (!jm || jmsg_parse(jm) != 0) {
+		jmsg_free(jm);
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		return NULL;
 	}
@@ -127,10 +128,11 @@ struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig)
 
 void jmsg_free(struct jmsg *jm)
 {
-	free(jm->orig);
-	if (jm->tok)
+	if (jm) {
+		free(jm->orig);
 		free(jm->tok);
-	free(jm);
+		free(jm);
+	}
 }
 
 char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t start, const char *key,
