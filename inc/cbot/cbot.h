@@ -139,6 +139,18 @@ void cbot_join(const struct cbot *bot, const char *channel,
  */
 void cbot_nick(const struct cbot *bot, const char *newname);
 
+/**
+ * Add an alias for the bot.
+ *
+ * Bot aliases are helpful for backends which have special encodings for
+ * "mentions". Backends can add their aliases here and the bot will recognize
+ * this when used to address the bot.
+ *
+ * @param bot Bot instance
+ * @param alias Name to add
+ */
+void cbot_add_alias(struct cbot *bot, const char *alias);
+
 struct cbot_plugin;
 
 struct cbot_plugin_ops {

@@ -74,6 +74,7 @@ struct cbot_channel_conf {
 struct cbot {
 	/* Loaded from configuration */
 	char *name;
+	struct sc_array aliases;
 	char *backend_name;
 	char *plugin_dir;
 	char *db_file;

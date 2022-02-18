@@ -72,17 +72,32 @@ void cbot_nick(const struct cbot *cbot, const char *newnick)
 	cbot->backend_ops->nick(cbot, newnick);
 }
 
+static int addressed_advance(const char *message, int i)
+{
+	while (isspace(message[i]) || ispunct(message[i])) {
+		i++;
+	}
+	return i;
+}
+
 int cbot_addressed(const struct cbot *bot, const char *message)
 {
 	int increment = strlen(bot->name);
-	if (strncmp(bot->name, message, increment) == 0) {
-		while (isspace(message[increment]) ||
-		       ispunct(message[increment])) {
-			increment++;
-		}
-		return increment;
+	int i;
+	if (strncmp(bot->name, message, increment) == 0)
+		return addressed_advance(message, increment);
+	for (i = 0; i < bot->aliases.len; i++) {
+		char *alias = sc_arr(&bot->aliases, char *)[i];
+		increment = strlen(alias);
+		if (strncmp(alias, message, increment) == 0)
+			return addressed_advance(message, increment);
 	}
 	return 0;
+}
+
+void cbot_add_alias(struct cbot *bot, const char *alias)
+{
+	sc_arr_append(&bot->aliases, char *, strdup(alias));
 }
 
 /********
@@ -106,6 +121,7 @@ struct cbot *cbot_create(void)
 	}
 	sc_list_init(&cbot->init_channels);
 	sc_list_init(&cbot->plugins);
+	sc_arr_init(&cbot->aliases, 8, sizeof(char *));
 	OpenSSL_add_all_digests();
 	return cbot;
 }
@@ -402,6 +418,10 @@ void cbot_delete(struct cbot *cbot)
 	free(cbot->plugin_dir);
 	free(cbot->db_file);
 	sc_lwt_free(cbot->lwt_ctx);
+	for (int i = 0; i < cbot->aliases.len; i++) {
+		free(sc_arr(&cbot->aliases, char *)[i]);
+	}
+	sc_arr_destroy(&cbot->aliases);
 	free(cbot);
 	EVP_cleanup();
 }
