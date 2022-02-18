@@ -7,7 +7,6 @@ project(
 sources = [
   'src/cbot.c',
   'src/cbot_cli.c',
-  'src/cbot_hashchain.c',
   'src/cbot_irc.c',
   'src/db.c',
   'src/tok.c',
@@ -56,7 +55,6 @@ libnosj_dep = dependency(
   fallback: ['nosj', 'libnosj_dep'],
   version: '>=1.0.0',
 )
-crypto_dep = dependency('libcrypto')
 dl_dep = cc.find_library('dl', required : false)
 sqlite_dep = dependency(
   'sqlite3',
@@ -72,7 +70,6 @@ cbot_deps = [
     libsc_lwt_dep,
     libnosj_dep,
     libircclient_dep,
-    crypto_dep,
     dl_dep,
     sqlite_dep,
     config_dep,

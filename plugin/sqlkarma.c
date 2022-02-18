@@ -103,7 +103,7 @@ static void karma_best(struct cbot_message_event *event)
 
 static void karma_check(struct cbot_message_event *event, void *user)
 {
-	int rv, karma;
+	int rv, karma = 0;
 	char *word = sc_regex_get_capture(event->message, event->indices, 1);
 
 	// An empty capture means we should list out the best karma.
@@ -136,10 +136,8 @@ static void karma_change(struct cbot_message_event *event, void *user)
 
 static void karma_set(struct cbot_message_event *event, void *user)
 {
-	char *word, *value, *hash;
-	hash = sc_regex_get_capture(event->message, event->indices, 2);
-	if (!cbot_is_authorized(event->bot, hash)) {
-		free(hash);
+	char *word, *value;
+	if (!cbot_is_authorized(event->bot, event->username, event->message)) {
 		cbot_send(event->bot, event->channel,
 		          "sorry, you're not authorized to do that!");
 		return;
@@ -150,7 +148,6 @@ static void karma_set(struct cbot_message_event *event, void *user)
 	karma_query_set(event->bot, word, atoi(value));
 	free(word);
 	free(value);
-	free(hash);
 }
 
 static void karma_forget(struct cbot_message_event *event, void *user)
@@ -175,8 +172,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)karma_change, NULL,
 	              ".*?([" KARMA_WORD "]+)(\\+\\+|--).*?");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)karma_set, NULL,
-	              "set-karma +([" KARMA_WORD
-	              "]+) +(-?\\d+) +([A-Za-z0-9+/=]+)");
+	              "set-karma +([" KARMA_WORD "]+) +(-?\\d+) *.*");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)karma_forget,
 	              NULL, "forget[ -]me");
 

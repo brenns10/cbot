@@ -219,4 +219,5 @@ struct cbot_backend_ops cli_ops = {
 	.op = cbot_cli_op,
 	.join = cbot_cli_join,
 	.nick = cbot_cli_nick,
+	.is_authorized = NULL,
 };

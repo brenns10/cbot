@@ -254,4 +254,5 @@ struct cbot_backend_ops signal_ops = {
 	.run = cbot_signal_run,
 	.send = cbot_signal_send,
 	.nick = cbot_signal_nick,
+	.is_authorized = NULL,
 };

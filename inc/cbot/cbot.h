@@ -109,14 +109,15 @@ void cbot_me(const struct cbot *bot, const char *dest, const char *format, ...);
  */
 int cbot_addressed(const struct cbot *bot, const char *message);
 /**
- * Determines whether the beginning of the message contains a hash that
- * matches the bot's current hash in the chain. If not, returns 0. If
- * so, returns the index of the beginning of the rest of the message.
- * @param bot The bot to check the authorization of.
- * @param message The message to check for the SHA in.
- * @returns The index of the beginning of the rest of the message.
+ * Determines whether the sender / message is authorized.
+ * This just means it has privilege -- usually meaning the user is the bot
+ * author, i.e. Me :D
+ * @param bot The bot instance
+ * @param user The user to check the authorization of
+ * @param message The message in question
+ * @returns non-zero if authorized
  */
-int cbot_is_authorized(struct cbot *bot, const char *message);
+int cbot_is_authorized(struct cbot *bot, const char *user, const char *message);
 /**
  * Give operator privileges to a user.
  * @param bot Bot instance.

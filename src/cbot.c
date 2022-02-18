@@ -100,6 +100,13 @@ void cbot_add_alias(struct cbot *bot, const char *alias)
 	sc_arr_append(&bot->aliases, char *, strdup(alias));
 }
 
+int cbot_is_authorized(struct cbot *bot, const char *user, const char *msg)
+{
+	if (bot->backend_ops->is_authorized)
+		return bot->backend_ops->is_authorized(bot, user, msg);
+	return 0;
+}
+
 /********
  * Functions related to the bot lifetime
  ********/
@@ -122,7 +129,6 @@ struct cbot *cbot_create(void)
 	sc_list_init(&cbot->init_channels);
 	sc_list_init(&cbot->plugins);
 	sc_arr_init(&cbot->aliases, 8, sizeof(char *));
-	OpenSSL_add_all_digests();
 	return cbot;
 }
 

@@ -398,4 +398,5 @@ struct cbot_backend_ops irc_ops = {
 	.op = cbot_irc_op,
 	.join = cbot_irc_join,
 	.nick = cbot_irc_nick,
+	.is_authorized = NULL,
 };

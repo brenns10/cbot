@@ -59,6 +59,8 @@ struct cbot_backend_ops {
 	void (*join)(const struct cbot *cbot, const char *channel,
 	             const char *password);
 	void (*nick)(const struct cbot *cbot, const char *newnick);
+	int (*is_authorized)(const struct cbot *bot, const char *sender,
+	                     const char *message);
 };
 
 extern struct cbot_backend_ops irc_ops;
@@ -97,8 +99,6 @@ struct cbot *cbot_create(void);
 int cbot_load_config(struct cbot *bot, const char *conf_file);
 void cbot_run(struct cbot *bot);
 void cbot_delete(struct cbot *obj);
-
-int cbot_is_authorized(struct cbot *cbot, const char *message);
 
 void cbot_set_nick(struct cbot *bot, const char *newname);
 
