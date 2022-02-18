@@ -6,6 +6,14 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.6.0 (2022-02-17)
+------------------
+
+- Signal backend:
+  - Add ignore_dm config
+  - Add the ability to respond to @mentions
+  - Upgrade signald/java in Docker container
+
 0.5.{4..9} (2021-11-23)
 -----------------------
 
