@@ -51,9 +51,8 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 
 	backend = calloc(1, sizeof(*backend));
 	backend->sender = strdup(phone);
-	backend->spill = malloc(4096);
-	backend->spilllen = 0;
 	backend->ignore_dm = ignore_dm;
+	sc_list_init(&backend->messages);
 
 	backend->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (backend->fd < 0) {
@@ -83,7 +82,6 @@ out3:
 out2:
 	close(backend->fd);
 out1:
-	free(backend->spill);
 	sig_user_free(backend->bot_profile);
 	free(backend);
 	return -1;

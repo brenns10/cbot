@@ -38,66 +38,7 @@ static int async_read(int fd, char *data, size_t nbytes)
 	}
 }
 
-struct jmsg *jmsg_read(struct cbot_signal_backend *sig)
-{
-	int rv, foundidx;
-	struct sc_charbuf cb;
-	char *found;
-	size_t ls = 0;
-	struct jmsg *jm;
-
-	sc_cb_init(&cb, 4096);
-
-	/* Copy any spilled data into bufs->orig */
-	if (sig->spilllen) {
-		sc_cb_memcpy(&cb, sig->spill, sig->spilllen);
-		sig->spilllen = 0;
-	}
-	for (;;) {
-		/*
-		 * Search for the terminator. This is at the top of the loop so
-		 * that any additional terminators in the spill buffer get
-		 * found before reading more data.
-		 */
-		found = memchr(cb.buf + ls, '\n', cb.length - ls);
-		ls = cb.length;
-		if (found) {
-			/*
-			 * Copy everything after the terminator to the spill
-			 * buffer, NUL terminate and return.
-			 */
-			foundidx = found - cb.buf + 1;
-			if (foundidx != cb.length) {
-				sig->spilllen = cb.length - foundidx;
-				memcpy(sig->spill, found + 1, sig->spilllen);
-			}
-			*found = '\0';
-			jm = calloc(1, sizeof(*jm));
-			jm->orig = cb.buf;
-			jm->origlen = foundidx - 1;
-			return jm;
-		}
-
-		/* Ensure there is space to read more data */
-		if (cb.length == cb.capacity) {
-			cb.capacity *= 2;
-			cb.buf = realloc(cb.buf, cb.capacity);
-		}
-
-		/* Read data */
-		rv = async_read(sig->fd, cb.buf + cb.length,
-		                cb.capacity - cb.length);
-		if (rv < 0) {
-			sc_cb_destroy(&cb);
-			fprintf(stderr, "read error: %d\n", rv);
-			return NULL;
-		} else {
-			cb.length += rv;
-		}
-	}
-}
-
-int jmsg_parse(struct jmsg *jm)
+static int jmsg_parse(struct jmsg *jm)
 {
 	struct json_parser p = json_parse(jm->orig, NULL, 0);
 
@@ -114,16 +55,116 @@ int jmsg_parse(struct jmsg *jm)
 	return 0;
 }
 
+/*
+ * Read at least one jmsg, adding it to the list. All jmsg are parsed.
+ *
+ * Return the number of successfully read jmsgs. On error, return -1 (though
+ * successful messages may still be in the list).
+ */
+static int jmsg_read(int fd, struct sc_list_head *list)
+{
+	int rv, nextmsgidx;
+	struct sc_charbuf cb;
+	char *found;
+	int count = 0;
+	struct jmsg *jm;
+
+	sc_cb_init(&cb, 4096);
+
+	for (;;) {
+		rv = async_read(fd, cb.buf + cb.length,
+		                cb.capacity - cb.length);
+		if (rv < 0) {
+			fprintf(stderr, "read error: %d\n", rv);
+			goto err;
+		} else {
+			cb.length += rv;
+		}
+
+		found = memchr(cb.buf, '\n', cb.length);
+		while (found) {
+			/*
+			 * Find start of next message and replace newline
+			 * with nul terminator
+			 */
+			nextmsgidx = found - cb.buf + 1;
+			*found = '\0';
+			printf("rv: %d nextmsgidx: %d length: %d\n", rv,
+			       nextmsgidx, cb.length);
+
+			/*
+			 * Copy data into new jmsg and add to output.
+			 */
+			jm = calloc(1, sizeof(*jm));
+			sc_list_init(&jm->list);
+			jm->orig = malloc(nextmsgidx);
+			memcpy(jm->orig, cb.buf, nextmsgidx);
+			jm->origlen = nextmsgidx - 1;
+			printf("JM: \"%s\"\n", jm->orig);
+			if (jmsg_parse(jm) < 0) {
+				jmsg_free(jm);
+				goto err;
+			}
+			sc_list_insert_end(list, &jm->list);
+			count += 1;
+
+			/*
+			 * Skip past any possible additional newlines.
+			 */
+			while (nextmsgidx < cb.length &&
+			       cb.buf[nextmsgidx] == '\n')
+				nextmsgidx++;
+
+			/*
+			 * If there is no more data in the buffer, we're good.
+			 * Return.
+			 */
+			if (nextmsgidx == cb.length) {
+				sc_cb_destroy(&cb);
+				return count;
+			}
+
+			/*
+			 * Otherwise, shift data down to
+			 */
+			memmove(cb.buf, &cb.buf[nextmsgidx],
+			        cb.length - nextmsgidx);
+			cb.length -= nextmsgidx;
+			found = memchr(cb.buf, '\n', cb.length);
+		}
+
+		/* Ensure there is space to read more data */
+		if (cb.length == cb.capacity) {
+			cb.capacity *= 2;
+			cb.buf = realloc(cb.buf, cb.capacity);
+		}
+	}
+err:
+	sc_cb_destroy(&cb);
+	return -1;
+}
+
+static struct jmsg *jmsg_first(struct sc_list_head *list)
+{
+	struct jmsg *jm;
+
+	sc_list_for_each_entry(jm, list, list, struct jmsg)
+	{
+		sc_list_remove(&jm->list);
+		return jm;
+	}
+	return NULL;
+}
+
 struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig)
 {
 	struct jmsg *jm;
-	jm = jmsg_read(sig);
-	if (!jm || jmsg_parse(jm) != 0) {
-		jmsg_free(jm);
-		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
-		return NULL;
-	}
-	return jm;
+
+	if ((jm = jmsg_first(&sig->messages)))
+		return jm;
+	if (jmsg_read(sig->fd, &sig->messages) < 0)
+		return NULL; /* need to propagate error */
+	return jmsg_first(&sig->messages);
 }
 
 void jmsg_free(struct jmsg *jm)

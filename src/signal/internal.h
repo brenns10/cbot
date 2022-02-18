@@ -14,9 +14,10 @@ struct cbot_signal_backend {
 	/* The Unix domain socket connecting us to Signald */
 	int fd;
 
-	/* Any data from the last read which hasn't yet been processed */
+	/* Queued messages ready to read */
+	struct sc_list_head messages;
 	char *spill;
-	size_t spilllen;
+	int spilllen;
 
 	/* Ignore DMs? (Useful for running multiple bots on the same acct) */
 	int ignore_dm;
@@ -48,25 +49,9 @@ struct jmsg {
 
 	struct json_token *tok;
 	size_t toklen;
+
+	struct sc_list_head list;
 };
-
-/**
- * Read a JSON message from Signald.
- *
- * This may yield to the event loop waiting for input. It reads until a full
- * line is received, and buffers any remaining data transparently.
- *
- * @param sig Signal backend
- * @return NULL on error, otherwise a struct jmsg ready to parse
- */
-struct jmsg *jmsg_read(struct cbot_signal_backend *sig);
-
-/**
- * Parse a JSON message.
- * @param sig Signal backend
- * @return -1 on error, otherwise 0 and the message is ready for use
- */
-int jmsg_parse(struct jmsg *jm);
 
 /**
  * Combine the read and parse steps together into one.
