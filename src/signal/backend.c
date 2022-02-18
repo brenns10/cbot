@@ -76,6 +76,7 @@ out2:
 	close(backend->fd);
 out1:
 	free(backend->spill);
+	sig_user_free(backend->bot_profile);
 	free(backend);
 	return -1;
 }
@@ -176,6 +177,13 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 		printf("  Number: %s\n", user->number);
 	}
 	sig_user_free_all(&head);
+
+	/* set our bot UUID mention as an alias */
+	user = sig_get_profile(sig, sig->sender);
+	if (user) {
+		cbot_add_alias(sig->bot, mention_format_p(user->uuid, "uuid"));
+		sig->bot_profile = user;
+	}
 }
 
 static void cbot_signal_run(struct cbot *bot)

@@ -7,6 +7,8 @@
 #include <nosj.h>
 #include <sc-collections.h>
 
+struct signal_user;
+
 struct cbot_signal_backend {
 
 	/* The Unix domain socket connecting us to Signald */
@@ -24,6 +26,7 @@ struct cbot_signal_backend {
 
 	/* Phone number of the bot sender */
 	char *sender;
+	struct signal_user *bot_profile;
 
 	/* Reference to the bot */
 	struct cbot *bot;
