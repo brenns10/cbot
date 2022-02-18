@@ -62,7 +62,7 @@ static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig,
 	        "\"get_profile\",\"version\":\"v1\"}\n",
 	        sig->sender, kind, ident);
 
-	jm = jmsg_read_parse(sig);
+	jm = jmsg_next(sig);
 	if (!jm) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		return NULL;
@@ -94,7 +94,7 @@ void sig_list_contacts(struct cbot_signal_backend *sig,
 	        "\n{\"account\":\"%s\",\"type\":\"list_contacts\",\"version\":"
 	        "\"v1\"}\n",
 	        sig->sender);
-	jm = jmsg_read_parse(sig);
+	jm = jmsg_next(sig);
 	ix = jmsg_lookup(jm, "data.profiles");
 	json_array_for_each(ix, jm->tok, ix)
 	{
@@ -139,7 +139,7 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 	        "\"v1\"}\n",
 	        sig->sender);
 
-	jm = jmsg_read_parse(sig);
+	jm = jmsg_next(sig);
 	if (!jm) {
 		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
 		return -1;
@@ -213,7 +213,7 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type)
 	 * processing, then place all unrelated JMSGs on that queue here.
 	 */
 	while (!found) {
-		jm = jmsg_read_parse(sig);
+		jm = jmsg_next(sig);
 		if (!jm) {
 			fprintf(stderr, "sig_expect: error reading jmsg\n");
 			jmsg_free(jm);
@@ -287,7 +287,7 @@ char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind,
 	        "\"version\":\"v1\",\"partial\":{\"%s\":\"%s\"}}\n",
 	        sig->sender, kind, val);
 
-	jm = jmsg_read_parse(sig);
+	jm = jmsg_next(sig);
 	printf("%s\n", jm->orig);
 	if (!jm) {
 		fprintf(stderr,

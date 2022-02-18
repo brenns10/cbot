@@ -156,7 +156,7 @@ static struct jmsg *jmsg_first(struct sc_list_head *list)
 	return NULL;
 }
 
-struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig)
+struct jmsg *jmsg_next(struct cbot_signal_backend *sig)
 {
 	struct jmsg *jm;
 

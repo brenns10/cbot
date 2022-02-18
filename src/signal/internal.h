@@ -54,11 +54,12 @@ struct jmsg {
 };
 
 /**
- * Combine the read and parse steps together into one.
+ * Read the next jmsg from the queue of incoming messages. If there are no
+ * messages in the queue, this will block.
  * @param sig Signal backend
  * @return NULL on error, otherwise a struct jmsg ready to use
  */
-struct jmsg *jmsg_read_parse(struct cbot_signal_backend *sig);
+struct jmsg *jmsg_next(struct cbot_signal_backend *sig);
 
 /**
  * Free a JSON message object, in whatever lifetime state it may be.

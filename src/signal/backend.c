@@ -209,7 +209,7 @@ static void cbot_signal_run(struct cbot *bot)
 	sig_set_name(sig, bot->name);
 
 	while (1) {
-		jm = jmsg_read_parse(sig);
+		jm = jmsg_next(sig);
 		if (!jm)
 			break;
 		handle_incoming(sig, jm);
