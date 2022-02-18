@@ -38,11 +38,13 @@ static struct signal_user *__sig_parse_profile(struct jmsg *jm, size_t ix)
 	user = malloc(sizeof(*user));
 	sc_list_init(&user->list);
 	user->first_name = jmsg_lookup_string_at_len(jm, ix, "name", &namelen);
-	nul = strchr(user->first_name, '\0');
-	if ((nul - user->first_name) < namelen)
-		user->last_name = nul + 1;
-	else
-		user->last_name = NULL;
+	if (user->first_name) {
+		nul = strchr(user->first_name, '\0');
+		if ((nul - user->first_name) < namelen)
+			user->last_name = nul + 1;
+		else
+			user->last_name = NULL;
+	}
 	user->number = jmsg_lookup_string_at(jm, ix, "address.number");
 	user->uuid = jmsg_lookup_string_at(jm, ix, "address.uuid");
 	return user;
