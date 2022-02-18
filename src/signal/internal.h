@@ -62,6 +62,14 @@ struct jmsg {
 struct jmsg *jmsg_next(struct cbot_signal_backend *sig);
 
 /**
+ * Wait for a jmsg of a given type. Other messages are queued.
+ * @param sig Signal backend
+ * @param type Type of message to wait for (from JSON type field)
+ * @return jmsg or NULL on error
+ */
+struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type);
+
+/**
  * Free a JSON message object, in whatever lifetime state it may be.
  * @param jm Message to free.
  */

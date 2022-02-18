@@ -203,38 +203,8 @@ void sig_set_name(struct cbot_signal_backend *sig, const char *name)
 
 void sig_expect(struct cbot_signal_backend *sig, const char *type)
 {
-	struct jmsg *jm;
-	size_t ix_type;
-	bool found = false;
-
-	/*
-	 * TODO: this drops unrelated messages which is... dumb
-	 * Need to redesign JMSG reading so that we queue up JMSGs for
-	 * processing, then place all unrelated JMSGs on that queue here.
-	 */
-	while (!found) {
-		jm = jmsg_next(sig);
-		if (!jm) {
-			fprintf(stderr, "sig_expect: error reading jmsg\n");
-			jmsg_free(jm);
-			return;
-		}
-		ix_type = json_object_get(jm->orig, jm->tok, 0, "type");
-		if (ix_type == 0) {
-			fprintf(stderr, "sig_expect: no \"type\" field found "
-			                "in jmsg\n");
-		} else if (!json_string_match(jm->orig, jm->tok, ix_type,
-		                              type)) {
-			fprintf(stderr,
-			        "sig_expect: expected message type %s, but got "
-			        "something else, waiting still...\n",
-			        type);
-		} else {
-			printf("sig_expect: got message type %s\n", type);
-			found = true;
-		}
-		jmsg_free(jm);
-	}
+	struct jmsg *jm = jmsg_wait(sig, type);
+	jmsg_free(jm);
 }
 
 const static char fmt_send_group[] = ("\n{"

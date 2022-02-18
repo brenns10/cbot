@@ -167,6 +167,43 @@ struct jmsg *jmsg_next(struct cbot_signal_backend *sig)
 	return jmsg_first(&sig->messages);
 }
 
+static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
+{
+	struct jmsg *jm;
+	size_t ix_type;
+
+	sc_list_for_each_entry(jm, list, list, struct jmsg)
+	{
+		ix_type = json_object_get(jm->orig, jm->tok, 0, "type");
+		if (ix_type &&
+		    json_string_match(jm->orig, jm->tok, ix_type, type))
+			return jm;
+	}
+
+	return NULL;
+}
+
+struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
+{
+	struct sc_list_head list;
+	struct jmsg *jm = jmsg_find_type(&sig->messages, type);
+	if (jm)
+		return jm;
+
+	for (;;) {
+		sc_list_init(&list);
+		if (jmsg_read(sig->fd, &list) < 0) {
+			/* make sure we don't leak them */
+			sc_list_move(&list, sig->messages.prev);
+			return NULL;
+		}
+		jm = jmsg_find_type(&list, type);
+		if (jm)
+			return jm;
+		sc_list_move(&list, sig->messages.prev);
+	}
+}
+
 void jmsg_free(struct jmsg *jm)
 {
 	if (jm) {
