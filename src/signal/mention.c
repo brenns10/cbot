@@ -11,13 +11,19 @@
 
 const char MENTION_PLACEHOLDER[] = { 0xEF, 0xBF, 0xBC, 0x00 };
 
-char *mention_format(char *string, const char *prefix)
+char *mention_format_p(char *string, const char *prefix)
 {
 	struct sc_charbuf cb;
 	sc_cb_init(&cb, 64);
 	sc_cb_printf(&cb, "@(%s:%s)", prefix, string);
-	free(string);
 	return cb.buf;
+}
+
+char *mention_format(char *string, const char *prefix)
+{
+	char *res = mention_format_p(string, prefix);
+	free(string);
+	return res;
 }
 
 /*

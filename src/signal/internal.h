@@ -129,8 +129,16 @@ static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 #define MENTION_GROUP 2
 
 /**
- * Formats a mention placeholder.
+ * Formats a mention placeholder, without freeing old string.
  * @param string The value of the mention
+ * @param prefix The prefix to apply (e.g. uuid, group)
+ * @returns A newly allocated string with the mention text.
+ */
+char *mention_format_p(char *string, const char *prefix);
+
+/**
+ * Formats a mention placeholder, freeing old string.
+ * @param string The value of the mention (FREED by this function)
  * @param prefix The prefix to apply (e.g. uuid, group)
  * @returns A newly allocated string with the mention text.
  */
