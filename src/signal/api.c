@@ -11,10 +11,12 @@
 
 void sig_user_free(struct signal_user *user)
 {
-	free(user->first_name);
-	free(user->number);
-	free(user->uuid);
-	free(user);
+	if (user) {
+		free(user->first_name);
+		free(user->number);
+		free(user->uuid);
+		free(user);
+	}
 }
 
 void sig_user_free_all(struct sc_list_head *list)
@@ -102,13 +104,15 @@ void sig_list_contacts(struct cbot_signal_backend *sig,
 void sig_group_free(struct signal_group *grp)
 {
 	size_t i;
-	free(grp->id);
-	free(grp->title);
-	free(grp->invite_link);
-	for (i = 0; i < grp->n_members; i++)
-		free(grp->members[i].uuid);
-	free(grp->members);
-	free(grp);
+	if (grp) {
+		free(grp->id);
+		free(grp->title);
+		free(grp->invite_link);
+		for (i = 0; i < grp->n_members; i++)
+			free(grp->members[i].uuid);
+		free(grp->members);
+		free(grp);
+	}
 }
 
 void sig_group_free_all(struct sc_list_head *list)
