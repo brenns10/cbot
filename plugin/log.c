@@ -4,7 +4,6 @@
 
 #define _XOPEN_SOURCE 700
 
-#include <bits/types/struct_tm.h>
 #include <libconfig.h>
 #include <stdio.h>
 #include <time.h>
