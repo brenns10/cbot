@@ -6,6 +6,13 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.6.2 (2022-02-18)
+------------------
+
+Midnight release:
+- Alpine/Docker change to support native library
+- Fix potential segfault on user name
+
 0.6.1 (2022-02-17)
 ------------------
 
