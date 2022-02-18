@@ -18,6 +18,9 @@ struct cbot_signal_backend {
 	char *spill;
 	size_t spilllen;
 
+	/* Ignore DMs? (Useful for running multiple bots on the same acct) */
+	int ignore_dm;
+
 	/*
 	 * A stdio write stream associated with the above socket. It is in
 	 * unbuffered mode, used to write formatted JSON commands.

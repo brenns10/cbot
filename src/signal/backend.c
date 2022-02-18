@@ -22,6 +22,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	int rv;
 	const char *phone;
 	const char *signald_socket;
+	int ignore_dm = 0;
 
 	rv = config_setting_lookup_string(group, "phone", &phone);
 	if (rv == CONFIG_FALSE) {
@@ -37,6 +38,12 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 		                "type or not exists\n");
 		return -1;
 	}
+
+	config_setting_lookup_bool(group, "ignore_dm", &ignore_dm);
+	if (ignore_dm) {
+		printf("cbot signal: ignoring DMs\n");
+	}
+
 	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
 		fprintf(stderr, "cbot signal: signald socket path too long\n");
 		return -1;
@@ -46,6 +53,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	backend->sender = strdup(phone);
 	backend->spill = malloc(4096);
 	backend->spilllen = 0;
+	backend->ignore_dm = ignore_dm;
 
 	backend->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (backend->fd < 0) {
@@ -105,7 +113,10 @@ static bool should_continue_group(struct cbot_signal_backend *sig,
  */
 static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 {
-	char *msgb, *srcb, *group, *repl;
+	char *msgb = NULL;
+	char *srcb = NULL;
+	char *group = NULL;
+	char *repl;
 	size_t mention_index;
 
 	if (jmsg_parse(jm) != 0)
@@ -121,22 +132,21 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	msgb = repl;
 
 	srcb = jmsg_lookup_string(jm, "data.source.uuid");
-	if (!srcb) {
-		free(msgb);
-		return 0;
-	}
+	if (!srcb)
+		goto out;
 	srcb = mention_format(srcb, "uuid");
 
 	group = jmsg_lookup_string(jm, "data.dataMessage.groupV2.id");
 	if (group) {
-		if (!should_continue_group(sig, group)) {
-			free(msgb);
-			return 0;
-		}
+		if (!should_continue_group(sig, group))
+			goto out;
 		group = mention_format(group, "group");
+	} else if (sig->ignore_dm) {
+		goto out;
 	}
 
 	cbot_handle_message(sig->bot, group ? group : srcb, srcb, msgb, false);
+out:
 	free(group);
 	free(srcb);
 	free(msgb);
