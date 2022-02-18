@@ -1,6 +1,6 @@
 FROM alpine:3.14
 COPY cbot.apk /
-RUN apk add --allow-untrusted ./cbot.apk openjdk8-jre gcompat && rm ./cbot.apk
+RUN apk add --allow-untrusted ./cbot.apk openjdk11-jre gcompat && rm ./cbot.apk
 RUN adduser --disabled-password --uid 1002 cbot && \
     mkdir -p /var/run/signald && \
     chown cbot /var/run/signald

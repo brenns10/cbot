@@ -12,7 +12,7 @@ packages:
   - openssl-dev
   - libucontext-dev
   - sqlite
-  - openjdk8
+  - openjdk11
   - docker
 sources:
   - https://github.com/brenns10/cbot
@@ -83,7 +83,7 @@ tasks:
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       cd ../signald
-      git checkout 0.14.1
+      git checkout 0.17.0
       make installDist
       cp -r build/install/signald ../cbot/deploy/signald
       cd ../cbot/deploy
