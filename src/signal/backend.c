@@ -119,9 +119,6 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	char *repl;
 	size_t mention_index;
 
-	if (jmsg_parse(jm) != 0)
-		return -1;
-
 	msgb = jmsg_lookup_string(jm, "data.dataMessage.body");
 	if (!msgb)
 		return 0;
@@ -214,7 +211,7 @@ static void cbot_signal_run(struct cbot *bot)
 	sig_set_name(sig, bot->name);
 
 	while (1) {
-		jm = jmsg_read(sig);
+		jm = jmsg_read_parse(sig);
 		if (!jm)
 			break;
 		handle_incoming(sig, jm);
