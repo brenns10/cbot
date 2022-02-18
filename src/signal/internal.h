@@ -32,6 +32,10 @@ struct cbot_signal_backend {
 	char *sender;
 	struct signal_user *bot_profile;
 
+	/* Phone number of authorized user */
+	char *auth;
+	struct signal_user *auth_profile;
+
 	/* Reference to the bot */
 	struct cbot *bot;
 };

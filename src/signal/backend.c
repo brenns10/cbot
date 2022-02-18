@@ -21,6 +21,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	struct sockaddr_un addr;
 	int rv;
 	const char *phone;
+	const char *auth = NULL;
 	const char *signald_socket;
 	int ignore_dm = 0;
 
@@ -30,6 +31,8 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 		                "exists\n");
 		return -1;
 	}
+
+	config_setting_lookup_string(group, "auth", &auth);
 
 	rv = config_setting_lookup_string(group, "signald_socket",
 	                                  &signald_socket);
@@ -73,6 +76,8 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 		perror("connect");
 		goto out3;
 	}
+	if (auth)
+		backend->auth = strdup(auth);
 
 	backend->bot = bot;
 	bot->backend = backend;
@@ -189,6 +194,8 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 		cbot_add_alias(sig->bot, mention_format_p(user->uuid, "uuid"));
 		sig->bot_profile = user;
 	}
+
+	sig->auth_profile = sig_get_profile(sig, sig->auth);
 }
 
 static void cbot_signal_run(struct cbot *bot)
@@ -248,11 +255,33 @@ static void cbot_signal_nick(const struct cbot *bot, const char *newnick)
 	cbot_set_nick((struct cbot *)bot, newnick);
 }
 
+static int cbot_signal_is_authorized(const struct cbot *bot, const char *sender,
+                                     const char *message)
+{
+	struct cbot_signal_backend *sig = bot->backend;
+	int kind, rv = 0;
+	char *uuid;
+
+	if (!sig->auth_profile)
+		return 0;
+
+	uuid = mention_parse(sender, &kind, NULL);
+	if (kind != MENTION_USER) {
+		free(uuid);
+		return 0;
+	}
+
+	if (strcmp(uuid, sig->auth_profile->uuid) == 0)
+		rv = 1;
+	free(uuid);
+	return rv;
+}
+
 struct cbot_backend_ops signal_ops = {
 	.name = "signal",
 	.configure = cbot_signal_configure,
 	.run = cbot_signal_run,
 	.send = cbot_signal_send,
 	.nick = cbot_signal_nick,
-	.is_authorized = NULL,
+	.is_authorized = cbot_signal_is_authorized,
 };
