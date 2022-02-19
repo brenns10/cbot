@@ -71,7 +71,8 @@ static int birthday_get_month(struct cbot *bot, int month,
 static int birthday_get_all(struct cbot *bot, struct sc_list_head *res)
 {
 	CBOTDB_QUERY_FUNC_BEGIN(bot, struct birthday,
-	                        "SELECT name, month, day FROM birthday;");
+	                        "SELECT name, month, day FROM birthday "
+	                        "ORDER BY month, day ASC;");
 	CBOTDB_LIST_RESULT(bot, res, CBOTDB_OUTPUT(text, 0, name);
 	                   CBOTDB_OUTPUT(int, 1, month);
 	                   CBOTDB_OUTPUT(int, 2, day););
@@ -118,7 +119,7 @@ static void cmd_bd_del(struct cbot_message_event *event)
 		          "Deleted %d birthday records", amt);
 	else
 		cbot_send(event->bot, event->channel,
-		          "Didn't find any matchingr ecords");
+		          "Didn't find any matching records");
 }
 
 static void cmd_bd_all(struct cbot_message_event *event)
@@ -134,7 +135,6 @@ static void cmd_bd_all(struct cbot_message_event *event)
 		count++;
 		cbot_send_rl(event->bot, event->channel, "%s on %d/%d", b->name,
 		             b->month, b->day);
-		printf("%s: %d/%d\n", b->name, b->month, b->day);
 		free(b->name);
 		free(b);
 	}
@@ -150,8 +150,7 @@ static void cmd_bd_add(struct cbot_message_event *event)
 
 	date = sc_regex_get_capture(event->message, event->indices, 0);
 	name = sc_regex_get_capture(event->message, event->indices, 1);
-	int rv = sscanf(date, "%d/%d", &month, &day);
-	printf("%s %d\n", date, rv);
+	sscanf(date, "%d/%d", &month, &day);
 
 	if (month < 1 || month > 12) {
 		cbot_send(event->bot, event->channel, "%d is not a valid month",
