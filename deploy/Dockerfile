@@ -11,6 +11,7 @@ RUN wget https://github.com/brenns10/libsignal-client-alpine/raw/master/0.12.3/l
     rm libsignal_jni.so
 COPY run.sh /bin/
 RUN chmod 755 /bin/run.sh
+RUN mkdir /var/cores && chmod 777 /var/cores
 
 USER cbot
 WORKDIR /home/cbot

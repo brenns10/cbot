@@ -20,7 +20,7 @@ build() {
 		--sysconfdir=/etc \
 		--mandir=/usr/share/man \
 		--localstatedir=/var \
-		--buildtype=plain \
+		--buildtype=debugoptimized \
 		$pkgname-$pkgver output \
                 -Ddefault_library=static
         # default_library=static: any dependency we pull in via subproject
