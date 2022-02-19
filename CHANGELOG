@@ -6,6 +6,21 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.7.0 (2022-02-18)
+------------------
+
+New Plugin, birthday!
+- Tracks birthdays stored in database
+- Every day at configurable time, sends happy birthday messages for relevant
+  people
+- Sends a monthly overview message
+- Allows management by me
+
+Signal backend is improved so that waiting for a response from signald does not
+drop messages which were sent in the meantime.
+
+Cbot gained rate limited message support.
+
 0.6.2 (2022-02-18)
 ------------------
 
