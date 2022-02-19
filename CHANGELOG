@@ -6,8 +6,8 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
-0.7.1 (2022-02-19)
-------------------
+0.7.{1,2} (2022-02-19)
+----------------------
 
 Packaging changes to allow core dumps, and debuginfo.
 
