@@ -68,6 +68,39 @@ static int birthday_add(struct cbot *bot, char *name, int month, int day)
 	CBOTDB_NO_RESULT();
 }
 
+static int _birthday_del(struct cbot *bot, char *name)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void,
+	                        "DELETE FROM birthday "
+	                        "WHERE name=$name;");
+	CBOTDB_BIND_ARG(text, name);
+	CBOTDB_NO_RESULT();
+}
+
+static int _changes(struct cbot *bot)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, void, "SELECT changes;");
+	CBOTDB_SINGLE_INTEGER_RESULT();
+}
+
+static int birthday_del(struct cbot *bot, char *name)
+{
+	_birthday_del(bot, name);
+	return _changes(bot);
+}
+
+static void cmd_bd_del(struct cbot_message_event *event)
+{
+	char *name = sc_regex_get_capture(event->message, event->indices, 0);
+	int amt = birthday_del(event->bot, name);
+	if (amt)
+		cbot_send(event->bot, event->channel,
+		          "Deleted %d birthday records", amt);
+	else
+		cbot_send(event->bot, event->channel,
+		          "Didn't find any matchingr ecords");
+}
+
 static void cmd_bd_all(struct cbot_message_event *event)
 {
 	struct sc_list_head res;
@@ -214,6 +247,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	              "birthday add ([0-9]+/[0-9]+) (.*)");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_all, NULL,
 	              "birthday list");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_del, NULL,
+	              "birthday remove (.*)");
 	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), bd_thread, arg);
 
 	return 0;
