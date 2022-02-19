@@ -35,6 +35,13 @@ struct birthday {
 	struct sc_list_head list;
 };
 
+const char *months[] = {
+	[1] = "January",  [2] = "February",  [3] = "March",
+	[4] = "April",    [5] = "May",       [6] = "June",
+	[7] = "July",     [8] = "August",    [9] = "September",
+	[10] = "October", [11] = "November", [12] = "December",
+};
+
 static int birthday_get_day(struct cbot *bot, int month, int day,
                             struct sc_list_head *res)
 {
@@ -43,6 +50,19 @@ static int birthday_get_day(struct cbot *bot, int month, int day,
 	                        "WHERE month=$month AND day=$day;");
 	CBOTDB_BIND_ARG(int, month);
 	CBOTDB_BIND_ARG(int, day);
+	CBOTDB_LIST_RESULT(bot, res, CBOTDB_OUTPUT(text, 0, name);
+	                   CBOTDB_OUTPUT(int, 1, month);
+	                   CBOTDB_OUTPUT(int, 2, day););
+}
+
+static int birthday_get_month(struct cbot *bot, int month,
+                              struct sc_list_head *res)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, struct birthday,
+	                        "SELECT name, month, day FROM birthday "
+	                        "WHERE month=$month "
+	                        "ORDER BY day ASC;");
+	CBOTDB_BIND_ARG(int, month);
 	CBOTDB_LIST_RESULT(bot, res, CBOTDB_OUTPUT(text, 0, name);
 	                   CBOTDB_OUTPUT(int, 1, month);
 	                   CBOTDB_OUTPUT(int, 2, day););
@@ -163,10 +183,13 @@ static void bd_thread(void *arg)
 	struct timespec to;
 	time_t cur;
 	struct tm tm;
-	int rep_month, rep_day;
+	int rep_month, rep_day, count;
 	struct sc_list_head res;
 	struct birthday *b, *n;
 	struct sc_lwt *tsk = sc_lwt_current();
+	struct sc_charbuf cb;
+
+	sc_cb_init(&cb, 1024);
 
 	/* If started end of report loop, don't try to send birthday */
 	cur = time(NULL);
@@ -194,22 +217,49 @@ static void bd_thread(void *arg)
 
 		/* if it is 9 o'clock of a different day to what we last
 		 * reported, go! */
-		if (tm.tm_mon != rep_month && tm.tm_mday != rep_day &&
-		    tm.tm_hour == a->hour && tm.tm_min >= a->min) {
-			sc_list_init(&res);
-			birthday_get_day(a->bot, tm.tm_mon, tm.tm_mday, &res);
-			sc_list_for_each_safe(b, n, &res, list, struct birthday)
-			{
-				cbot_send(a->bot, a->channel,
-				          "🎊 Happy Birthday, %s! 🎊", b->name);
-				free(b->name);
-				free(b);
-			}
-			rep_month = tm.tm_mon;
-			rep_day = tm.tm_mday;
+		if (!(tm.tm_mon != rep_month && tm.tm_mday != rep_day &&
+		      tm.tm_hour == a->hour && tm.tm_min >= a->min))
+			continue;
+
+		sc_list_init(&res);
+		birthday_get_day(a->bot, tm.tm_mon, tm.tm_mday, &res);
+		sc_list_for_each_safe(b, n, &res, list, struct birthday)
+		{
+			cbot_send(a->bot, a->channel, "🎊 Happy Birthday, %s! 🎊",
+			          b->name);
+			free(b->name);
+			free(b);
 		}
+		rep_month = tm.tm_mon;
+		rep_day = tm.tm_mday;
+
+		/* Now, we want to find out if tomorrow is the first of the
+		 * month. If so, and if we have birthdays, send a message with
+		 * the list of birthdays.
+		 */
+		cur += 86400;
+		localtime_r(&cur, &tm);
+		tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
+		if (tm.tm_mday != 1)
+			continue;
+		sc_list_init(&res);
+		birthday_get_month(a->bot, tm.tm_mon, &res);
+		sc_cb_clear(&cb);
+		sc_cb_printf(&cb, "%s birthdays:\n", months[tm.tm_mon]);
+		count = 0;
+		sc_list_for_each_safe(b, n, &res, list, struct birthday)
+		{
+			sc_cb_printf(&cb, "%d/%d: %s\n", b->month, b->day,
+			             b->name);
+			count++;
+			free(b->name);
+			free(b);
+		}
+		if (count)
+			cbot_send(a->bot, a->channel, "%s", cb.buf);
 	}
 
+	sc_cb_destroy(&cb);
 	free(a->channel);
 	free(a);
 }
