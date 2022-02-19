@@ -110,6 +110,7 @@ plugins = [
   'sqlknow',
   'weather',
   'aqi',
+  'birthday',
 ]
 plugin_libs = []
 foreach f: plugins
