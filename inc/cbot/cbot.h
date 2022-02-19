@@ -90,6 +90,12 @@ struct cbot_user_info {
  */
 void cbot_send(const struct cbot *bot, const char *dest, const char *format,
                ...);
+
+/**
+ * Send a message to a destination, rate limited.
+ * Same args as cbot_send.
+ */
+void cbot_send_rl(struct cbot *cbot, const char *dest, const char *format, ...);
 /**
  * Send a "me" (action) message to a destination.
  * @param bot The bot provided in the event struct.

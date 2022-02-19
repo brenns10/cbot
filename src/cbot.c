@@ -26,6 +26,12 @@ struct cbot_backend_ops *all_ops[] = {
 	&signal_ops,
 };
 
+struct cbot_qmsg {
+	char *msg;
+	char *dest;
+	struct sc_list_head list;
+};
+
 /********
  * Functions which plugins can call to perform actions. These are generally
  * delegated to the backends.
@@ -42,6 +48,59 @@ void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
 	cbot->backend_ops->send(cbot, dest, cb.buf);
 	sc_cb_destroy(&cb);
 	va_end(va);
+}
+
+static void cbot_sender_thread(void *arg)
+{
+	struct cbot *bot = arg;
+	struct cbot_qmsg *qm, *tmp;
+	struct sc_lwt *tsk = sc_lwt_current();
+	struct timespec to;
+
+	for (;;) {
+		to.tv_nsec = 1000 * 1000 * 200; /* 5 per secnd */
+		to.tv_sec = 0;
+		/* only queue us up if we have queued messages */
+		if (bot->msgq.next != &bot->msgq)
+			sc_lwt_settimeout(tsk, &to);
+		sc_lwt_set_state(tsk, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		if (sc_lwt_shutting_down())
+			break;
+
+		qm = NULL;
+		sc_list_for_each_entry(tmp, &bot->msgq, list, struct cbot_qmsg)
+		{
+			qm = tmp;
+			break;
+		}
+		if (!qm)
+			continue;
+		sc_list_remove(&qm->list);
+		/* clang-tidy can't handle this, thinks i freed qm */
+		cbot_send(bot, qm->dest, "%s", qm->msg); // NOLINT
+		printf("Send queued message\n");
+		free(qm->msg);
+		free(qm->dest);
+		free(qm);
+	}
+}
+
+void cbot_send_rl(struct cbot *cbot, const char *dest, const char *format, ...)
+{
+	va_list va;
+	struct sc_charbuf cb;
+	struct cbot_qmsg *qm = calloc(1, sizeof(*qm));
+	sc_list_init(&qm->list);
+	va_start(va, format);
+	sc_cb_init(&cb, 1024);
+	sc_cb_vprintf(&cb, (char *)format, va);
+	va_end(va);
+	qm->dest = strdup(dest);
+	qm->msg = cb.buf;
+	// do not destroy cb!
+	sc_list_insert_end(&cbot->msgq, &qm->list);
+	sc_lwt_set_state(cbot->msgq_thread, SC_LWT_RUNNABLE);
 }
 
 void cbot_me(const struct cbot *cbot, const char *dest, const char *format, ...)
@@ -128,6 +187,7 @@ struct cbot *cbot_create(void)
 	}
 	sc_list_init(&cbot->init_channels);
 	sc_list_init(&cbot->plugins);
+	sc_list_init(&cbot->msgq);
 	sc_arr_init(&cbot->aliases, 8, sizeof(char *));
 	return cbot;
 }
@@ -237,6 +297,9 @@ int cbot_load_plugins(struct cbot *bot, config_setting_t *group);
 static void cbot_run_in_lwt(struct cbot *bot)
 {
 	struct timespec t;
+
+	bot->msgq_thread = sc_lwt_create_task(cbot_get_lwt_ctx(bot),
+	                                      cbot_sender_thread, bot);
 	bot->backend_ops->run(bot);
 	CL_DEBUG("Sending shutdown signal and waiting...\n");
 	sc_lwt_send_shutdown_signal();

@@ -79,8 +79,8 @@ static void cmd_bd_all(struct cbot_message_event *event)
 	sc_list_for_each_safe(b, n, &res, list, struct birthday)
 	{
 		count++;
-		cbot_send(event->bot, event->channel, "%s on %d/%d", b->name,
-		          b->month, b->day);
+		cbot_send_rl(event->bot, event->channel, "%s on %d/%d", b->name,
+		             b->month, b->day);
 		printf("%s: %d/%d\n", b->name, b->month, b->day);
 		free(b->name);
 		free(b);

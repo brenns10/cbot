@@ -91,6 +91,9 @@ struct cbot {
 	struct sc_lwt_ctx *lwt_ctx;
 	struct sc_lwt *lwt;
 
+	struct sc_lwt *msgq_thread;
+	struct sc_list_head msgq;
+
 	CURLM *curlm;
 	struct sc_lwt *curl_lwt;
 };
