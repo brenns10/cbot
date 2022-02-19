@@ -127,20 +127,32 @@ static void cmd_bd_all(struct cbot_message_event *event)
 	struct sc_list_head res;
 	struct birthday *b, *n;
 	int count = 0;
+	int permsg = 0;
+	struct sc_charbuf cb;
 
+	sc_cb_init(&cb, 1024);
 	sc_list_init(&res);
 	birthday_get_all(event->bot, &res);
+	sc_cb_printf(&cb, "All birthdays\n");
 	sc_list_for_each_safe(b, n, &res, list, struct birthday)
 	{
 		count++;
-		cbot_send_rl(event->bot, event->channel, "%s on %d/%d", b->name,
-		             b->month, b->day);
+		permsg++;
+		sc_cb_printf(&cb, "%d/%d: %s\n", b->month, b->day, b->name);
+		if (permsg >= 5) {
+			cbot_send_rl(event->bot, event->channel, "%s", cb.buf);
+			sc_cb_clear(&cb);
+			permsg = 0;
+		}
 		free(b->name);
 		free(b);
 	}
 	if (!count)
 		cbot_send(event->bot, event->channel,
 		          "I have no birthdays recorded");
+	else if (permsg)
+		cbot_send_rl(event->bot, event->channel, "%s", cb.buf);
+	sc_cb_destroy(&cb);
 }
 
 static void cmd_bd_add(struct cbot_message_event *event)
