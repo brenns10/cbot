@@ -176,8 +176,10 @@ static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
 	{
 		ix_type = json_object_get(jm->orig, jm->tok, 0, "type");
 		if (ix_type &&
-		    json_string_match(jm->orig, jm->tok, ix_type, type))
+		    json_string_match(jm->orig, jm->tok, ix_type, type)) {
+			sc_list_remove(&jm->list);
 			return jm;
+		}
 	}
 
 	return NULL;
