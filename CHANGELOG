@@ -6,6 +6,12 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.7.3 (2022-02-19)
+------------------
+
+Signal: Fix bug in queued message handling which sometimes resulted in
+double-free.
+
 0.7.{1,2} (2022-02-19)
 ----------------------
 
