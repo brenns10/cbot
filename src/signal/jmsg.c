@@ -200,9 +200,9 @@ struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
 			return NULL;
 		}
 		jm = jmsg_find_type(&list, type);
+		sc_list_move(&list, sig->messages.prev);
 		if (jm)
 			return jm;
-		sc_list_move(&list, sig->messages.prev);
 	}
 }
 
