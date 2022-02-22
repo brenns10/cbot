@@ -127,3 +127,9 @@ endforeach
 
 install_headers('inc/cbot/cbot.h', subdir : 'cbot')
 install_headers('inc/cbot/db.h', subdir : 'cbot')
+
+if get_option('doc')
+	subdir('doc')
+else
+	message('Documentation will not be built. Use -Ddoc to build it.')
+endif

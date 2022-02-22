@@ -29,8 +29,8 @@ tools, but the authoritative source is the [sqlite docs][1].
 The following plugins make use of the database and would be a good reference for
 the tools documented below:
 
-- [plugin/sqlkarma.c](../plugin/sqlkarma.c)
-- [plugin/sqlknow.c](../plugin/sqlknow.c)
+- `plugin/sqlkarma.c`
+- `plugin/sqlknow.c`
 
 ### Table registration and migration
 
@@ -45,8 +45,7 @@ migrate the old schema to the new one.
 
 Running queries in sqlite is a bit tedious, so CBot contains a macro system to
 allow you to generate functions which execute a query and return a result. I
-won't bother to go into many details, just read
-[inc/cbot/db.h](../inc/cbot/db.h).
+won't bother to go into many details, just read `inc/cbot/db.h`.
 
 Lightweight Threads
 -------------------
@@ -70,7 +69,7 @@ Note that if a plugin would like to call ANY function which would block (such as
 libcurl) then it should make sure that it is async-safe and integrated with
 sc-lwt, and they need to do it off the main lwt.
 
-A great basic lwt example is [plugin/annoy.c](../plugin/annoy.c).
+A great basic lwt example is `plugin/annoy.c`.
 
 HTTP Requests: libcurl
 ----------------------
@@ -87,11 +86,11 @@ without writing tons of callbacks.
   actions on that thread.
 * Create an "easy handle" (see [cURL easy overview][2]) for your request, but
   rather than using `curl_easy_perform()` use `cbot_curl_perform()` (see
-  [inc/cbot/curl.h](../inc/cbot/curl.h)).
+  `inc/cbot/curl.h`).
 
 [2]: https://curl.se/libcurl/c/libcurl-easy.html
 
-Check out [plugin/weather.c](../plugin/weather.c) for a curl example.
+Check out `plugin/weather.c` for a curl example.
 
 Tokenizing
 ----------
@@ -102,8 +101,8 @@ string, and gives you an array of tokens which were delimited by whitespace. The
 tokenizer supports basic quoting to allow whitespace in your arguments, and
 that's about it.
 
-Check out [plugin/tok.c](../plugin/tok.c) to see the tokenizer in action.
-It's implemented in [src/tok.c](../src/tok.c), which is worth reading.
+Check out `plugin/tok.c` to see the tokenizer in action.
+It's implemented in `src/tok.c`, which is worth reading.
 
 Dynamic Formatting
 ------------------
@@ -123,4 +122,4 @@ The `cbot_format()` API takes a formatter function, which gets called for each
 curly brace expansion and can append whatever it wants into the string builder /
 charbuf.
 
-See it in action in [plugin/reply.c](../plugin/reply.c).
+See it in action in `plugin/reply.c`.

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -x
+@DOXYGEN_CMD@ @DOXYGEN_CONF@
+@SPHINX_CMD@ -W -j auto @SRCDIR@ @OUTDIR@
