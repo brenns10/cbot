@@ -116,9 +116,8 @@ specifies each plugin which is loaded. Each plugin named in this mapping will be
 loaded. The plugin can be mapped to an empty config dict for plugins with no
 options, for example:
 
-```
+.. code::
 
-  help: {};
-```
+    help: {};
 
 Plugins which require configurations should stick it in these objects.

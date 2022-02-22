@@ -6,7 +6,7 @@ Welcome to CBot's Documentation!
    :caption: Contents:
 
    User
-   Install
+   admin
    Development
    Plugins
    Plugins-2

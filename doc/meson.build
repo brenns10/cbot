@@ -75,9 +75,10 @@ doxygen_target = custom_target(
 sphinx_files = [
 	'index.rst',
 	'Development.md',
-	'Install.md',
 	'Plugins.md',
 	'Plugins-2.md',
+	'User.md',
+	'admin.rst',
 ]
 foreach file : sphinx_files
 	configure_file(input: file, output: file, copy: true)
