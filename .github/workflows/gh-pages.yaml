@@ -1,0 +1,32 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Environment
+        run: |
+          sudo apt install -y python3-pip doxygen meson ninja gcc libconfig-dev libsqlite3-dev libcurl-dev
+          sudo pip install sphinx breathe
+
+      - name: Build
+        run: |
+          meson build -Ddoc=true
+          ninja -C build docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/doc/doc/
