@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>How to write a CBot Plugin &#8212; cbot 0.7.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Plugins - Advanced Topics" href="Plugins-2.html" />
+    <link rel="prev" title="Development" href="Development.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-to-write-a-cbot-plugin">
+<h1>How to write a CBot Plugin<a class="headerlink" href="#how-to-write-a-cbot-plugin" title="Permalink to this headline">¶</a></h1>
+<p>CBot has a quite pleasant plugin system. If you’re familiar with C, you’re able
+to extend the bot quite a bit. Follow this guide to learn the basics of CBot
+plugin development.</p>
+<p>To drive this tutorial, we will try to build a “hello world” plugin. This plugin
+will simply reply to any message which says “hello” and respond “world”. While
+the functionality itself is pretty silly, once you can do this, you’ll be able
+to start making much more interesting stuff.</p>
+<p>As a prerequisite, this guide assumes you are able to use the build system to
+compile CBot.</p>
+<section id="step-1-plugin-structure">
+<h2>Step 1: Plugin structure<a class="headerlink" href="#step-1-plugin-structure" title="Permalink to this headline">¶</a></h2>
+<p>The best way to write a CBot plugin is “in-tree”, that is by writing it within
+this repository. Just create a file “plugin/hello.c”.</p>
+<p><strong>Aside:</strong> whatever name you choose for your plugin (not including the <code class="docutils literal notranslate"><span class="pre">.c</span></code> file
+extension) should be a valid C identifier, more or less. This will allow it to
+be included in the configuration file.</p>
+<p>Here is a completely blank, minimal plugin, which does nothing:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &quot;cbot/cbot.h&quot;
+
+static int load(struct cbot_plugin *plugin, config_setting_t *conf)
+{
+    return 0;
+}
+
+struct cbot_plugin_ops ops = {
+    .load=load,
+};
+</pre></div>
+</div>
+<p>Save that as your plugin file, and then add a your plugin name to the <code class="docutils literal notranslate"><span class="pre">plugins</span></code>
+list in the <code class="docutils literal notranslate"><span class="pre">meson.build</span></code> file at the root of this repository. When you
+recompile (<code class="docutils literal notranslate"><span class="pre">ninja</span> <span class="pre">-C</span> <span class="pre">build</span></code>), the build system will detect a change and
+reconfigure itself. Then it should compile everything, along with your new
+plugin. You’ll find the compiled plugin at <code class="docutils literal notranslate"><span class="pre">build/hello.so</span></code>.</p>
+</section>
+<section id="step-2-ops-struct-and-load">
+<h2>Step 2: ops Struct and load()<a class="headerlink" href="#step-2-ops-struct-and-load" title="Permalink to this headline">¶</a></h2>
+<p>The above plugin file contained an empty function and a struct declaration.
+These are the minimal items for a plugin. When CBot loads your plugin, it
+searches for a symbol named <code class="docutils literal notranslate"><span class="pre">ops</span></code>, and expects it to be of type <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_plugin_ops</span></code>. You can see the definition of this type in <code class="docutils literal notranslate"><span class="pre">inc/cbot/cbot.h</span></code>,
+but here it is with docstrings removed:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct cbot_plugin_ops {
+    char *description;
+    int (*load)(struct cbot_plugin *plugin, config_setting_t *config);
+    void (*unload)(struct cbot_plugin *plugin);
+    void (*help)(struct cbot_plugin *plugin, const char *target);
+};
+</pre></div>
+</div>
+<p>All of the fields are optional, except for <code class="docutils literal notranslate"><span class="pre">load</span></code>, which is the one we’ll focus
+on right now. This function should do any initialization tasks for the plugin.
+This is the place where a plugin should tell the bot that it would like to
+respond to certain types of messages or events. <em>If you don’t register any
+handlers for events here, the plugin will never get called again.</em> So, our empty
+load() function above is a bit silly, but it’s perfectly valid. The plugin
+simply does nothing.</p>
+<p>There are two important arguments to the load() function: a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_plugin</span></code>
+pointer, and a <code class="docutils literal notranslate"><span class="pre">config_setting_t</span></code> pointer. The plugin struct looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct cbot_plugin {
+    struct cbot_plugin_ops *ops;
+    void *data;
+    struct cbot *bot;
+};
+</pre></div>
+</div>
+<p>An instance of this struct is allocated for each instance of the plugin which is
+loaded. The <code class="docutils literal notranslate"><span class="pre">ops</span></code> pointer should simply point to the variable defined at the
+bottom of the file. <code class="docutils literal notranslate"><span class="pre">data</span></code> will be NULL, but can be used by the plugin to store
+data for later. Finally, the <code class="docutils literal notranslate"><span class="pre">bot</span></code> pointer points to the main struct of <code class="docutils literal notranslate"><span class="pre">cbot</span></code>,
+which is used for most bot actions like sending messages.</p>
+<p>The plugin may modify any field of the plugin struct as it wants. CBot will use
+the <code class="docutils literal notranslate"><span class="pre">ops</span></code> that are currently in the plugin struct, so if the bot would like to
+dynamically change behavior, that’s ok. CBot does not rely on the <code class="docutils literal notranslate"><span class="pre">bot</span></code> pointer
+within the plugin, but it’s in a plugin’s best interest to leave that alone. If
+a plugin overwrites it, calling API functions will become much more difficult.</p>
+<p>The second argument is a <code class="docutils literal notranslate"><span class="pre">config_setting_t</span> <span class="pre">*</span></code>, which is an element from
+<a class="reference external" href="http://hyperrealm.github.io/libconfig/">libconfig</a>. I won’t cover that at all,
+except to mention that this points to plugin-specific configuration, and can be
+accessed using any libconfig function you want.</p>
+</section>
+<section id="step-3-registering-handlers">
+<h2>Step 3: Registering handlers<a class="headerlink" href="#step-3-registering-handlers" title="Permalink to this headline">¶</a></h2>
+<p>Now that we know what load() is, let’s use it to register a “handler”. CBot lets
+us handle a few different types of events (see <code class="docutils literal notranslate"><span class="pre">enum</span> <span class="pre">cbot_event_type</span></code>) but the
+most important two are <code class="docutils literal notranslate"><span class="pre">CBOT_MESSAGE</span></code> and <code class="docutils literal notranslate"><span class="pre">CBOT_ADDRESSED</span></code>. <code class="docutils literal notranslate"><span class="pre">CBOT_MESSAGE</span></code> is an
+event which triggers on every single message: direct message, channel message,
+etc. <code class="docutils literal notranslate"><span class="pre">CBOT_ADDRESSED</span></code> is a special event which only triggers on a subset of
+messages: those which are “addressed” to the bot. Here are some examples of
+“addressed” messages:</p>
+<ul class="simple">
+<li><p>Message in a channel: <code class="docutils literal notranslate"><span class="pre">cbot:</span> <span class="pre">hello!</span></code></p></li>
+<li><p>Message in a channel: <code class="docutils literal notranslate"><span class="pre">cbot</span> <span class="pre">hello!</span></code></p></li>
+<li><p>Direct message to cbot: <code class="docutils literal notranslate"><span class="pre">hello!</span></code></p></li>
+</ul>
+<p>All three of the above messages would generate the same <code class="docutils literal notranslate"><span class="pre">CBOT_ADDRESSED</span></code> event,
+and the contents of the message would be trimmed to remove the bot’s name. This
+allows plugin authors to respond to messages directed at the bot, without
+knowing about the bot’s current username, and without having to filter out
+irrelevant messages.</p>
+<p>In our case, we want to respond to any message which says “hello” – not just
+those which are addressed to us. So, we should register a handler for
+<code class="docutils literal notranslate"><span class="pre">CBOT_MESSAGE</span></code>.</p>
+<p>For message events, CBot lets you specify a regular expression to filter
+messages further by their contents. Your handler will only be called if the full
+contents of the message matches this regex. We will simply specify a regex of
+<code class="docutils literal notranslate"><span class="pre">hello</span></code> to make our plugin nice and easy.</p>
+<p>A handler function, to CBot, is a function which takes a two arguments:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_event</span> <span class="pre">*event</span></code>: this is a general purpose event struct. Different
+types of events have more specialized versions with different fields. The
+event struct has a <code class="docutils literal notranslate"><span class="pre">bot</span></code> field, a <code class="docutils literal notranslate"><span class="pre">plugin</span></code> field, and a <code class="docutils literal notranslate"><span class="pre">type</span></code> field which
+tells you the event type. For message events, you can cast this to a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_message_event</span></code> which further contains strings <code class="docutils literal notranslate"><span class="pre">channel</span></code>, <code class="docutils literal notranslate"><span class="pre">username</span></code>,
+<code class="docutils literal notranslate"><span class="pre">message</span></code>, and some other fields we won’t discuss.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*user</span></code>: this is given to CBOT when you register the handler. It can be
+used to store handler-specific data.</p></li>
+</ul>
+<p>With this information, the handler registration function should be clear:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct cbot_handler *cbot_register(struct cbot_plugin *plugin,
+                                   enum cbot_event_type type,
+                                   cbot_handler_t handler, void *user,
+                                   char *regex);
+</pre></div>
+</div>
+<p>The first argument is the plugin doing the registration. type is the event type,
+handler is the function to be called, user is the user data, and regex is the
+(optional) regex to filter messages by. Let’s put this together and register a
+hypothetical handler:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static int load(struct cbot_plugin *plugin, config_setting_t *conf)
+{
+    cbot_register(plugin, CBOT_MESSAGE, (cbot_handler_t)say_hello, NULL,
+                  &quot;hello&quot;);
+    return 0;
+}
+</pre></div>
+</div>
+</section>
+<section id="step-4-handler-function">
+<h2>Step 4: Handler function<a class="headerlink" href="#step-4-handler-function" title="Permalink to this headline">¶</a></h2>
+<p>Finally, let’s look at the handler function for our plugin:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static void say_hello(struct cbot_message_event *event, void *user)
+{
+    cbot_send(event-&gt;bot, event-&gt;channel, &quot;world&quot;);
+}
+</pre></div>
+</div>
+<p>First, note that our first argument is not <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_event</span></code>, it is <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_message_event</span></code>. We can do this because our handler only handles messages,
+but the downside is that we had to cast this function to <code class="docutils literal notranslate"><span class="pre">(cbot_handler_t)</span></code>
+when it was registered above.</p>
+<p>The remainder of this function seems pretty obvious: send the message “world” to
+the channel in which the original message came in from.</p>
+</section>
+<section id="step-5-compile-and-run">
+<h2>Step 5: Compile and run<a class="headerlink" href="#step-5-compile-and-run" title="Permalink to this headline">¶</a></h2>
+<p>Now that we have a complete plugin, we should compile it and run it. Use <code class="docutils literal notranslate"><span class="pre">ninja</span> <span class="pre">-C</span> <span class="pre">build</span></code> to compile the plugin. Running it is as simple as adding a line in the
+<code class="docutils literal notranslate"><span class="pre">plugins</span></code> group of your config file:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hello: {};
+</pre></div>
+</div>
+<p>Notice the empty <code class="docutils literal notranslate"><span class="pre">{}</span></code> group – any configuration inside of this would go
+directly to the <code class="docutils literal notranslate"><span class="pre">conf</span></code> variable in the <code class="docutils literal notranslate"><span class="pre">load()</span></code> function – neat, right?</p>
+<p>Anyway, if you don’t have a configuration yet, this would be a good baseline to
+start testing outside of IRC. Save it as <code class="docutils literal notranslate"><span class="pre">cli.cfg</span></code>. You can add more plugins
+too, if you so desire.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cbot: {
+  name = &quot;cbot&quot;;
+  channels = (
+    { name = &quot;stdin&quot; },
+  );
+  backend = &quot;cli&quot;;
+  plugin_dir = &quot;build&quot;;
+  db = &quot;cli.sqlite3&quot;;
+};
+cli: {};
+plugins: {
+  hello: {};
+};
+</pre></div>
+</div>
+<p>After compiling, run <code class="docutils literal notranslate"><span class="pre">build/cbot</span> <span class="pre">cli.cfg</span></code> and you should have a CLI chat with
+cbot in it. If you see the following message (with no errors after it), then you
+know your plugin has been loaded:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>attempting to load symbol ops from build/hello.so
+</pre></div>
+</div>
+<p>You should be able to type “hello” and get a response from cbot:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt; hello
+[stdin]cbot: world
+&gt;
+</pre></div>
+</div>
+<p>And that’s it, you’ve written your first plugin!</p>
+<p>Next up, take a browse through <a class="reference internal" href="Plugins-2.html"><span class="doc std std-doc">Plugins-2.md</span></a> to learn some
+advanced topics and APIs which help you make great plugins.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cbot</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Development.html">Development</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to write a CBot Plugin</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-plugin-structure">Step 1: Plugin structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-ops-struct-and-load">Step 2: ops Struct and load()</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-registering-handlers">Step 3: Registering handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-4-handler-function">Step 4: Handler function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-5-compile-and-run">Step 5: Compile and run</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Plugins-2.html">Plugins - Advanced Topics</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="Development.html" title="previous chapter">Development</a></li>
+      <li>Next: <a href="Plugins-2.html" title="next chapter">Plugins - Advanced Topics</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Stephen Brennan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/Plugins.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

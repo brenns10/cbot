@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Plugins - Advanced Topics &#8212; cbot 0.7.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="How to write a CBot Plugin" href="Plugins.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="plugins-advanced-topics">
+<h1>Plugins - Advanced Topics<a class="headerlink" href="#plugins-advanced-topics" title="Permalink to this headline">¶</a></h1>
+<p>This document is not particularly detailed. It’s intended to give you an idea
+for the tools that CBot contains to help you write plugins. Rather than give
+detailed code examples, I’ll point to plugins you should read to learn more.</p>
+<section id="apis-to-learn">
+<h2>APIs To Learn<a class="headerlink" href="#apis-to-learn" title="Permalink to this headline">¶</a></h2>
+<p>Check out the following libraries (source located at
+https://sr.ht/~brenns10/sc-libs) for APIs commonly used in CBot:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sc-collections</span></code>: we heavily use the linked list and character buffer, docs
+are in the <code class="docutils literal notranslate"><span class="pre">sc-collections.h</span></code> header.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sc-regex</span></code>: you mostly care about the API for getting captured strings,
+<code class="docutils literal notranslate"><span class="pre">sc_regex_get_capture()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sc-lwt</span></code>: the API is not that large, read the header file</p></li>
+</ul>
+</section>
+<section id="persistent-storage-sqlite-database">
+<h2>Persistent Storage: Sqlite Database<a class="headerlink" href="#persistent-storage-sqlite-database" title="Permalink to this headline">¶</a></h2>
+<p>CBot links to Sqlite and maintains a persistent database file. Plugins are
+welcome to use it to provide persistence. CBot provides a couple convenience
+tools, but the authoritative source is the <a class="reference external" href="https://sqlite.org/docs.html">sqlite docs</a>.</p>
+<p>The following plugins make use of the database and would be a good reference for
+the tools documented below:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">plugin/sqlkarma.c</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plugin/sqlknow.c</span></code></p></li>
+</ul>
+<section id="table-registration-and-migration">
+<h3>Table registration and migration<a class="headerlink" href="#table-registration-and-migration" title="Permalink to this headline">¶</a></h3>
+<p>A plugin should “register” a table with a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_db_table</span></code>. Why? The
+struct contains a version field, and CBot maintains a schema version table. If
+you decide to change the schema for a table, you just increment the version, and
+the bot will know the table in its database is out of date. Then, it will look
+into an array of <code class="docutils literal notranslate"><span class="pre">ALTER</span> <span class="pre">TABLE</span></code> statements you provide, which will be able to
+migrate the old schema to the new one.</p>
+</section>
+<section id="query-functions">
+<h3>Query functions<a class="headerlink" href="#query-functions" title="Permalink to this headline">¶</a></h3>
+<p>Running queries in sqlite is a bit tedious, so CBot contains a macro system to
+allow you to generate functions which execute a query and return a result. I
+won’t bother to go into many details, just read <code class="docutils literal notranslate"><span class="pre">inc/cbot/db.h</span></code>.</p>
+</section>
+</section>
+<section id="lightweight-threads">
+<h2>Lightweight Threads<a class="headerlink" href="#lightweight-threads" title="Permalink to this headline">¶</a></h2>
+<p>It may not be obvious, but CBot is actually an “async” program, which makes use
+of a pretty awesome lightweight threading model. There’s only one “operating
+system thread”, but CBot itself can switch between several “lightweight threads”
+(which I refer to as lwts in code/docs) whenever they have no work to be done.
+This is cooperative multitasking.</p>
+<p>The IRC operations and plugins execute all one one lightweight thread.
+Typically, that thread is blocked, waiting for I/O from IRC, so there’s plenty
+of opportunity for other lwts to run.</p>
+<p>Plugins can use <code class="docutils literal notranslate"><span class="pre">cbot_get_lwt_ctx()</span></code> to retrieve a context object for use with
+the sc-lwt library, and then they can go ahead and launch lightweight threads.
+Note that plugins should behave well and not hog the CPU. This is mainly meant
+for other I/O operations.</p>
+<p>Note that if a plugin would like to call ANY function which would block (such as
+libcurl) then it should make sure that it is async-safe and integrated with
+sc-lwt, and they need to do it off the main lwt.</p>
+<p>A great basic lwt example is <code class="docutils literal notranslate"><span class="pre">plugin/annoy.c</span></code>.</p>
+</section>
+<section id="http-requests-libcurl">
+<h2>HTTP Requests: libcurl<a class="headerlink" href="#http-requests-libcurl" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://curl.se/libcurl/c/">Docs</a></p>
+<p>libcurl is an excellent HTTP library! It is integrated with CBot now so you can
+use it to make plugins which connect to APIs etc. CBot uses the async mode of
+libcurl (the Multi API) along with sc-lwt to be able to write code which can run
+several HTTP requests in parallel, all on the same OS-thread (different LWTs)
+without writing tons of callbacks.</p>
+<ul class="simple">
+<li><p>In order to use libcurl, you MUST create a separate lwt and do all blocking
+actions on that thread.</p></li>
+<li><p>Create an “easy handle” (see <a class="reference external" href="https://curl.se/libcurl/c/libcurl-easy.html">cURL easy overview</a>) for your request, but
+rather than using <code class="docutils literal notranslate"><span class="pre">curl_easy_perform()</span></code> use <code class="docutils literal notranslate"><span class="pre">cbot_curl_perform()</span></code> (see
+<code class="docutils literal notranslate"><span class="pre">inc/cbot/curl.h</span></code>).</p></li>
+</ul>
+<p>Check out <code class="docutils literal notranslate"><span class="pre">plugin/weather.c</span></code> for a curl example.</p>
+</section>
+<section id="tokenizing">
+<h2>Tokenizing<a class="headerlink" href="#tokenizing" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you just want to write a command that takes, you know, an array of
+arguments. Tokenizing in C can be a drag. CBot has a tokenizer that takes a
+string, and gives you an array of tokens which were delimited by whitespace. The
+tokenizer supports basic quoting to allow whitespace in your arguments, and
+that’s about it.</p>
+<p>Check out <code class="docutils literal notranslate"><span class="pre">plugin/tok.c</span></code> to see the tokenizer in action.
+It’s implemented in <code class="docutils literal notranslate"><span class="pre">src/tok.c</span></code>, which is worth reading.</p>
+</section>
+<section id="dynamic-formatting">
+<h2>Dynamic Formatting<a class="headerlink" href="#dynamic-formatting" title="Permalink to this headline">¶</a></h2>
+<p>Love Python format() and f-strings? Well, C won’t get you anything nearly as
+convenient, but this is a good 70%. It’s based on the charbuf struct in
+sc-collections. It allows you to give a string like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&quot;Hello {target}, my name is {myname}! Check out {url}&quot;
+</pre></div>
+</div>
+<p>And fill in the curly braces with the correct values. This isn’t generally all
+that useful in C, because you usually can stick with the printf family. But
+sometimes you don’t know the format string or the order of the items, or even
+what you want to include in your string output.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">cbot_format()</span></code> API takes a formatter function, which gets called for each
+curly brace expansion and can append whatever it wants into the string builder /
+charbuf.</p>
+<p>See it in action in <code class="docutils literal notranslate"><span class="pre">plugin/reply.c</span></code>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cbot</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Development.html">Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Plugins.html">How to write a CBot Plugin</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Plugins - Advanced Topics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#apis-to-learn">APIs To Learn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#persistent-storage-sqlite-database">Persistent Storage: Sqlite Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lightweight-threads">Lightweight Threads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#http-requests-libcurl">HTTP Requests: libcurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tokenizing">Tokenizing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dynamic-formatting">Dynamic Formatting</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="Plugins.html" title="previous chapter">How to write a CBot Plugin</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Stephen Brennan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/Plugins-2.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
