@@ -16,7 +16,7 @@ jobs:
 
       - name: Setup Environment
         run: |
-          sudo apt install -y python3-pip doxygen meson ninja gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev
+          sudo apt install -y python3-pip doxygen meson gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev
           sudo pip install sphinx breathe
 
       - name: Build
