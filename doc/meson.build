@@ -78,7 +78,6 @@ sphinx_files = [
 	'Install.md',
 	'Plugins.md',
 	'Plugins-2.md',
-	'user.rst',
 ]
 foreach file : sphinx_files
 	configure_file(input: file, output: file, copy: true)
