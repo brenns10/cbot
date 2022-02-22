@@ -1,12 +1,6 @@
 Development
 ===========
 
-Compiling
----------
-
-Go ahead and just see the [Install.md](Install.md) documentation file. You need
-to be able to compile the bot, and that's the guide for doing so.
-
 Dev Tooling
 -----------
 

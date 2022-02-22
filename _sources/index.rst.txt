@@ -5,7 +5,8 @@ Welcome to CBot's Documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   Install
+   User
+   admin
    Development
    Plugins
    Plugins-2
