@@ -8,14 +8,16 @@ detailed code examples, I'll point to plugins you should read to learn more.
 APIs To Learn
 -------------
 
-Check out the following libraries (source located at
-https://sr.ht/~brenns10/sc-libs) for APIs commonly used in CBot:
+Check out the following libraries (browse the
+[source](https://sr.ht/~brenns10/sc-libs) and
+[docs](https://brenns10.srht.site/sc-libs/)) for APIs commonly used in CBot:
 
-* `sc-collections`: we heavily use the linked list and character buffer, docs
-  are in the `sc-collections.h` header.
-* `sc-regex`: you mostly care about the API for getting captured strings,
-  `sc_regex_get_capture()`
-* `sc-lwt`: the API is not that large, read the header file
+* [sc-collections](https://brenns10.srht.site/sc-libs/sc-collections/): we
+  heavily use the linked list and character buffer.
+* [sc-regex](https://brenns10.srht.site/sc-libs/sc-regex/): CBot is built on
+  plugins that match events against regular expressions.
+* [sc-lwt](https://brenns10.srht.site/sc-libs/sc-lwt/): CBot uses a lightweight
+  thread solution to do lots of I/O heavy "threads".
 
 Persistent Storage: Sqlite Database
 -----------------------------------
