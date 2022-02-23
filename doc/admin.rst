@@ -130,4 +130,5 @@ options, for example:
 
     help: {};
 
-Plugins which require configurations should stick it in these objects.
+If the plugin requires configuration, it can be provided in these objects.
+Please see ``sample.cfg`` for examples of each plugin's configuration.
