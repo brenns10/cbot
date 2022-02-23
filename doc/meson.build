@@ -74,11 +74,12 @@ doxygen_target = custom_target(
 # meson.build file
 sphinx_files = [
 	'index.rst',
-	'Development.md',
+	'Tooling.md',
 	'Plugins.md',
 	'Plugins-2.md',
 	'User.md',
 	'admin.rst',
+	'dev.rst',
 ]
 foreach file : sphinx_files
 	configure_file(input: file, output: file, copy: true)

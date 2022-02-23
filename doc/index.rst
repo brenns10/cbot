@@ -13,9 +13,7 @@ navigate through this documentation.
 
    User
    admin
-   Development
-   Plugins
-   Plugins-2
+   dev
 
 Indices and tables
 ==================
