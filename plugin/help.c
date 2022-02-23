@@ -6,18 +6,11 @@
 
 #include "cbot/cbot.h"
 
-struct sc_regex *r;
-
-static char *help_lines[] = {
-#include "help.h"
-};
-
 static void help(struct cbot_message_event *event, void *user)
 {
-	size_t i;
-	for (i = 0; i < sizeof(help_lines) / sizeof(char *); i++) {
-		cbot_send(event->bot, event->username, help_lines[i]);
-	}
+	cbot_send(event->bot, event->channel,
+	          "Please see CBot's user documentation at "
+	          "http://brenns10.github.io/cbot/User.html");
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
