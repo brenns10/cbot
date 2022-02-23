@@ -39,14 +39,16 @@ for the tools that CBot contains to help you write plugins. Rather than give
 detailed code examples, I’ll point to plugins you should read to learn more.</p>
 <section id="apis-to-learn">
 <h2>APIs To Learn<a class="headerlink" href="#apis-to-learn" title="Permalink to this headline">¶</a></h2>
-<p>Check out the following libraries (source located at
-https://sr.ht/~brenns10/sc-libs) for APIs commonly used in CBot:</p>
+<p>Check out the following libraries (browse the
+<a class="reference external" href="https://sr.ht/~brenns10/sc-libs">source</a> and
+<a class="reference external" href="https://brenns10.srht.site/sc-libs/">docs</a>) for APIs commonly used in CBot:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">sc-collections</span></code>: we heavily use the linked list and character buffer, docs
-are in the <code class="docutils literal notranslate"><span class="pre">sc-collections.h</span></code> header.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">sc-regex</span></code>: you mostly care about the API for getting captured strings,
-<code class="docutils literal notranslate"><span class="pre">sc_regex_get_capture()</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">sc-lwt</span></code>: the API is not that large, read the header file</p></li>
+<li><p><a class="reference external" href="https://brenns10.srht.site/sc-libs/sc-collections/">sc-collections</a>: we
+heavily use the linked list and character buffer.</p></li>
+<li><p><a class="reference external" href="https://brenns10.srht.site/sc-libs/sc-regex/">sc-regex</a>: CBot is built on
+plugins that match events against regular expressions.</p></li>
+<li><p><a class="reference external" href="https://brenns10.srht.site/sc-libs/sc-lwt/">sc-lwt</a>: CBot uses a lightweight
+thread solution to do lots of I/O heavy “threads”.</p></li>
 </ul>
 </section>
 <section id="persistent-storage-sqlite-database">
@@ -158,19 +160,13 @@ charbuf.</p>
 
 
 <h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="User.html">Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="admin.html">Administering CBot</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Development.html">Development</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Plugins.html">How to write a CBot Plugin</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Plugins - Advanced Topics</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#apis-to-learn">APIs To Learn</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#persistent-storage-sqlite-database">Persistent Storage: Sqlite Database</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lightweight-threads">Lightweight Threads</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#http-requests-libcurl">HTTP Requests: libcurl</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#tokenizing">Tokenizing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#dynamic-formatting">Dynamic Formatting</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="dev.html">Development</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Tooling.html">Dev Tooling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Plugins.html">How to write a CBot Plugin</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Plugins - Advanced Topics</a></li>
 </ul>
 </li>
 </ul>
@@ -179,7 +175,9 @@ charbuf.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="dev.html">Development</a><ul>
       <li>Previous: <a href="Plugins.html" title="previous chapter">How to write a CBot Plugin</a></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

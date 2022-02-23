@@ -7,7 +7,17 @@ Installing (Distribution Packages)
 CBot has source releases on `Github <https://github.com/brenns10/cbot>`_ as well
 as binary package releases for Alpine Linux. You can install the Alpine packages
 with ``apk add --allow-untrusted <file>``. For other Linux distributions, you'll
-need to install from source. The steps below should help do that.
+need to install from source.
+
+Installing (Docker)
+-------------------
+
+CBot also has Docker images published on `Docker Hub
+<https://hub.docker.com/r/brenns10/cbot>`_. These Docker images are optimized
+for running CBot with Signal, and by default they launch a script which launches
+the Signald daemon to allow it to interface with Signal. If you are deploying
+CBot on Signal, you may find this a useful deployment method. However, for
+deploying to IRC, it may be more convenient to build and run CBot from source.
 
 Installing (From Source)
 ------------------------
@@ -120,4 +130,5 @@ options, for example:
 
     help: {};
 
-Plugins which require configurations should stick it in these objects.
+If the plugin requires configuration, it can be provided in these objects.
+Please see ``sample.cfg`` for examples of each plugin's configuration.

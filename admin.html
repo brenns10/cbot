@@ -15,7 +15,7 @@
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Development" href="Development.html" />
+    <link rel="next" title="Development" href="dev.html" />
     <link rel="prev" title="Users" href="User.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -40,7 +40,15 @@
 <p>CBot has source releases on <a class="reference external" href="https://github.com/brenns10/cbot">Github</a> as well
 as binary package releases for Alpine Linux. You can install the Alpine packages
 with <code class="docutils literal notranslate"><span class="pre">apk</span> <span class="pre">add</span> <span class="pre">--allow-untrusted</span> <span class="pre">&lt;file&gt;</span></code>. For other Linux distributions, you’ll
-need to install from source. The steps below should help do that.</p>
+need to install from source.</p>
+</section>
+<section id="installing-docker">
+<h2>Installing (Docker)<a class="headerlink" href="#installing-docker" title="Permalink to this headline">¶</a></h2>
+<p>CBot also has Docker images published on <a class="reference external" href="https://hub.docker.com/r/brenns10/cbot">Docker Hub</a>. These Docker images are optimized
+for running CBot with Signal, and by default they launch a script which launches
+the Signald daemon to allow it to interface with Signal. If you are deploying
+CBot on Signal, you may find this a useful deployment method. However, for
+deploying to IRC, it may be more convenient to build and run CBot from source.</p>
 </section>
 <section id="installing-from-source">
 <h2>Installing (From Source)<a class="headerlink" href="#installing-from-source" title="Permalink to this headline">¶</a></h2>
@@ -137,7 +145,8 @@ options, for example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">:</span> <span class="p">{};</span>
 </pre></div>
 </div>
-<p>Plugins which require configurations should stick it in these objects.</p>
+<p>If the plugin requires configuration, it can be provided in these objects.
+Please see <code class="docutils literal notranslate"><span class="pre">sample.cfg</span></code> for examples of each plugin’s configuration.</p>
 </section>
 </section>
 </section>
@@ -159,18 +168,16 @@ options, for example:</p>
 
 
 <h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="User.html">Users</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Administering CBot</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installing-distribution-packages">Installing (Distribution Packages)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-docker">Installing (Docker)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installing-from-source">Installing (From Source)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuring">Configuring</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="Development.html">Development</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Plugins.html">How to write a CBot Plugin</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Plugins-2.html">Plugins - Advanced Topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dev.html">Development</a></li>
 </ul>
 
 <div class="relations">
@@ -178,7 +185,7 @@ options, for example:</p>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="User.html" title="previous chapter">Users</a></li>
-      <li>Next: <a href="Development.html" title="next chapter">Development</a></li>
+      <li>Next: <a href="dev.html" title="next chapter">Development</a></li>
   </ul></li>
 </ul>
 </div>
