@@ -195,6 +195,13 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 		sig->bot_profile = user;
 	}
 
+	struct sc_charbuf alias;
+	sc_cb_init(&alias, 64);
+	sc_cb_printf(&alias, "@@%s", sig->bot->name);
+	sc_cb_trim(&alias);
+	cbot_add_alias(sig->bot, alias.buf);
+	sc_cb_destroy(&alias);
+
 	sig->auth_profile = sig_get_profile(sig, sig->auth);
 }
 
