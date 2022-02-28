@@ -145,7 +145,10 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		goto out;
 	}
 
-	cbot_handle_message(sig->bot, group ? group : srcb, srcb, msgb, false);
+	if (group)
+		cbot_handle_message(sig->bot, group, srcb, msgb, false, false);
+	else
+		cbot_handle_message(sig->bot, srcb, srcb, msgb, false, true);
 out:
 	free(group);
 	free(srcb);

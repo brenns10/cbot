@@ -200,7 +200,7 @@ static void cbot_cli_run(struct cbot *bot)
 			line[newline - 1] = '\0';
 		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
 			continue;
-		cbot_handle_message(bot, "stdin", "shell", line, false);
+		cbot_handle_message(bot, "stdin", "shell", line, false, false);
 	}
 	free(line);
 }

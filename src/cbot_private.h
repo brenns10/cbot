@@ -107,7 +107,8 @@ void cbot_set_nick(struct cbot *bot, const char *newname);
 
 /* Functions which backends can call, to trigger various types of events */
 void cbot_handle_message(struct cbot *bot, const char *channel,
-                         const char *user, const char *message, bool action);
+                         const char *user, const char *message, bool action,
+                         bool is_dm);
 void cbot_handle_user_event(struct cbot *bot, const char *channel,
                             const char *user, enum cbot_event_type type);
 void cbot_handle_nick_event(struct cbot *bot, const char *old_username,

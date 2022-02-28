@@ -224,13 +224,24 @@ static void cbot_irc_join(const struct cbot *cbot, const char *channel,
 	maybe_schedule(cbot);
 }
 
+void event_privmsg(irc_session_t *session, const char *event,
+                   const char *origin, const char **params, unsigned int count)
+{
+	log_event(session, event, origin, params, count);
+	if (count >= 2 && params[1] != NULL) {
+		cbot_handle_message(session_bot(session), origin, origin,
+		                    params[1], false, true);
+		printf("Event handled by CBot.\n");
+	}
+}
+
 void event_channel(irc_session_t *session, const char *event,
                    const char *origin, const char **params, unsigned int count)
 {
 	log_event(session, event, origin, params, count);
 	if (count >= 2 && params[1] != NULL) {
 		cbot_handle_message(session_bot(session), params[0], origin,
-		                    params[1], false);
+		                    params[1], false, false);
 		printf("Event handled by CBot.\n");
 	}
 }
@@ -240,7 +251,7 @@ void event_action(irc_session_t *session, const char *event, const char *origin,
 {
 	log_event(session, event, origin, params, count);
 	struct cbot *bot = session_bot(session);
-	cbot_handle_message(bot, params[0], origin, params[1], true);
+	cbot_handle_message(bot, params[0], origin, params[1], true, false);
 	printf("Event handled by CBot.\n");
 }
 
@@ -365,7 +376,7 @@ static int cbot_irc_configure(struct cbot *bot, config_setting_t *group)
 	backend->callbacks.event_topic = log_event;
 	backend->callbacks.event_kick = log_event;
 	backend->callbacks.event_channel = event_channel;
-	backend->callbacks.event_privmsg = log_event;
+	backend->callbacks.event_privmsg = event_privmsg;
 	backend->callbacks.event_notice = log_event;
 	backend->callbacks.event_invite = log_event;
 	backend->callbacks.event_umode = log_event;

@@ -585,7 +585,8 @@ static void cbot_dispatch_msg(struct cbot *bot, struct cbot_message_event event,
  * @param action True if the message was a CTCP action, false otherwise.
  */
 void cbot_handle_message(struct cbot *bot, const char *channel,
-                         const char *user, const char *message, bool action)
+                         const char *user, const char *message, bool action,
+                         bool is_dm)
 {
 	struct cbot_message_event event;
 	int address_increment = cbot_addressed(bot, message);
@@ -598,7 +599,7 @@ void cbot_handle_message(struct cbot *bot, const char *channel,
 	event.indices = NULL;
 
 	/* When cbot is directly addressed */
-	if (address_increment) {
+	if (address_increment || is_dm) {
 		event.message = message + address_increment;
 		event.type = CBOT_ADDRESSED;
 		cbot_dispatch_msg(bot, event, CBOT_ADDRESSED);
