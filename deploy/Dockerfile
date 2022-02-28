@@ -1,6 +1,6 @@
 FROM alpine:3.14
 COPY cbot.apk /
-RUN apk add --allow-untrusted ./cbot.apk openjdk11-jre gcompat zip libgcc && rm ./cbot.apk
+RUN apk add --allow-untrusted ./cbot.apk openjdk11-jre gcompat zip libgcc tzdata && rm ./cbot.apk
 RUN adduser --disabled-password --uid 1002 cbot && \
     mkdir -p /var/run/signald && \
     chown cbot /var/run/signald
@@ -15,4 +15,5 @@ RUN mkdir /var/cores && chmod 777 /var/cores
 
 USER cbot
 WORKDIR /home/cbot
+ENV TZ=US/Pacific
 CMD ["/bin/run.sh"]
