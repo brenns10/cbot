@@ -79,7 +79,7 @@ static void cbot_sender_thread(void *arg)
 		sc_list_remove(&qm->list);
 		/* clang-tidy can't handle this, thinks i freed qm */
 		cbot_send(bot, qm->dest, "%s", qm->msg); // NOLINT
-		printf("Send queued message\n");
+		CL_DEBUG("Sent queued message\n");
 		free(qm->msg);
 		free(qm->dest);
 		free(qm);
