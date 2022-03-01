@@ -197,7 +197,6 @@ static void bd_thread(void *arg)
 	int rep_month, rep_day, count;
 	struct sc_list_head res;
 	struct birthday *b, *n;
-	struct sc_lwt *tsk = sc_lwt_current();
 	struct sc_charbuf cb;
 
 	sc_cb_init(&cb, 1024);
@@ -216,9 +215,7 @@ static void bd_thread(void *arg)
 	for (;;) {
 		to.tv_nsec = 0;
 		to.tv_sec = LOOP_MIN * 60;
-		sc_lwt_settimeout(tsk, &to);
-		sc_lwt_set_state(tsk, SC_LWT_BLOCKED);
-		sc_lwt_yield();
+		sc_lwt_sleep(&to);
 		if (sc_lwt_shutting_down())
 			break;
 
