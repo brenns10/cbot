@@ -43,12 +43,16 @@ struct levels {
 	char *name;
 	int level;
 };
+
+/* clang-format off */
 struct levels levels[] = {
+	{ "VERB", VERB },
 	{ "DEBUG", DEBUG },
 	{ "INFO", INFO },
 	{ "WARN", WARN },
 	{ "CRiT", CRIT },
 };
+/* clang-format on */
 
 int cbot_lookup_level(const char *str)
 {

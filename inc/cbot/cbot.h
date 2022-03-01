@@ -419,10 +419,11 @@ sqlite3 *cbot_db_conn(struct cbot *bot);
  ******************/
 
 enum cbot_log_level {
-	DEBUG = 10,
-	INFO = 20,
-	WARN = 30,
-	CRIT = 40,
+	VERB = 10,
+	DEBUG = 20,
+	INFO = 30,
+	WARN = 40,
+	CRIT = 50,
 };
 
 void cbot_log(int level, const char *format, ...);
@@ -437,5 +438,6 @@ int cbot_lookup_level(const char *str);
 #define CL_WARN(...)  cbot_log(WARN, " WARN: " __VA_ARGS__)
 #define CL_INFO(...)  cbot_log(INFO, " INFO: " __VA_ARGS__)
 #define CL_DEBUG(...) cbot_log(DEBUG, "DEBUG: " __VA_ARGS__)
+#define CL_VERB(...)  cbot_log(VERB, "VERB: " __VA_ARGS__)
 
 #endif // CBOT_H
