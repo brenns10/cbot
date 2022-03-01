@@ -143,8 +143,8 @@ static void karma_best(struct cbot_message_event *event)
 	size_t i;
 	karma_sort();
 	for (i = 0; i < (nkarma > KARMA_TOP ? KARMA_TOP : nkarma); i++) {
-		cbot_send(event->bot, event->channel, "%d. %s (%d karma)",
-		          i + 1, karma[i].word, karma[i].karma);
+		cbot_send_rl(event->bot, event->channel, "%d. %s (%d karma)",
+		             i + 1, karma[i].word, karma[i].karma);
 	}
 }
 

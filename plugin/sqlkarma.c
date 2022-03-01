@@ -94,8 +94,8 @@ static void karma_best(struct cbot_message_event *event)
 	karma_query_top(event->bot, KARMA_TOP, &res);
 	sc_list_for_each_safe(k, n, &res, list, struct karma)
 	{
-		cbot_send(event->bot, event->channel, "%s: %d", k->word,
-		          k->karma);
+		cbot_send_rl(event->bot, event->channel, "%s: %d", k->word,
+		             k->karma);
 		free(k->word);
 		free(k);
 	}
