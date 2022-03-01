@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "../cbot_private.h"
+#include "cbot/cbot.h"
 #include "internal.h"
 #include "sc-lwt.h"
 
@@ -27,8 +28,8 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 
 	rv = config_setting_lookup_string(group, "phone", &phone);
 	if (rv == CONFIG_FALSE) {
-		fprintf(stderr, "cbot signal: key \"phone\" wrong type or not "
-		                "exists\n");
+		CL_CRIT("cbot signal: key \"phone\" wrong type or not "
+		        "exists\n");
 		return -1;
 	}
 
@@ -37,18 +38,18 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	rv = config_setting_lookup_string(group, "signald_socket",
 	                                  &signald_socket);
 	if (rv == CONFIG_FALSE) {
-		fprintf(stderr, "cbot signal: key \"signald_socket\" wrong "
-		                "type or not exists\n");
+		CL_CRIT("cbot signal: key \"signald_socket\" wrong "
+		        "type or not exists\n");
 		return -1;
 	}
 
 	config_setting_lookup_bool(group, "ignore_dm", &ignore_dm);
 	if (ignore_dm) {
-		printf("cbot signal: ignoring DMs\n");
+		CL_INFO("signal: ignoring DMs\n");
 	}
 
 	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
-		fprintf(stderr, "cbot signal: signald socket path too long\n");
+		CL_CRIT("cbot signal: signald socket path too long\n");
 		return -1;
 	}
 
@@ -97,8 +98,6 @@ static bool should_continue_group(struct cbot_signal_backend *sig,
 {
 	struct cbot *bot = sig->bot;
 	struct cbot_channel_conf *chan;
-
-	printf("signal: should continue %s ?\n", grp);
 
 	sc_list_for_each_entry(chan, &bot->init_channels, list,
 	                       struct cbot_channel_conf)
@@ -168,16 +167,16 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 
 	sc_list_for_each_entry(grp, &head, list, struct signal_group)
 	{
-		printf("Group \"%s\"\n", grp->title);
-		printf("  Invite: %s\n", grp->invite_link);
-		printf("  Id:     %s\n", grp->id);
-		printf("  Members:\n");
+		CL_INFO("Group \"%s\"\n", grp->title);
+		CL_INFO("  Invite: %s\n", grp->invite_link);
+		CL_INFO("  Id:     %s\n", grp->id);
+		CL_INFO("  Members:\n");
 		for (i = 0; i < grp->n_members; i++)
-			printf("    Id: %s%s\n", grp->members[i].uuid,
-			       (grp->members[i].role ==
-			        SIGNAL_ROLE_ADMINISTRATOR)
-			               ? " (admin)"
-			               : "");
+			CL_INFO("    Id: %s%s\n", grp->members[i].uuid,
+			        (grp->members[i].role ==
+			         SIGNAL_ROLE_ADMINISTRATOR)
+			                ? " (admin)"
+			                : "");
 	}
 	sig_group_free_all(&head);
 
@@ -185,9 +184,9 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 	sig_list_contacts(sig, &head);
 	sc_list_for_each_entry(user, &head, list, struct signal_user)
 	{
-		printf("User \"%s %s\"\n", user->first_name, user->last_name);
-		printf("  Id: %s\n", user->uuid);
-		printf("  Number: %s\n", user->number);
+		CL_INFO("User \"%s %s\"\n", user->first_name, user->last_name);
+		CL_INFO("  Id: %s\n", user->uuid);
+		CL_INFO("  Number: %s\n", user->number);
 	}
 	sig_user_free_all(&head);
 
@@ -233,7 +232,7 @@ static void cbot_signal_run(struct cbot *bot)
 		jmsg_free(jm);
 		jm = NULL;
 	}
-	fprintf(stderr, "cbot signal: jmsg_read() returned NULL, exiting\n");
+	CL_CRIT("cbot signal: jmsg_read() returned NULL, exiting\n");
 }
 
 static void cbot_signal_send(const struct cbot *bot, const char *to,
@@ -252,8 +251,7 @@ static void cbot_signal_send(const struct cbot *bot, const char *to,
 		sig_send_group(sig, dest_payload, msg);
 		break;
 	default:
-		fprintf(stderr, "error: invalid signal destination \"%s\"\n",
-		        to);
+		CL_CRIT("error: invalid signal destination \"%s\"\n", to);
 	}
 	free(dest_payload);
 }

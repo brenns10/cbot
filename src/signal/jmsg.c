@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "cbot/cbot.h"
 #include "internal.h"
 #include "nosj.h"
 #include "sc-collections.h"
@@ -29,8 +30,7 @@ static int async_read(int fd, char *data, size_t nbytes)
 			perror("cbot_signal pipe read");
 			return -1;
 		} else if (rv == 0) {
-			fprintf(stderr,
-			        "cbot_signal: pipe is empty, exiting\n");
+			CL_CRIT("cbot_signal: pipe is empty, exiting\n");
 			return -1;
 		} else {
 			return rv;
@@ -75,7 +75,7 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 		rv = async_read(fd, cb.buf + cb.length,
 		                cb.capacity - cb.length);
 		if (rv < 0) {
-			fprintf(stderr, "read error: %d\n", rv);
+			CL_CRIT("read error: %d\n", rv);
 			goto err;
 		} else {
 			cb.length += rv;
@@ -89,8 +89,6 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 			 */
 			nextmsgidx = found - cb.buf + 1;
 			*found = '\0';
-			printf("rv: %d nextmsgidx: %d length: %d\n", rv,
-			       nextmsgidx, cb.length);
 
 			/*
 			 * Copy data into new jmsg and add to output.
@@ -100,7 +98,7 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 			jm->orig = malloc(nextmsgidx);
 			memcpy(jm->orig, cb.buf, nextmsgidx);
 			jm->origlen = nextmsgidx - 1;
-			printf("JM: \"%s\"\n", jm->orig);
+			CL_VERB("JM: \"%s\"\n", jm->orig);
 			if (jmsg_parse(jm) < 0) {
 				jmsg_free(jm);
 				goto err;

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cbot/cbot.h"
 #include "internal.h"
 #include "nosj.h"
 #include "sc-collections.h"
@@ -64,7 +65,7 @@ static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig,
 
 	jm = jmsg_next(sig);
 	if (!jm) {
-		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
+		CL_CRIT("sig_get_profile: error reading or parsing\n");
 		return NULL;
 	}
 	user = __sig_parse_profile(jm, jmsg_lookup(jm, "data"));
@@ -141,13 +142,13 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 
 	jm = jmsg_next(sig);
 	if (!jm) {
-		fprintf(stderr, "sig_get_profile: error reading or parsing\n");
+		CL_WARN("sig_get_profile: error reading or parsing\n");
 		return -1;
 	}
 
 	ix = jmsg_lookup(jm, "data.groups");
 	if (ix == 0) {
-		printf("Key 'groups' not found in response: %s\n", jm->orig);
+		CL_WARN("Key 'groups' not found in response: %s\n", jm->orig);
 		jmsg_free(jm);
 		return -1;
 	}
@@ -190,10 +191,6 @@ void sig_subscribe(struct cbot_signal_backend *sig)
 
 void sig_set_name(struct cbot_signal_backend *sig, const char *name)
 {
-	printf("SET "
-	       "{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_profile\","
-	       "\"version\":\"v1\"}\n",
-	       sig->sender, name);
 	fprintf(sig->ws,
 	        "\n{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_"
 	        "profile\",\"version\":\"v1\"}\n",
@@ -258,10 +255,8 @@ char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind,
 	        sig->sender, kind, val);
 
 	jm = jmsg_next(sig);
-	printf("%s\n", jm->orig);
 	if (!jm) {
-		fprintf(stderr,
-		        "sig_resolve_address: error reading or parsing\n");
+		CL_WARN("sig_resolve_address: error reading or parsing\n");
 		return NULL;
 	}
 	if (strcmp(kind, "number") == 0)

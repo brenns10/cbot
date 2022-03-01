@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cbot/cbot.h"
 #include "internal.h"
 #include "nosj.h"
 
@@ -101,7 +102,7 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 		}
 
 		if (list == 0) {
-			fprintf(stderr, "cbot signal: too few JSON mentions\n");
+			CL_CRIT("cbot signal: too few JSON mentions\n");
 			sc_cb_concat(&cb, "???");
 			str = next + sizeof(MENTION_PLACEHOLDER) - 1;
 			continue;
@@ -109,8 +110,7 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 		sc_cb_concat(&cb, "@(uuid:");
 		uuid_idx = jmsg_lookup_at(jm, list, "uuid");
 		if (jm->tok[uuid_idx].type != JSON_STRING) {
-			fprintf(stderr,
-			        "cbot signal: BADLY FORMATTED MENTION\n");
+			CL_CRIT("cbot signal: BADLY FORMATTED MENTION\n");
 		} else {
 			/* In general this isn't safe to manually access cb.buf,
 			 * but in our case we preallocated it to be the size of
@@ -128,7 +128,7 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 	}
 
 	if (jm->tok[list].next != 0) {
-		fprintf(stderr, "WARNING: unconsumed mention in JSON\n");
+		CL_WARN("unconsumed mention in JSON\n");
 	}
 	sc_cb_memcpy(&cb, str, strlen(str) + 1);
 	return cb.buf;
