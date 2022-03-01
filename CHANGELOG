@@ -6,6 +6,18 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.7.4 (2022-02-28)
+------------------
+
+- Signal: Allow using "@cbot" (but not as a real tagged mention) as an alias for
+  the bot.
+- Signal: Fix grotesque logging situation
+- Global: Allow to DM the bot without using its name, to trigger commands
+- plugin/birthday: code cleanups, use built-in logging framework
+- plugin/{sql,}karma: use ratelimited sending
+- Docker: set timezone
+
+
 0.7.3 (2022-02-19)
 ------------------
 
