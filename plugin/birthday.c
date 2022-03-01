@@ -229,6 +229,8 @@ static void bd_thread(void *arg)
 		      tm.tm_hour == a->hour && tm.tm_min >= a->min))
 			continue;
 
+		CL_DEBUG("birthday: it is %d/%d, checking birthdays\n",
+		         tm.tm_mon, tm.tm_mday);
 		sc_list_init(&res);
 		birthday_get_day(a->bot, tm.tm_mon, tm.tm_mday, &res);
 		sc_list_for_each_safe(b, n, &res, list, struct birthday)
@@ -250,6 +252,7 @@ static void bd_thread(void *arg)
 		tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
 		if (tm.tm_mday != 1)
 			continue;
+		CL_DEBUG("birthday: last day of month! send reminder\n");
 		sc_list_init(&res);
 		birthday_get_month(a->bot, tm.tm_mon, &res);
 		sc_cb_clear(&cb);
