@@ -71,11 +71,10 @@ It just responds to "hello" messages.
 
 ```
 me> cbot help
-cbot>  << HELP VOMIT >>
+cbot> Please see CBot's user documentation at http://brenns10.github.io/cbot/User.html
 ```
 
-Prints out a bunch of messages with "help" for using cbot. It's not very useful
-and will be replaced with a link to this page.
+Takes you... here.
 
 #### karma
 
