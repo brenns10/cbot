@@ -9,9 +9,9 @@ including the commands you might be able to use, as well as general guidance.
 CBot listens to every message sent in a channel/group, as well as all direct
 messages. However, most commands require that you send a message "to" CBot,
 either by starting off the message with its name (e.g. "cbot help") or by
-tagging the bot using the messaging platform (e.g. "@cbot help"). Direct
-messages do not currently count as a "to" CBot message, so you'll need to prefix
-those messages with "cbot " as well.
+tagging the bot using the messaging platform (e.g. "@cbot help"). If you send a
+direct message to CBot, then you don't need to prefix it with the bot name to
+trigger a command.
 
 ## Plugins
 
