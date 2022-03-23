@@ -6,6 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.7.5 (2022-03-23)
+------------------
+
+- plugin/birthday: don't require the month to change to report birthdays!
+
 0.7.4 (2022-02-28)
 ------------------
 
