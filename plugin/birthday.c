@@ -194,7 +194,7 @@ static void bd_thread(void *arg)
 	struct timespec to;
 	time_t cur;
 	struct tm tm;
-	int rep_month, rep_day, count;
+	int rep_day, count;
 	struct sc_list_head res;
 	struct birthday *b, *n;
 	struct sc_charbuf cb;
@@ -205,12 +205,10 @@ static void bd_thread(void *arg)
 	cur = time(NULL);
 	localtime_r(&cur, &tm);
 	tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
-	if (tm.tm_hour >= a->hour && tm.tm_min > a->min + LOOP_MIN) {
-		rep_month = tm.tm_mon;
+	if (tm.tm_hour >= a->hour && tm.tm_min > a->min + LOOP_MIN)
 		rep_day = tm.tm_mday;
-	} else {
-		rep_month = rep_day = 0;
-	}
+	else
+		rep_day = 0;
 
 	for (;;) {
 		to.tv_nsec = 0;
@@ -225,8 +223,8 @@ static void bd_thread(void *arg)
 
 		/* if it is 9 o'clock of a different day to what we last
 		 * reported, go! */
-		if (!(tm.tm_mon != rep_month && tm.tm_mday != rep_day &&
-		      tm.tm_hour == a->hour && tm.tm_min >= a->min))
+		if (!(tm.tm_mday != rep_day && tm.tm_hour == a->hour &&
+		      tm.tm_min >= a->min))
 			continue;
 
 		CL_DEBUG("birthday: it is %d/%d, checking birthdays\n",
@@ -240,7 +238,6 @@ static void bd_thread(void *arg)
 			free(b->name);
 			free(b);
 		}
-		rep_month = tm.tm_mon;
 		rep_day = tm.tm_mday;
 
 		/* Now, we want to find out if tomorrow is the first of the
