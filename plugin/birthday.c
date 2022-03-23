@@ -280,10 +280,17 @@ static void bd_thread(void *arg)
 	cur = time(NULL);
 	localtime_r(&cur, &tm);
 	tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
-	if (tm.tm_hour >= a->hour && tm.tm_min > a->min + LOOP_MIN)
+	if (tm.tm_hour >= a->hour && tm.tm_min > a->min + LOOP_MIN) {
+		CL_DEBUG("birthday: it is %d/%d, time is past report "
+		         "threshold, wait for tomorrow\n",
+		         tm.tm_mon, tm.tm_mday);
 		rep_day = tm.tm_mday;
-	else
+	} else {
+		CL_DEBUG("birthday: it is %d/%d, not yet reached report "
+		         "threshold\n",
+		         tm.tm_mon, tm.tm_mday);
 		rep_day = 0;
+	}
 
 	for (;;) {
 		to.tv_nsec = 0;
@@ -324,6 +331,7 @@ static void bd_thread(void *arg)
 		CL_DEBUG("birthday: reported %d birthdays in month\n", count);
 	}
 
+	CL_DEBUG("birthday: exiting thread\n");
 	free(a->channel);
 	free(a);
 }
