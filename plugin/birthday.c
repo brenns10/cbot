@@ -13,7 +13,8 @@
 #include "sc-lwt.h"
 #include "sc-regex.h"
 
-#define LOOP_MIN 5
+#define LOOP_MIN   5
+#define nelem(arr) (sizeof(arr) / sizeof(arr[0]))
 
 const char *tbl_birthday_alters[] = {};
 
@@ -110,6 +111,50 @@ static int birthday_del(struct cbot *bot, char *name)
 	return _changes(bot);
 }
 
+static int birthday_send_day_report(struct cbot *bot, const char *chan,
+                                    int month, int day)
+{
+	struct sc_list_head res;
+	struct birthday *b, *n;
+	int count = 0;
+
+	sc_list_init(&res);
+	birthday_get_day(bot, month, day, &res);
+	sc_list_for_each_safe(b, n, &res, list, struct birthday)
+	{
+		cbot_send(bot, chan, "🎊 Happy Birthday, %s! 🎊", b->name);
+		free(b->name);
+		free(b);
+		count++;
+	}
+	return count;
+}
+
+static int birthday_send_month_report(struct cbot *bot, const char *chan,
+                                      int month)
+{
+	struct sc_list_head res;
+	struct birthday *b, *n;
+	struct sc_charbuf cb;
+	int count = 0;
+
+	sc_list_init(&res);
+	sc_cb_init(&cb, 256);
+	birthday_get_month(bot, month, &res);
+	sc_cb_printf(&cb, "%s birthdays:\n", months[month]);
+	sc_list_for_each_safe(b, n, &res, list, struct birthday)
+	{
+		sc_cb_printf(&cb, "%d/%d: %s\n", b->month, b->day, b->name);
+		count++;
+		free(b->name);
+		free(b);
+	}
+	if (count)
+		cbot_send(bot, chan, "%s", cb.buf);
+	sc_cb_destroy(&cb);
+	return count;
+}
+
 static void cmd_bd_del(struct cbot_message_event *event)
 {
 	char *name = sc_regex_get_capture(event->message, event->indices, 0);
@@ -181,6 +226,41 @@ static void cmd_bd_add(struct cbot_message_event *event)
 	free(date);
 }
 
+static void cmd_bd_day(struct cbot_message_event *event)
+{
+	char *date;
+	int month = 0, day = 0, count;
+
+	date = sc_regex_get_capture(event->message, event->indices, 0);
+	sscanf(date, "%d/%d", &month, &day);
+	count = birthday_send_day_report(event->bot, event->channel, month,
+	                                 day);
+	if (!count)
+		cbot_send(event->bot, event->channel,
+		          "Sorry, no birthdays on %d/%d", month, day);
+}
+
+static void cmd_bd_month(struct cbot_message_event *event)
+{
+	char *month_str;
+	int month, count;
+
+	month_str = sc_regex_get_capture(event->message, event->indices, 1);
+	for (month = 1; month < nelem(months); month++) {
+		if (strcasecmp(month_str, months[month]) == 0)
+			break;
+	}
+	if (month >= nelem(months)) {
+		cbot_send(event->bot, event->channel,
+		          "Sorry, I don't know that month");
+		return;
+	}
+	count = birthday_send_month_report(event->bot, event->channel, month);
+	if (!count)
+		cbot_send(event->bot, event->channel,
+		          "Sorry, no birthdays in %s", months[month]);
+}
+
 struct bdarg {
 	char *channel;
 	struct cbot *bot;
@@ -195,11 +275,6 @@ static void bd_thread(void *arg)
 	time_t cur;
 	struct tm tm;
 	int rep_day, count;
-	struct sc_list_head res;
-	struct birthday *b, *n;
-	struct sc_charbuf cb;
-
-	sc_cb_init(&cb, 1024);
 
 	/* If started end of report loop, don't try to send birthday */
 	cur = time(NULL);
@@ -229,15 +304,9 @@ static void bd_thread(void *arg)
 
 		CL_DEBUG("birthday: it is %d/%d, checking birthdays\n",
 		         tm.tm_mon, tm.tm_mday);
-		sc_list_init(&res);
-		birthday_get_day(a->bot, tm.tm_mon, tm.tm_mday, &res);
-		sc_list_for_each_safe(b, n, &res, list, struct birthday)
-		{
-			cbot_send(a->bot, a->channel, "🎊 Happy Birthday, %s! 🎊",
-			          b->name);
-			free(b->name);
-			free(b);
-		}
+		count = birthday_send_day_report(a->bot, a->channel, tm.tm_mon,
+		                                 tm.tm_mday);
+		CL_DEBUG("birthday: sent %d birthday messages\n", count);
 		rep_day = tm.tm_mday;
 
 		/* Now, we want to find out if tomorrow is the first of the
@@ -250,24 +319,11 @@ static void bd_thread(void *arg)
 		if (tm.tm_mday != 1)
 			continue;
 		CL_DEBUG("birthday: last day of month! send reminder\n");
-		sc_list_init(&res);
-		birthday_get_month(a->bot, tm.tm_mon, &res);
-		sc_cb_clear(&cb);
-		sc_cb_printf(&cb, "%s birthdays:\n", months[tm.tm_mon]);
-		count = 0;
-		sc_list_for_each_safe(b, n, &res, list, struct birthday)
-		{
-			sc_cb_printf(&cb, "%d/%d: %s\n", b->month, b->day,
-			             b->name);
-			count++;
-			free(b->name);
-			free(b);
-		}
-		if (count)
-			cbot_send(a->bot, a->channel, "%s", cb.buf);
+		count = birthday_send_month_report(a->bot, a->channel,
+		                                   tm.tm_mon);
+		CL_DEBUG("birthday: reported %d birthdays in month\n", count);
 	}
 
-	sc_cb_destroy(&cb);
 	free(a->channel);
 	free(a);
 }
@@ -303,6 +359,10 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_add, NULL,
 	              "birthday add ([0-9]+/[0-9]+) (.*)");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_day, NULL,
+	              "birthdays ([0-9]+/[0-9]+)");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_month,
+	              NULL, "birthdays( in)? ([A-Za-z]+)");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_all, NULL,
 	              "birthday list");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_del, NULL,
