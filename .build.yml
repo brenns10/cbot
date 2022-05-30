@@ -12,11 +12,9 @@ packages:
   - openssl-dev
   - libucontext-dev
   - sqlite
-  - openjdk11
   - docker
 sources:
   - https://github.com/brenns10/cbot
-  - https://gitlab.com/signald/signald
 secrets:
 - 1f81b861-3618-4afd-b2d8-79f45710f9db # github token
 - 7b922363-3ca0-4080-863f-5404a4e6796f # package key
@@ -82,11 +80,7 @@ tasks:
             || echo "")
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
-      cd ../signald
-      git checkout 0.17.0
-      make installDist
-      cp -r build/install/signald ../cbot/deploy/signald
-      cd ../cbot/deploy
+      cd deploy
       cp ~/artifacts/cbot-$VER-r0.apk cbot.apk
       sudo service docker start
       sudo docker login docker.io -u brenns10 --password-stdin < ~/.dockerpw

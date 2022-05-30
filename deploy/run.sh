@@ -1,6 +1,6 @@
 #!/bin/sh
-/opt/signald/bin/signald --system-socket &
-while [ ! -S /var/run/signald/signald.sock ]; do
+while [ ! -S /var/signald/signald.sock ]; do
+    echo Waiting for signald
     sleep 0.1
 done
 cbot /home/cbot/config/cbot.cfg
