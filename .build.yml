@@ -16,7 +16,7 @@ packages:
 sources:
   - https://github.com/brenns10/cbot
 secrets:
-- 1f81b861-3618-4afd-b2d8-79f45710f9db # github token
+- 966f6f74-8918-460e-97f1-900641de0dfb # github token
 - 7b922363-3ca0-4080-863f-5404a4e6796f # package key
 - 29e80069-2df8-4bd1-9801-313f2ac4a82b # docker hub
 tasks:
