@@ -13,11 +13,10 @@ Installing (Docker)
 -------------------
 
 CBot also has Docker images published on `Docker Hub
-<https://hub.docker.com/r/brenns10/cbot>`_. These Docker images are optimized
-for running CBot with Signal, and by default they launch a script which launches
-the Signald daemon to allow it to interface with Signal. If you are deploying
-CBot on Signal, you may find this a useful deployment method. However, for
-deploying to IRC, it may be more convenient to build and run CBot from source.
+<https://hub.docker.com/r/brenns10/cbot>`_. Since version v0.8.0, these Docker
+images no longer contain Signald bundled. If you want to run CBot with Signal,
+you'll need to setup Signald yourself, likely via their Docker image.
+Docker-Compose is great for this.
 
 Installing (From Source)
 ------------------------
