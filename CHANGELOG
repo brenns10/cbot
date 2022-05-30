@@ -6,11 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
-0.7.{5,6} (2022-03-23)
+0.8.0 (2022-05-30)
 ----------------------
 
-- plugin/birthday: don't require the month to change to report birthdays!
-- plugin/birthday: add more subcommands and logging for debug
+- deploy: get rid of signald from the docker image
+- refresh Github deploy keys
 
 0.7.4 (2022-02-28)
 ------------------
