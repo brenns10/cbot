@@ -110,6 +110,19 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb, "- cbot weather: print weather in SF\n");
+	sc_cb_concat(
+	        cb,
+	        "- cbot weather LOCATION: weather in LOCATION (zip code?)\n");
+	sc_cb_concat(
+	        cb,
+	        "- cbot sunrise/sunset [LOCATION]: give sunrise/sunset info\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "lookup the weaither",
 	.load = load,
+	.help = help,
 };

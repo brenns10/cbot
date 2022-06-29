@@ -15,6 +15,8 @@
 struct rep {
 	struct sc_list_head list;
 	struct cbot_handler *hdlr;
+	char *regex;
+	int kind;
 	int count;
 	char *replies[0];
 };
@@ -73,6 +75,7 @@ static void destroy_replies(struct priv *priv)
 		for (i = 0; i < rep->count; i++) {
 			free(rep->replies[i]);
 		}
+		free(rep->regex);
 		free(rep);
 	}
 }
@@ -119,6 +122,8 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 		}
 		reply_count = config_setting_length(replies);
 		rep = calloc(1, sizeof(*rep) + reply_count * sizeof(char *));
+		rep->regex = strdup(trigger);
+		rep->kind = kind;
 		rep->count = reply_count;
 		rep->hdlr = cbot_register2(priv->plugin, kind,
 		                           (cbot_handler_t)handle_match, rep,
@@ -140,6 +145,8 @@ static struct rep *add_reply(struct priv *priv, config_setting_t *conf, int idx)
 		return rep;
 	} else {
 		rep = calloc(1, sizeof(*rep) + 1 * sizeof(char *));
+		rep->regex = strdup(trigger);
+		rep->kind = kind;
 		rep->count = 1;
 		rep->replies[0] = strdup(resp);
 		rep->hdlr = cbot_register2(priv->plugin, kind,
@@ -198,7 +205,24 @@ static void unload(struct cbot_plugin *plugin)
 	free(priv);
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	struct priv *priv = plugin->data;
+	struct rep *r;
+
+	sc_cb_concat(cb, "This plugin will reply to the following triggers:\n");
+	sc_list_for_each_entry(r, &priv->replies, list, struct rep)
+	{
+		sc_cb_printf(cb, "- %s%s\n", r->regex,
+		             (r->kind == CBOT_ADDRESSED)
+		                     ? " (only when @mentioned)"
+		                     : "");
+	}
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "replies to configurable prompts",
 	.load = load,
 	.unload = unload,
+	.help = help,
 };

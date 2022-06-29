@@ -26,6 +26,14 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb, "this plugin only works on IRC or CLI!\n");
+	sc_cb_concat(cb, "- cbot become <nick>: change nick\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "cbot plugin which lets you tell the bot to change nick",
 	.load = load,
+	.help = help,
 };

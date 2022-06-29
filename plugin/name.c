@@ -60,7 +60,15 @@ static void unload(struct cbot_plugin *plugin)
 	free(plugin->data);
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb, "- who/what/wtf is/are [you, ] cbot?\n");
+	sc_cb_concat(cb, "  replies with bot name and github link\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "gives information about the bot",
 	.load = load,
 	.unload = unload,
+	.help = help,
 };

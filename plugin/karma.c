@@ -204,15 +204,6 @@ static void karma_forget(struct cbot_message_event *event, void *user)
 	delete_if_exists(event->username);
 }
 
-/**
- * @brief Plugin loader function.
- *
- * Compiles necessary regular expressions and registers a single handle function
- * to handle any incoming channel messages.
- *
- * @param bot Bot we're loading into.
- * @param registrar Function to call to register handlers.
- */
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 #define KARMA_WORD     "^ \t\n"
@@ -228,6 +219,18 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(
+	        cb,
+	        "- WORD-- or WORD++: decrement or increment karma for WORD\n");
+	sc_cb_concat(cb, "- cbot karma WORD: check karma of WORD\n");
+	sc_cb_concat(cb, "- cbot karma: check top karma words\n");
+	sc_cb_concat(cb, "- cbot forget me: forget your username\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "track karma (++ or --) in a channel",
 	.load = load,
+	.help = help,
 };

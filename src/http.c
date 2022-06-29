@@ -144,7 +144,6 @@ static void cbot_http_root(struct cbot_http_event *evt, void *unused)
 {
 	const char *me = "<html><body>Hello, browser.</body></html>";
 	struct MHD_Response *resp;
-	cbot_send(evt->bot, "stdin", "Got request for \"%s\"", evt->url);
 	resp = MHD_create_response_from_buffer(strlen(me), (void *)me,
 	                                       MHD_RESPMEM_PERSISTENT);
 	MHD_add_response_header(resp, "Content-Type",

@@ -48,5 +48,6 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 }
 
 struct cbot_plugin_ops ops = {
+	.description = "diagnostic: list everyone in the channel",
 	.load = load,
 };

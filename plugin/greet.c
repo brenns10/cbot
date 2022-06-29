@@ -60,6 +60,7 @@ static void unload(struct cbot_plugin *plugin)
 }
 
 struct cbot_plugin_ops ops = {
+	.description = "greets people who say hello to the bot",
 	.load = load,
 	.unload = unload,
 };

@@ -209,9 +209,9 @@ struct cbot_plugin_ops {
 	void (*unload)(struct cbot_plugin *plugin);
 
 	/**
-	 * (optional) Send a help message to the given target.
+	 * (optional) Format a help message
 	 */
-	void (*help)(struct cbot_plugin *plugin, const char *target);
+	void (*help)(struct cbot_plugin *plugin, struct sc_charbuf *cb);
 };
 
 /*

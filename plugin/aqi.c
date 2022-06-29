@@ -165,7 +165,19 @@ static void unload(struct cbot_plugin *plugin)
 	plugin->data = NULL;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb,
+	             "- cbot aqi: get air quality index of San Francisco\n");
+	sc_cb_concat(
+	        cb,
+	        "- cbot aqi LOCATION: get AQI for LOCATION (use a Zip code)\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description =
+	        "show the air quality for a location (default San Francisco)",
 	.load = load,
 	.unload = unload,
+	.help = help,
 };

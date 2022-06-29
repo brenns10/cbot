@@ -380,6 +380,16 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb, "All dates are expressed as MM/DD\n");
+	sc_cb_concat(cb, "- birthday add DATE NAME: add birthday for NAME\n");
+	sc_cb_concat(cb, "- birthday list: list all birthdays\n");
+	sc_cb_concat(cb, "- birthday remove NAME: remove NAME's birthday\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "a plugin which notifies you about people's birthdays",
 	.load = load,
+	.help = help,
 };

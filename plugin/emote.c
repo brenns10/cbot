@@ -29,5 +29,6 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 }
 
 struct cbot_plugin_ops ops = {
+	.description = "instruct cbot to use the IRC /me command",
 	.load = load,
 };

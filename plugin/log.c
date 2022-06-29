@@ -88,5 +88,6 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 }
 
 struct cbot_plugin_ops ops = {
+	.description = "logs messages to a file",
 	.load = load,
 };

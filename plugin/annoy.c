@@ -62,6 +62,16 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(
+	        cb,
+	        "- cbot be annoying: send annoying messages to a channel\n");
+	sc_cb_concat(cb, "- cbot stop it: stop sending annoying messages\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "a plugin that sends annoying messages every 3 seconds",
 	.load = load,
+	.help = help,
 };

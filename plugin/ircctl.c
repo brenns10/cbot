@@ -41,6 +41,14 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
+{
+	sc_cb_concat(cb, "- cbot op USER: give operator privileges to USER\n");
+	sc_cb_concat(cb, "- cbot join CHANNEL: join CHANNEL\n");
+}
+
 struct cbot_plugin_ops ops = {
+	.description = "have cbot perform privileged IRC operator commands",
 	.load = load,
+	.help = help,
 };
