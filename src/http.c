@@ -13,6 +13,10 @@
 
 #define PORT 8888
 
+struct cbot_http {
+	char *url;
+};
+
 static int method_to_event(const char *method)
 {
 	if (strcmp(method, "GET") == 0)
@@ -152,9 +156,34 @@ static void cbot_http_root(struct cbot_http_event *evt, void *unused)
 	MHD_destroy_response(resp);
 }
 
-int cbot_http_init(struct cbot *bot)
+const char *cbot_http_geturl(struct cbot *bot)
 {
-	bot->http = MHD_start_daemon(MHD_USE_EPOLL, PORT, NULL, NULL,
+	if (bot->httpriv)
+		return bot->httpriv->url;
+	return NULL;
+}
+
+void cbot_http_destroy(struct cbot *bot)
+{
+	if (bot->httpriv) {
+		free(bot->httpriv->url);
+		free(bot->httpriv);
+	}
+}
+
+int cbot_http_init(struct cbot *bot, config_setting_t *config)
+{
+	int port = PORT;
+	const char *url = "https://example.com";
+
+	struct cbot_http *http = calloc(sizeof(*http), 1);
+	bot->httpriv = http;
+
+	config_setting_lookup_int(config, "port", &port);
+	config_setting_lookup_string(config, "url", &url);
+	http->url = strdup(url);
+
+	bot->http = MHD_start_daemon(MHD_USE_EPOLL, port, NULL, NULL,
 	                             (MHD_AccessHandlerCallback)hdlr, bot,
 	                             MHD_OPTION_END);
 	if (!bot->http) {

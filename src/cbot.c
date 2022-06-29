@@ -351,7 +351,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 {
 	int rv, i;
 	config_t conf;
-	config_setting_t *setting, *backgroup, *pluggroup;
+	config_setting_t *setting, *backgroup, *pluggroup, *httpgroup;
 	config_init(&conf);
 	rv = config_read_file(&conf, conf_file);
 	if (rv == CONFIG_FALSE) {
@@ -417,10 +417,17 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 		goto out;
 	}
 
-	rv = cbot_http_init(bot);
-	if (rv < 0) {
+	httpgroup = config_lookup(&conf, "http");
+	if (httpgroup && !config_setting_is_group(httpgroup)) {
+		CL_CRIT("cbot: \"http\" section should be a group\n");
 		rv = -1;
 		goto out;
+	} else if (httpgroup) {
+		rv = cbot_http_init(bot, httpgroup);
+		if (rv < 0) {
+			rv = -1;
+			goto out;
+		}
 	}
 
 	pluggroup = config_lookup(&conf, "plugins");
@@ -497,6 +504,7 @@ void cbot_delete(struct cbot *cbot)
 		free(sc_arr(&cbot->aliases, char *)[i]);
 	}
 	sc_arr_destroy(&cbot->aliases);
+	cbot_http_destroy(cbot);
 	free(cbot);
 	EVP_cleanup();
 }

@@ -12,9 +12,13 @@
 
 static void help(struct cbot_message_event *event, void *user)
 {
+	const char *url = cbot_http_geturl(event->bot);
 	cbot_send(event->bot, event->channel,
 	          "Please see CBot's user documentation at "
 	          "http://brenns10.github.io/cbot/User.html");
+	if (url)
+		cbot_send(event->bot, event->channel,
+		          "See also this bot's help pages at %s/help", url);
 }
 
 static void http_get(struct cbot_http_event *event, void *user)

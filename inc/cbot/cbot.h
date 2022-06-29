@@ -393,6 +393,15 @@ int cbot_format(struct sc_charbuf *buf, const char *fmt,
                 cbot_formatter_t formatter, void *user);
 
 /******************
+ * HTTP Utilities
+ ******************/
+
+/**
+ * Returns the URL of the HTTP server (if running)
+ */
+const char *cbot_http_geturl(struct cbot *bot);
+
+/******************
  * DB API
  ******************/
 

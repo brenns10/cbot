@@ -74,6 +74,8 @@ struct cbot_channel_conf {
 	struct sc_list_head list;
 };
 
+struct cbot_http;
+
 struct cbot {
 	/* Loaded from configuration */
 	char *name;
@@ -100,6 +102,7 @@ struct cbot {
 
 	struct MHD_Daemon *http;
 	struct sc_lwt *http_lwt;
+	struct cbot_http *httpriv;
 };
 
 struct cbot *cbot_create(void);
@@ -148,6 +151,7 @@ void run_cbot_cli(int argc, char **argv);
 
 #define plugpriv(plug) ((struct cbot_plugpriv *)plug)
 
-int cbot_http_init(struct cbot *bot);
+int cbot_http_init(struct cbot *bot, config_setting_t *group);
+void cbot_http_destroy(struct cbot *bot);
 
 #endif // CBOT_PRIVATE_H
