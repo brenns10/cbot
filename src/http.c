@@ -9,6 +9,7 @@
 
 #include "cbot/cbot.h"
 #include "cbot_private.h"
+#include "sc-lwt.h"
 
 #define PORT 8888
 
@@ -111,14 +112,16 @@ static void cbot_http_run(void *data)
 	unsigned long long req_to;
 
 	while (true) {
-		sc_lwt_clear_fds(&in_fd, &out_fd, &err_fd);
+		sc_lwt_fdgen_advance(cur);
 		maxfd = 0;
+		sc_lwt_clear_fds(&in_fd, &out_fd, &err_fd);
 		rv = MHD_get_fdset(daemon, &in_fd, &out_fd, &err_fd, &maxfd);
 		if (rv == MHD_NO) {
 			fprintf(stderr, "MHD_get_fdset says no\n");
 		}
 		sc_lwt_add_select_fds(cur, &in_fd, &out_fd, &err_fd, maxfd,
 		                      NULL);
+		sc_lwt_fdgen_purge(cur);
 
 		rv = MHD_get_timeout(daemon, &req_to);
 		if (rv == MHD_YES) {
