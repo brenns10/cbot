@@ -401,6 +401,35 @@ int cbot_format(struct sc_charbuf *buf, const char *fmt,
  */
 const char *cbot_http_geturl(struct cbot *bot);
 
+/**
+ * Initialize an sc_charbuf with the contents necessary to create a plaintext
+ * looking HTTP response. Note that this is not actually text/plain, it uses
+ * HTML, so you will need to escape unwanted HTML tags, via
+ * sc_cb_concat_http_esc().
+ */
+void cbot_http_plainresp_start(struct sc_charbuf *cb, const char *title);
+
+/**
+ * Concatenate data onto cb, escaping any < ar > characters as &lt; and &gt;
+ * respectively.
+ */
+void sc_cb_concat_http_esc(struct sc_charbuf *cb, const char *data);
+
+/**
+ * Send an HTTP response initialized via cbot_http_plainresp_start().
+ * Returns 0 on success, or -1 on error. In either case, the structure is
+ * consumed and memory associated with it is freed, and so all you need to do is
+ * return an error code from your function.
+ */
+int cbot_http_plainresp_send(struct sc_charbuf *cb,
+                             struct cbot_http_event *event,
+                             unsigned int status_code);
+
+/**
+ * Abort an unsent HTTP plain response.
+ */
+void cbot_http_plainresp_abort(struct sc_charbuf *cb);
+
 /******************
  * DB API
  ******************/

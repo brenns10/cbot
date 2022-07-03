@@ -171,6 +171,74 @@ void cbot_http_destroy(struct cbot *bot)
 	}
 }
 
+void cbot_http_plainresp_start(struct sc_charbuf *cb, const char *title)
+{
+	sc_cb_init(cb, 1024);
+	sc_cb_printf(cb, "<html><head><title>%s</title></head><body><pre>\n",
+	             title);
+}
+
+void sc_cb_concat_http_esc(struct sc_charbuf *cb, const char *data)
+{
+	char *lcaret, *rcaret, *next;
+
+	do {
+		lcaret = strchr(data, '<');
+		rcaret = strchr(data, '>');
+		if (lcaret && rcaret) {
+			if (lcaret < rcaret)
+				next = lcaret;
+			else
+				next = rcaret;
+		} else if (lcaret) {
+			next = lcaret;
+		} else {
+			next = rcaret;
+		}
+
+		sc_cb_memcpy(cb, data, next - data);
+		if (*data == '<')
+			sc_cb_concat(cb, "&lt;");
+		else
+			sc_cb_concat(cb, "&gt;");
+		data = next + 1;
+	} while (lcaret || rcaret);
+}
+
+int cbot_http_plainresp_send(struct sc_charbuf *cb,
+                             struct cbot_http_event *event,
+                             unsigned int status_code)
+{
+	struct MHD_Response *resp;
+	enum MHD_Result code;
+	int rv = -1;
+
+	sc_cb_concat(cb, "</pre></body></html>\n");
+	resp = MHD_create_response_from_buffer(cb->length, cb->buf,
+	                                       MHD_RESPMEM_MUST_FREE);
+	if (!resp)
+		return rv;
+
+	code = MHD_add_response_header(resp, "Content-Type",
+	                               "text/html; charset=utf-8");
+	if (code == MHD_NO)
+		goto err;
+
+	code = MHD_queue_response(event->connection, status_code, resp);
+	if (code == MHD_NO)
+		goto err;
+
+	rv = 0;
+err:
+	MHD_destroy_response(resp);
+	return rv;
+}
+
+void http_plainresp_abort(struct sc_charbuf *cb)
+{
+	sc_cb_destroy(cb);
+}
+
 int cbot_http_init(struct cbot *bot, config_setting_t *config)
 {
 	int port = PORT;
