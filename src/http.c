@@ -181,7 +181,6 @@ void cbot_http_plainresp_start(struct sc_charbuf *cb, const char *title)
 void sc_cb_concat_http_esc(struct sc_charbuf *cb, const char *data)
 {
 	char *lcaret, *rcaret, *next;
-
 	do {
 		lcaret = strchr(data, '<');
 		rcaret = strchr(data, '>');
@@ -192,8 +191,10 @@ void sc_cb_concat_http_esc(struct sc_charbuf *cb, const char *data)
 				next = rcaret;
 		} else if (lcaret) {
 			next = lcaret;
-		} else {
+		} else if (rcaret) {
 			next = rcaret;
+		} else {
+			break;
 		}
 
 		sc_cb_memcpy(cb, data, next - data);
@@ -203,6 +204,7 @@ void sc_cb_concat_http_esc(struct sc_charbuf *cb, const char *data)
 			sc_cb_concat(cb, "&gt;");
 		data = next + 1;
 	} while (lcaret || rcaret);
+	sc_cb_concat(cb, data);
 }
 
 int cbot_http_plainresp_send(struct sc_charbuf *cb,
