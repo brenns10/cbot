@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include <libconfig.h>
+#include <microhttpd.h>
 
 #include "cbot/cbot.h"
 #include "cbot/db.h"
@@ -200,6 +201,29 @@ static void cmd_bd_all(struct cbot_message_event *event)
 	sc_cb_destroy(&cb);
 }
 
+/* Return HTTP response listing all birthdays */
+static void cmd_bd_http_get(struct cbot_http_event *event, void *user)
+{
+	struct sc_list_head res;
+	struct birthday *b, *n;
+	struct sc_charbuf cb;
+
+	cbot_http_plainresp_start(&cb, "All birthdays");
+
+	sc_list_init(&res);
+	birthday_get_all(event->bot, &res);
+	sc_cb_concat(&cb, "All birthdays\n\n");
+	sc_list_for_each_safe(b, n, &res, list, struct birthday)
+	{
+		sc_cb_printf(&cb, "%d/%d: ", b->month, b->day);
+		sc_cb_concat_http_esc(&cb, b->name);
+		sc_cb_append(&cb, '\n');
+		free(b->name);
+		free(b);
+	}
+	cbot_http_plainresp_send(&cb, event, MHD_HTTP_OK);
+}
+
 static void cmd_bd_add(struct cbot_message_event *event)
 {
 	char *name, *date;
@@ -375,6 +399,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	              "birthday list");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cmd_bd_del, NULL,
 	              "birthday remove (.*)");
+	cbot_register(plugin, CBOT_HTTP_GET, (cbot_handler_t)cmd_bd_http_get,
+	              NULL, "/birthdays");
 	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), bd_thread, arg);
 
 	return 0;
@@ -386,6 +412,8 @@ static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 	sc_cb_concat(cb, "- birthday add DATE NAME: add birthday for NAME\n");
 	sc_cb_concat(cb, "- birthday list: list all birthdays\n");
 	sc_cb_concat(cb, "- birthday remove NAME: remove NAME's birthday\n");
+	sc_cb_printf(cb, "- %s/birthdays: view birthday list\n",
+	             cbot_http_geturl(plugin->bot));
 }
 
 struct cbot_plugin_ops ops = {
