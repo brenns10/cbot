@@ -55,7 +55,7 @@ but here it is with docstrings removed:
         char *description;
         int (*load)(struct cbot_plugin *plugin, config_setting_t *config);
         void (*unload)(struct cbot_plugin *plugin);
-        void (*help)(struct cbot_plugin *plugin, const char *target);
+        void (*help)(struct cbot_plugin *plugin, struct sc_charbuf *cb);
     };
 
 All of the fields are optional, except for `load`, which is the one we'll focus
