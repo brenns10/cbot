@@ -33,6 +33,7 @@ CBot.
 - A C compiler (gcc or clang)
 - libconfig: This is used to parse the configuration file. It is required.
 - libcurl: For HTTP queries to APIs. It is required.
+- libmicrohttpd: For HTTP server. It is required
 - libircclient: This is for IRC support. It is required, but we can use a
   "vendored" version if your OS doesn't package it.
 - sqlite3: Used for maintaining state. It is required, but we can use a vendored
@@ -45,10 +46,10 @@ Here are some commands to get setup for various distributions:
 .. code:: bash
 
    # Ubuntu
-   sudo apt install meson gcc libconfig-dev libcurl4-openssl-dev libsqlite3-dev
+   sudo apt install meson gcc libconfig-dev libcurl4-openssl-dev libsqlite3-dev libmicrohttpd-dev
 
    # Arch
-   sudo pacman -Sy meson gcc libconfig curl sqlite
+   sudo pacman -Sy meson gcc libconfig curl sqlite libmicrohttpd
 
 Building
 ^^^^^^^^
