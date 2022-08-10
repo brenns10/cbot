@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Administering CBot &#8212; cbot 0.8.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -45,11 +45,10 @@ need to install from source.</p>
 </section>
 <section id="installing-docker">
 <h2>Installing (Docker)<a class="headerlink" href="#installing-docker" title="Permalink to this heading">¶</a></h2>
-<p>CBot also has Docker images published on <a class="reference external" href="https://hub.docker.com/r/brenns10/cbot">Docker Hub</a>. These Docker images are optimized
-for running CBot with Signal, and by default they launch a script which launches
-the Signald daemon to allow it to interface with Signal. If you are deploying
-CBot on Signal, you may find this a useful deployment method. However, for
-deploying to IRC, it may be more convenient to build and run CBot from source.</p>
+<p>CBot also has Docker images published on <a class="reference external" href="https://hub.docker.com/r/brenns10/cbot">Docker Hub</a>. Since version v0.8.0, these Docker
+images no longer contain Signald bundled. If you want to run CBot with Signal,
+you’ll need to setup Signald yourself, likely via their Docker image.
+Docker-Compose is great for this.</p>
 </section>
 <section id="installing-from-source">
 <h2>Installing (From Source)<a class="headerlink" href="#installing-from-source" title="Permalink to this heading">¶</a></h2>
@@ -64,6 +63,7 @@ named <code class="docutils literal notranslate"><span class="pre">meson</span><
 <li><p>A C compiler (gcc or clang)</p></li>
 <li><p>libconfig: This is used to parse the configuration file. It is required.</p></li>
 <li><p>libcurl: For HTTP queries to APIs. It is required.</p></li>
+<li><p>libmicrohttpd: For HTTP server. It is required</p></li>
 <li><p>libircclient: This is for IRC support. It is required, but we can use a
 “vendored” version if your OS doesn’t package it.</p></li>
 <li><p>sqlite3: Used for maintaining state. It is required, but we can use a vendored
@@ -73,10 +73,10 @@ can all be setup by the build system, as they have no OS packaging.</p></li>
 </ul>
 <p>Here are some commands to get setup for various distributions:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ubuntu</span>
-sudo apt install meson gcc libconfig-dev libcurl4-openssl-dev libsqlite3-dev
+sudo apt install meson gcc libconfig-dev libcurl4-openssl-dev libsqlite3-dev libmicrohttpd-dev
 
 <span class="c1"># Arch</span>
-sudo pacman -Sy meson gcc libconfig curl sqlite
+sudo pacman -Sy meson gcc libconfig curl sqlite libmicrohttpd
 </pre></div>
 </div>
 </section>
@@ -216,7 +216,7 @@ Please see <code class="docutils literal notranslate"><span class="pre">sample.c
       &copy;2021 Stephen Brennan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
