@@ -6,9 +6,14 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.9.0 (2022-10-31)
+------------------
+
 - HTTP server is added.
   - Help is delivered as a link to a webpage.
   - Plugins may register for HTTP events.
+- Birthdays can be viewed as web page
+- [deploy] Removed unnecessary kill statement in run.sh
 
 0.8.0 (2022-05-30)
 ----------------------
