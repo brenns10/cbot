@@ -6,6 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.10.0 (2022-11-14)
+-------------------
+
+Added buttcoin plugin.
+
 0.9.1 (2022-10-31)
 ------------------
 
