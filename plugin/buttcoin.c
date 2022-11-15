@@ -47,7 +47,7 @@ static inline double thresh(double price)
 }
 
 static const char *URL = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/"
-                         "quotes/latest?symbol=BTC";
+                         "quotes/latest?symbol=BTC,USDT";
 static const char *TESTURL = "http://localhost:4100";
 static const char *LINK = "https://coinmarketcap.com/currencies/bitcoin/";
 static const char *TETHER_LINK = "https://coinmarketcap.com/currencies/tether/";
