@@ -30,11 +30,15 @@ struct buttcoin_notify {
 	/* Most recent price */
 	double price_usd;
 
+	bool tether_notified;
+
 	/* The threshold we crossed last time we notified */
 	double last_notify_thresh;
+};
 
-	/* When we last notified */
-	struct timeval last_notify_time;
+struct prices {
+	double btc;
+	double tether;
 };
 
 static inline double thresh(double price)
@@ -46,8 +50,9 @@ static const char *URL = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/"
                          "quotes/latest?symbol=BTC";
 static const char *TESTURL = "http://localhost:4100";
 static const char *LINK = "https://coinmarketcap.com/currencies/bitcoin/";
+static const char *TETHER_LINK = "https://coinmarketcap.com/currencies/tether/";
 
-static double lookup_price(struct buttcoin_notify *butt)
+static int lookup_price(struct buttcoin_notify *butt, struct prices *prices)
 {
 	struct cbot *bot = butt->bot;
 	CURLcode rv;
@@ -56,7 +61,6 @@ static double lookup_price(struct buttcoin_notify *butt)
 	struct curl_slist *headers = NULL;
 	struct sc_charbuf buf;
 	struct json_easy *json;
-	double price = -1;
 	size_t index;
 
 	sc_cb_init(&buf, 256);
@@ -70,6 +74,7 @@ static double lookup_price(struct buttcoin_notify *butt)
 	rv = cbot_curl_perform(bot, curl);
 	if (rv != CURLE_OK) {
 		CL_WARN("buttcoin: curl error: %s\n", curl_easy_strerror(rv));
+		ret = -1;
 		goto out;
 	}
 
@@ -84,9 +89,18 @@ static double lookup_price(struct buttcoin_notify *butt)
 	index = json_easy_lookup(json, 0, "data.BTC[0].quote.USD.price");
 	if (index == 0) {
 		CL_WARN("buttcoin: quote price not found in response\n");
+		ret = -1;
 		goto out_free_json;
 	}
-	price = json_easy_number_get(json, index);
+	prices->btc = json_easy_number_get(json, index);
+
+	index = json_easy_lookup(json, 0, "data.USDT[0].quote.USD.price");
+	if (index == 0) {
+		CL_WARN("buttcoin: quote price not found in response\n");
+		ret = -1;
+		goto out_free_json;
+	}
+	prices->tether = json_easy_number_get(json, index);
 
 out_free_json:
 	json_easy_free(json);
@@ -94,23 +108,31 @@ out:
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(curl);
 	sc_cb_destroy(&buf);
-	return price;
+	return ret;
 }
 
 static void buttcoin_loop(void *arg)
 {
 	struct buttcoin_notify *butt = arg;
-	double price, floor;
+	double floor;
 	struct timespec ts;
-	struct timeval tv;
+	struct prices prices;
+	int ret;
 
-	butt->price_usd = lookup_price(butt);
+	ret = lookup_price(butt, &prices);
 	CL_DEBUG("buttcoin: got price: $%.2f\n", butt->price_usd);
-	if (butt->price_usd < 0) {
+	if (ret != 0) {
 		CL_WARN("buttcoin: initial price lookup failed, bailing\n");
 		return;
 	}
-	butt->last_notify_thresh = butt->price_usd;
+	butt->price_usd = prices.btc;
+	/*
+	 * If we don't already have the last threshold, simply use the current
+	 * price's floor + 1000. So we'll notify when it drops below the current
+	 * $1k threshold.
+	 */
+	if (butt->last_notify_thresh == 0)
+		butt->last_notify_thresh = thresh(butt->price_usd) + 1000;
 
 	for (;;) {
 		ts.tv_nsec = 0;
@@ -121,32 +143,36 @@ static void buttcoin_loop(void *arg)
 			break;
 		}
 
-		price = lookup_price(butt);
-		floor = thresh(butt->price_usd);
-		CL_DEBUG("buttcoin: got price: $%.2f, thresh: $%.2f\n", price,
-		         floor);
-		butt->price_usd = price;
-		if (price >= floor)
+		ret = lookup_price(butt, &prices);
+		if (ret != 0) {
+			CL_WARN("buttcoin: lookup got error, skipping this "
+			        "check\n");
 			continue;
+		}
+		floor = thresh(butt->price_usd);
+		butt->price_usd = prices.btc;
 
-		/*
-		 * Ok, price is lower than the 1000 floor of the last price!
-		 * But we could be wobbling. Don't notify for the same threshold
-		 * within 12 hours.
-		 */
-		gettimeofday(&tv, NULL);
-		if (!(floor < butt->last_notify_thresh ||
-		      tv.tv_sec - butt->last_notify_time.tv_sec >=
-		              butt->renotify_wait))
+		if (prices.tether < 0.97 && !butt->tether_notified) {
+			cbot_send(butt->bot, butt->channel,
+			          "Uh-oh, is Tether losing its peg?\n"
+			          "The price is now $%.4f\n"
+			          "Live graph: %s",
+			          prices.tether, TETHER_LINK);
+			butt->tether_notified = true;
+		}
+
+		CL_DEBUG("buttcoin: price: $%.2f floor: $%.2f last floor: "
+		         "$%.2f\n",
+		         prices.btc, floor, butt->last_notify_thresh);
+		if (prices.btc >= floor || floor >= butt->last_notify_thresh)
 			continue;
 
 		butt->last_notify_thresh = floor;
-		butt->last_notify_time = tv;
 		cbot_send(butt->bot, butt->channel,
 		          "Lol, BTC is now below $%.0f\n"
 		          "The price is now $%.2f\n"
 		          "Live graph: %s",
-		          floor, price, LINK);
+		          floor, prices.btc, LINK);
 	}
 
 	/* cleanup butt */
@@ -162,7 +188,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	const char *api_key;
 	int use_test = 0;
 	int seconds = 300;
-	int renotify_wait = 12 * 3600;
+	double start_thresh = 0;
 	struct buttcoin_notify *butt;
 	struct sc_charbuf cb;
 
@@ -176,9 +202,9 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		CL_CRIT("buttcoin: missing \"channel\" config\n");
 		return -1;
 	}
+	config_setting_lookup_float(conf, "btc_thresh_start", &start_thresh);
 	config_setting_lookup_bool(conf, "use_test_endpoint", &use_test);
 	config_setting_lookup_int(conf, "sleep_interval", &seconds);
-	config_setting_lookup_int(conf, "renotify_wait", &renotify_wait);
 
 	butt = calloc(1, sizeof(*butt));
 	butt->bot = plugin->bot;
@@ -188,7 +214,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	butt->api_key_header = cb.buf;
 	butt->url = use_test ? TESTURL : URL;
 	butt->seconds = seconds;
-	butt->renotify_wait = renotify_wait;
+	butt->last_notify_thresh = start_thresh;
 
 	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), buttcoin_loop, butt);
 	return 0;

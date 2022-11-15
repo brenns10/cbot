@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 price = 16500
+tether = 0.9998
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -17,12 +18,21 @@ def hello_world(path):
                 {
                     'quote': {
                         'USD': {
-                            'price': price
-                        }
-                    }
-                }
-            ]
-        }
+                            'price': price,
+                        },
+                    },
+                },
+            ],
+            'USDT': [
+                {
+                    'quote': {
+                        'USD': {
+                            'price': tether,
+                        },
+                    },
+                },
+            ],
+        },
     })
 
 
