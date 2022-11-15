@@ -120,11 +120,11 @@ static void buttcoin_loop(void *arg)
 	int ret;
 
 	ret = lookup_price(butt, &prices);
-	CL_DEBUG("buttcoin: got price: $%.2f\n", butt->price_usd);
 	if (ret != 0) {
 		CL_WARN("buttcoin: initial price lookup failed, bailing\n");
 		return;
 	}
+	CL_DEBUG("buttcoin: got price: $%.2f\n", prices.btc);
 	butt->price_usd = prices.btc;
 	/*
 	 * If we don't already have the last threshold, simply use the current
