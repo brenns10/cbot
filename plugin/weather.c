@@ -16,13 +16,6 @@
 
 char *defloc = "San Francisco";
 
-static ssize_t write_cb(char *data, size_t size, size_t nmemb, void *user)
-{
-	struct sc_charbuf *buf = user;
-	sc_cb_memcpy(buf, data, size * nmemb);
-	return size * nmemb;
-}
-
 static void sc_cb_rstrip(struct sc_charbuf *buf, char *seq)
 {
 	int i;
@@ -70,8 +63,7 @@ static void do_weather(void *data)
 	url = mkurl(easy, req->urlfmt, *req->loc ? req->loc : defloc);
 	curl_easy_setopt(easy, CURLOPT_URL, url);
 	// curl_easy_setopt(easy, CURLOPT_VERBOSE, 1L);
-	curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, write_cb);
-	curl_easy_setopt(easy, CURLOPT_WRITEDATA, &buf);
+	cbot_curl_charbuf_response(easy, &buf);
 	rv = cbot_curl_perform(bot, easy);
 	if (rv != CURLE_OK) {
 		fprintf(stderr, "curl: error: %s\n", curl_easy_strerror(rv));

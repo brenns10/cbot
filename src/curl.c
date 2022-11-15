@@ -13,6 +13,19 @@
 #include "sc-collections.h"
 #include "sc-lwt.h"
 
+static ssize_t write_cb(char *data, size_t size, size_t nmemb, void *user)
+{
+	struct sc_charbuf *buf = user;
+	sc_cb_memcpy(buf, data, size * nmemb);
+	return size * nmemb;
+}
+
+void cbot_curl_charbuf_response(CURL *easy, struct sc_charbuf *buf)
+{
+	curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, write_cb);
+	curl_easy_setopt(easy, CURLOPT_WRITEDATA, buf);
+}
+
 struct sc_list_head waitlist;
 
 struct curl_waiting {

@@ -21,4 +21,14 @@
  */
 CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle);
 
+/**
+ * @brief Use this to configure your CURL handle to write response to a charbuf
+ *
+ * It's just a simple way to get the whole response data as a single string.
+ *
+ * @param easy Handle
+ * @param buf Buffer to write response to
+ */
+void cbot_curl_charbuf_response(CURL *easy, struct sc_charbuf *buf);
+
 #endif

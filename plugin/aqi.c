@@ -34,13 +34,6 @@ static inline struct aqi *getaqi(struct cbot_plugin *plugin)
 	return (struct aqi *)plugin->data;
 }
 
-static ssize_t write_cb(char *data, size_t size, size_t nmemb, void *user)
-{
-	struct sc_charbuf *buf = user;
-	sc_cb_memcpy(buf, data, size * nmemb);
-	return size * nmemb;
-}
-
 static void handle_query(void *data)
 {
 	struct aqi_query *query = data;
@@ -60,8 +53,7 @@ static void handle_query(void *data)
 	easy = curl_easy_init();
 	curl_easy_setopt(easy, CURLOPT_URL, urlbuf.buf);
 	// curl_easy_setopt(easy, CURLOPT_VERBOSE, 1L);
-	curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, write_cb);
-	curl_easy_setopt(easy, CURLOPT_WRITEDATA, &respbuf);
+	cbot_curl_charbuf_response(easy, &respbuf);
 	rv = cbot_curl_perform(plugin->bot, easy);
 	if (rv != CURLE_OK) {
 		fprintf(stderr, "aqi: curl error: %s\n",
