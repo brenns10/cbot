@@ -54,7 +54,7 @@ libsc_lwt_dep = dependency(
 libnosj_dep = dependency(
   'libnosj',
   fallback: ['nosj', 'libnosj_dep'],
-  version: '>=1.0.0',
+  version: '>=1.1.1',
 )
 dl_dep = cc.find_library('dl', required : false)
 sqlite_dep = dependency(
@@ -114,6 +114,7 @@ plugins = [
   'weather',
   'aqi',
   'birthday',
+  'buttcoin',
 ]
 plugin_libs = []
 foreach f: plugins
