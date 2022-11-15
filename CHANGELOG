@@ -6,6 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.10.1 (2022-11-15)
+-------------------
+
+Update buttcoin to include Tether, and better notification behavior.
+
 0.10.0 (2022-11-14)
 -------------------
 
