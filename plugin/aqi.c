@@ -41,9 +41,8 @@ static void handle_query(void *data)
 	struct cbot_plugin *plugin = aqi->plugin;
 	struct sc_charbuf urlbuf, respbuf;
 	CURL *easy;
-	struct json_token *tokens;
-	struct json_parser p;
-	size_t idx;
+	struct json_easy *json;
+	uint32_t idx;
 	int rv, aqival;
 
 	sc_cb_init(&urlbuf, 256);
@@ -62,26 +61,25 @@ static void handle_query(void *data)
 	}
 	// printf("RESULT\n%s\nENDRESULT\n", respbuf.buf);
 
-	p = json_parse(respbuf.buf, NULL, -1);
-	if (p.error != JSONERR_NO_ERROR) {
-		fprintf(stderr, "aqi: nosj error: ");
-		json_print_error(stderr, p);
-		fprintf(stderr, "\n");
+	json = json_easy_new(respbuf.buf);
+	rv = json_easy_parse(json);
+	if (rv != JSON_OK) {
+		fprintf(stderr, "aqi: nosj error: %s\n", json_strerror(rv));
 		goto out_curl;
 	}
-	tokens = calloc(p.tokenidx, sizeof(*tokens));
-	p = json_parse(respbuf.buf, tokens, p.tokenidx);
-	assert(p.error == JSONERR_NO_ERROR);
 
-	idx = json_lookup(respbuf.buf, tokens, 0, "status");
-	if (!idx || !json_string_match(respbuf.buf, tokens, idx, "ok")) {
+	rv = json_easy_lookup(json, 0, "status", &idx);
+	bool match;
+	if (!rv)
+		json_easy_string_match(json, idx, "ok", &match);
+	if (rv || !match) {
 		char *msg = "(not found)";
 		bool freemsg = false;
-		idx = json_lookup(respbuf.buf, tokens, 0, "data");
-		if (idx && tokens[idx].type == JSON_STRING) {
-			msg = malloc(tokens[idx].length + 1);
-			json_string_load(respbuf.buf, tokens, idx, msg);
-			freemsg = true;
+		rv = json_easy_lookup(json, 0, "data", &idx);
+		if (!rv) {
+			rv = json_easy_string_get(easy, idx, &msg);
+			if (!rv)
+				freemsg = true;
 		}
 		fprintf(stderr, "aqi: api error: %s\n", msg);
 		if (freemsg)
@@ -89,18 +87,24 @@ static void handle_query(void *data)
 		goto out_api;
 	}
 
-	idx = json_lookup(respbuf.buf, tokens, 0, "data.aqi");
-	if (!idx || tokens[idx].type != JSON_NUMBER) {
+	rv = json_easy_lookup(json, 0, "data.aqi", &idx);
+	if (rv != JSON_OK || json->tokens[idx].type != JSON_NUMBER) {
 		fprintf(stderr, "aqi: api didn't return data.aqi\n");
 		goto out_api;
 	}
-	aqival = (int)json_number_get(respbuf.buf, tokens, idx);
+	double val;
+	rv = json_easy_number_get(json, idx, &val);
+	if (rv != JSON_OK) {
+		CL_CRIT("aqi: data.aqi is not a number\n");
+		goto out_api;
+	}
+	aqival = (int)val;
 	sc_cb_clear(&urlbuf);
 	sc_cb_printf(&urlbuf, "AQI: %d", aqival);
 	cbot_send(plugin->bot, query->channel, urlbuf.buf);
 
 out_api:
-	free(tokens);
+	json_easy_free(json);
 out_curl:
 	sc_cb_destroy(&urlbuf);
 	sc_cb_destroy(&respbuf);

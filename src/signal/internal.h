@@ -48,12 +48,7 @@ struct cbot_signal_backend {
  * Can be parsed, and then subsequent lookup operations can happen.
  */
 struct jmsg {
-	char *orig;
-	size_t origlen;
-
-	struct json_token *tok;
-	size_t toklen;
-
+	struct json_easy easy;
 	struct sc_list_head list;
 };
 
@@ -85,9 +80,10 @@ void jmsg_free(struct jmsg *jm);
  * @param n The index of the object to look in
  * @param key The key to search - may be a JSON object expression.
  */
-static inline size_t jmsg_lookup_at(struct jmsg *jm, size_t n, const char *key)
+static inline int jmsg_lookup_at(struct jmsg *jm, uint32_t n, const char *key,
+                                 uint32_t *res)
 {
-	return json_lookup(jm->orig, jm->tok, n, key);
+	return json_easy_lookup(&jm->easy, n, key, res);
 }
 
 /**
@@ -95,9 +91,10 @@ static inline size_t jmsg_lookup_at(struct jmsg *jm, size_t n, const char *key)
  * @param jm JSON message
  * @param key The key to search - may be a JSON object expression.
  */
-static inline size_t jmsg_lookup(struct jmsg *jm, const char *key)
+static inline uint32_t jmsg_lookup(struct jmsg *jm, const char *key,
+                                   uint32_t *res)
 {
-	return jmsg_lookup_at(jm, 0, key);
+	return jmsg_lookup_at(jm, 0, key, res);
 }
 
 /**
@@ -107,10 +104,10 @@ static inline size_t jmsg_lookup(struct jmsg *jm, const char *key)
  * @param key The key to search - may be a JSON object expression.
  * @param[out] len Optional length of string
  */
-char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t n, const char *key,
+char *jmsg_lookup_string_at_len(struct jmsg *jm, uint32_t n, const char *key,
                                 size_t *len);
 
-static inline char *jmsg_lookup_string_at(struct jmsg *jm, size_t n,
+static inline char *jmsg_lookup_string_at(struct jmsg *jm, uint32_t n,
                                           const char *key)
 {
 	return jmsg_lookup_string_at_len(jm, n, key, NULL);
@@ -176,7 +173,7 @@ char *mention_parse(const char *string, int *kind, int *offset);
  * @param list The index of the array to read menitons from
  * @return A newly allocated string with mentions expanded to placeholders.
  */
-char *mention_from_json(const char *str, struct jmsg *jm, size_t list);
+char *mention_from_json(const char *str, struct jmsg *jm, uint32_t list);
 
 /**
  * Return a newly allocated string with necessary escaping for JSON. Return a

@@ -119,16 +119,18 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	char *srcb = NULL;
 	char *group = NULL;
 	char *repl;
-	size_t mention_index;
+	uint32_t mention_index = 0;
 
 	msgb = jmsg_lookup_string(jm, "data.dataMessage.body");
 	if (!msgb)
 		return 0;
 
-	mention_index = jmsg_lookup(jm, "data.dataMessage.mentions");
-	repl = mention_from_json(msgb, jm, mention_index);
-	free(msgb);
-	msgb = repl;
+	jmsg_lookup(jm, "data.dataMessage.mentions", &mention_index);
+	if (mention_index) {
+		repl = mention_from_json(msgb, jm, mention_index);
+		free(msgb);
+		msgb = repl;
+	}
 
 	srcb = jmsg_lookup_string(jm, "data.source.uuid");
 	if (!srcb)

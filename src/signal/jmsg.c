@@ -40,18 +40,12 @@ static int async_read(int fd, char *data, size_t nbytes)
 
 static int jmsg_parse(struct jmsg *jm)
 {
-	struct json_parser p = json_parse(jm->orig, NULL, 0);
+	int res = json_easy_parse(&jm->easy);
 
-	if (p.error != JSONERR_NO_ERROR) {
-		fprintf(stderr, "json parse error:\n");
-		json_print_error(stderr, p);
+	if (res != JSON_OK) {
+		CL_CRIT("json parse error: %s\n", json_strerror(res));
 		return -1;
 	}
-
-	jm->tok = calloc(p.tokenidx, sizeof(*jm->tok));
-	jm->toklen = p.tokenidx;
-	p = json_parse(jm->orig, jm->tok, jm->toklen);
-	assert(p.error == JSONERR_NO_ERROR);
 	return 0;
 }
 
@@ -67,7 +61,6 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 	struct sc_charbuf cb;
 	char *found;
 	int count = 0;
-	struct jmsg *jm;
 
 	sc_cb_init(&cb, 4096);
 
@@ -83,6 +76,9 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 
 		found = memchr(cb.buf, '\n', cb.length);
 		while (found) {
+			char *buf = NULL;
+			struct jmsg *jm = NULL;
+
 			/*
 			 * Find start of next message and replace newline
 			 * with nul terminator
@@ -93,12 +89,25 @@ static int jmsg_read(int fd, struct sc_list_head *list)
 			/*
 			 * Copy data into new jmsg and add to output.
 			 */
+			buf = malloc(nextmsgidx);
+			if (!buf) {
+				CL_CRIT("Allocation error\n");
+				goto err;
+			}
+			memcpy(buf, cb.buf, nextmsgidx);
 			jm = calloc(1, sizeof(*jm));
-			sc_list_init(&jm->list);
-			jm->orig = malloc(nextmsgidx);
-			memcpy(jm->orig, cb.buf, nextmsgidx);
-			jm->origlen = nextmsgidx - 1;
-			CL_VERB("JM: \"%s\"\n", jm->orig);
+			if (!jm) {
+				CL_CRIT("Allocation error\n");
+				free(buf);
+				goto err;
+			}
+			json_easy_init(&jm->easy, buf);
+			/* Weirdly, clang-tidy believes that here, buf could be
+			 * leaked. I guess it doesn't pick up on the fact that
+			 * now, jm->easy takes ownership of buf. Suppress the
+			 * false positive.*/
+			sc_list_init(&jm->list); // NOLINT
+			CL_VERB("JM: \"%s\"\n", jm->easy.input);
 			if (jmsg_parse(jm) < 0) {
 				jmsg_free(jm);
 				goto err;
@@ -168,13 +177,22 @@ struct jmsg *jmsg_next(struct cbot_signal_backend *sig)
 static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
 {
 	struct jmsg *jm;
-	size_t ix_type;
+	uint32_t ix_type;
 
 	sc_list_for_each_entry(jm, list, list, struct jmsg)
 	{
-		ix_type = json_object_get(jm->orig, jm->tok, 0, "type");
-		if (ix_type &&
-		    json_string_match(jm->orig, jm->tok, ix_type, type)) {
+		int ret;
+		bool match;
+
+		ret = json_easy_object_get(&jm->easy, 0, "type", &ix_type);
+		if (ret != JSON_OK)
+			continue;
+
+		ret = json_easy_string_match(&jm->easy, ix_type, type, &match);
+		if (ret != JSON_OK)
+			continue;
+
+		if (match) {
 			sc_list_remove(&jm->list);
 			return jm;
 		}
@@ -207,24 +225,24 @@ struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
 void jmsg_free(struct jmsg *jm)
 {
 	if (jm) {
-		free(jm->orig);
-		free(jm->tok);
+		/* json_easy does not own input */
+		free((void *)jm->easy.input);
+		json_easy_destroy(&jm->easy);
 		free(jm);
 	}
 }
 
-char *jmsg_lookup_string_at_len(struct jmsg *jm, size_t start, const char *key,
-                                size_t *len)
+char *jmsg_lookup_string_at_len(struct jmsg *jm, uint32_t start,
+                                const char *key, size_t *len)
 {
-	size_t res = jmsg_lookup_at(jm, start, key);
-	char *str;
-	if (res == 0)
+	char *data;
+	uint32_t idx;
+
+	if (json_easy_lookup(&jm->easy, start, key, &idx) != 0)
 		return NULL;
-	if (jm->tok[res].type != JSON_STRING)
+	if (json_easy_string_get(&jm->easy, idx, &data) != 0)
 		return NULL;
 	if (len)
-		*len = jm->tok[res].length;
-	str = malloc(jm->tok[res].length + 1);
-	json_string_load(jm->orig, jm->tok, res, str);
-	return str;
+		*len = jm->easy.tokens[idx].length;
+	return data;
 }

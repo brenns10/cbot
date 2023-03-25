@@ -61,7 +61,7 @@ static int lookup_price(struct buttcoin_notify *butt, struct prices *prices)
 	struct curl_slist *headers = NULL;
 	struct sc_charbuf buf;
 	struct json_easy *json;
-	size_t index;
+	uint32_t index;
 
 	sc_cb_init(&buf, 256);
 	curl_easy_setopt(curl, CURLOPT_URL, butt->url);
@@ -81,26 +81,29 @@ static int lookup_price(struct buttcoin_notify *butt, struct prices *prices)
 	json = json_easy_new(buf.buf);
 	ret = json_easy_parse(json);
 	if (ret != 0) {
-		CL_WARN("buttcoin: json parse error: %s\n",
-		        json_easy_strerror(ret));
+		CL_WARN("buttcoin: json parse error: %s\n", json_strerror(ret));
 		goto out_free_json;
 	}
 
-	index = json_easy_lookup(json, 0, "data.BTC[0].quote.USD.price");
-	if (index == 0) {
-		CL_WARN("buttcoin: quote price not found in response\n");
+	ret = json_easy_lookup(json, 0, "data.BTC[0].quote.USD.price", &index);
+	if (!ret)
+		ret = json_easy_number_get(json, index, &prices->btc);
+	if (ret != JSON_OK) {
+		CL_WARN("buttcoin: quote price not found in response: %s\n",
+		        json_strerror(ret));
 		ret = -1;
 		goto out_free_json;
 	}
-	prices->btc = json_easy_number_get(json, index);
 
-	index = json_easy_lookup(json, 0, "data.USDT[0].quote.USD.price");
-	if (index == 0) {
-		CL_WARN("buttcoin: quote price not found in response\n");
+	ret = json_easy_lookup(json, 0, "data.USDT[0].quote.USD.price", &index);
+	if (!ret)
+		ret = json_easy_number_get(json, index, &prices->tether);
+	if (ret != JSON_OK) {
+		CL_WARN("buttcoin: quote price not found in response: %s\n",
+		        json_strerror(ret));
 		ret = -1;
 		goto out_free_json;
 	}
-	prices->tether = json_easy_number_get(json, index);
 
 out_free_json:
 	json_easy_free(json);

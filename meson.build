@@ -54,7 +54,7 @@ libsc_lwt_dep = dependency(
 libnosj_dep = dependency(
   'libnosj',
   fallback: ['nosj', 'libnosj_dep'],
-  version: '>=1.1.1',
+  version: '>=2.0.0',
 )
 dl_dep = cc.find_library('dl', required : false)
 sqlite_dep = dependency(

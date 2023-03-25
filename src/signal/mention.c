@@ -1,6 +1,7 @@
 /*
  * Functions which help add and remove mentions to Signal messages.
  */
+#include <assert.h>
 #include <sc-collections.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,16 +69,15 @@ char *mention_parse(const char *string, int *kind, int *offset)
 	return out;
 }
 
-char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
+char *mention_from_json(const char *str, struct jmsg *jm, uint32_t list)
 {
 	const char *next, *at;
-	size_t uuid_idx;
+	uint32_t uuid_idx;
 	struct sc_charbuf cb;
-	sc_cb_init(&cb, jm->origlen);
+	sc_cb_init(&cb, jm->easy.input_len);
 
-	if (list != 0)
-		list = jm->tok[list].child;
-
+	/* List starts at index +1 */
+	list++;
 	for (;;) {
 		/* find next occurrence of either a mention or @ (which needs
 		 * escaping) */
@@ -107,9 +107,18 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 			str = next + sizeof(MENTION_PLACEHOLDER) - 1;
 			continue;
 		}
+		if (jmsg_lookup_at(jm, list, "uuid", &uuid_idx) != JSON_OK) {
+			CL_CRIT("cbot signal: can't find UUID in JSON "
+			        "mention\n");
+			sc_cb_concat(&cb, "???");
+			str = next + sizeof(MENTION_PLACEHOLDER) - 1;
+			/* We should skip this item in the list, it's malformed
+			 */
+			list = jm->easy.tokens[list].next;
+			continue;
+		}
 		sc_cb_concat(&cb, "@(uuid:");
-		uuid_idx = jmsg_lookup_at(jm, list, "uuid");
-		if (jm->tok[uuid_idx].type != JSON_STRING) {
+		if (jm->easy.tokens[uuid_idx].type != JSON_STRING) {
 			CL_CRIT("cbot signal: BADLY FORMATTED MENTION\n");
 		} else {
 			/* In general this isn't safe to manually access cb.buf,
@@ -117,17 +126,18 @@ char *mention_from_json(const char *str, struct jmsg *jm, size_t list)
 			 * the original JSON message, which means it must have
 			 * space for a subset of it.
 			 */
-			json_string_load(jm->orig, jm->tok, uuid_idx,
-			                 cb.buf + cb.length);
-			cb.length += jm->tok[uuid_idx].length;
+			int ret = json_easy_string_load(&jm->easy, uuid_idx,
+			                                cb.buf + cb.length);
+			assert(ret == JSON_OK); /* We already type checked */
+			cb.length += jm->easy.tokens[uuid_idx].length;
 			cb.buf[cb.length] = '\0';
 		}
 		sc_cb_append(&cb, ')');
-		list = jm->tok[list].next;
+		list = jm->easy.tokens[list].next;
 		str = next + sizeof(MENTION_PLACEHOLDER) - 1;
 	}
 
-	if (jm->tok[list].next != 0) {
+	if (jm->easy.tokens[list].next != 0) {
 		CL_WARN("unconsumed mention in JSON\n");
 	}
 	sc_cb_memcpy(&cb, str, strlen(str) + 1);

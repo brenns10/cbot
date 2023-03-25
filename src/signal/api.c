@@ -56,7 +56,9 @@ static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig,
                                              const char *kind)
 {
 	struct jmsg *jm = NULL;
-	struct signal_user *user;
+	struct signal_user *user = NULL;
+	uint32_t idx;
+	int ret;
 
 	fprintf(sig->ws,
 	        "\n{\"account\":\"%s\",\"address\":{\"%s\":\"%s\"},\"type\":"
@@ -66,9 +68,15 @@ static struct signal_user *__sig_get_profile(struct cbot_signal_backend *sig,
 	jm = jmsg_next(sig);
 	if (!jm) {
 		CL_CRIT("sig_get_profile: error reading or parsing\n");
-		return NULL;
+		goto out;
 	}
-	user = __sig_parse_profile(jm, jmsg_lookup(jm, "data"));
+	ret = jmsg_lookup(jm, "data", &idx);
+	if (ret != JSON_OK) {
+		CL_CRIT("sig_get_profile: missing \"data\" field\n");
+		goto out;
+	}
+	user = __sig_parse_profile(jm, idx);
+out:
 	jmsg_free(jm);
 	return user;
 }
@@ -90,14 +98,20 @@ void sig_list_contacts(struct cbot_signal_backend *sig,
 {
 	struct jmsg *jm;
 	struct signal_user *user;
-	size_t ix;
+	uint32_t ix;
+	int ret;
 	fprintf(sig->ws,
 	        "\n{\"account\":\"%s\",\"type\":\"list_contacts\",\"version\":"
 	        "\"v1\"}\n",
 	        sig->sender);
 	jm = jmsg_next(sig);
-	ix = jmsg_lookup(jm, "data.profiles");
-	json_array_for_each(ix, jm->tok, ix)
+	if (jm)
+		ret = jmsg_lookup(jm, "data.profiles", &ix);
+	if (!jm || ret != JSON_OK) {
+		jmsg_free(jm);
+		return;
+	}
+	json_array_for_each(ix, jm->easy.tokens, ix)
 	{
 		user = __sig_parse_profile(jm, ix);
 		sc_list_insert_end(head, &user->list);
@@ -131,8 +145,9 @@ void sig_group_free_all(struct sc_list_head *list)
 int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 {
 	struct jmsg *jm = NULL;
-	size_t ix, jx, kx;
+	uint32_t ix, jx, kx;
 	int count = 0;
+	int ret;
 	struct signal_group *group;
 	struct signal_member *memb;
 	fprintf(sig->ws,
@@ -142,17 +157,18 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 
 	jm = jmsg_next(sig);
 	if (!jm) {
-		CL_WARN("sig_get_profile: error reading or parsing\n");
+		CL_WARN("sig_list_groups: error reading or parsing\n");
 		return -1;
 	}
 
-	ix = jmsg_lookup(jm, "data.groups");
-	if (ix == 0) {
-		CL_WARN("Key 'groups' not found in response: %s\n", jm->orig);
+	ret = jmsg_lookup(jm, "data.groups", &ix);
+	if (ret != JSON_OK) {
+		CL_WARN("Key 'groups' not found in response: %s\n",
+		        json_strerror(ret));
 		jmsg_free(jm);
 		return -1;
 	}
-	json_array_for_each(ix, jm->tok, ix)
+	json_array_for_each(ix, jm->easy.tokens, ix)
 	{
 		group = malloc(sizeof(*group));
 		sc_list_init(&group->list);
@@ -160,17 +176,30 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 		group->title = jmsg_lookup_string_at(jm, ix, "title");
 		group->invite_link =
 		        jmsg_lookup_string_at(jm, ix, "inviteLink");
-		jx = jmsg_lookup_at(jm, ix, "memberDetail");
-		group->members = calloc(jm->tok[jx].length,
+		ret = jmsg_lookup_at(jm, ix, "memberDetail", &jx);
+		if (ret != JSON_OK) {
+			CL_WARN("Could not find memberDetail for group %s\n",
+			        group->id);
+			free(group->id);
+			free(group->title);
+			free(group->invite_link);
+			free(group);
+			continue;
+		}
+		group->members = calloc(jm->easy.tokens[jx].length,
 		                        sizeof(struct signal_member));
 		group->n_members = 0;
-		json_array_for_each(jx, jm->tok, jx)
+		json_array_for_each(jx, jm->easy.tokens, jx)
 		{
+			bool is_admin = false;
 			memb = &group->members[group->n_members++];
 			memb->uuid = jmsg_lookup_string_at(jm, jx, "uuid");
-			kx = jmsg_lookup_at(jm, jx, "role");
-			if (json_string_match(jm->orig, jm->tok, kx,
-			                      "ADMINISTRATOR"))
+			ret = jmsg_lookup_at(jm, jx, "role", &kx);
+			if (!ret)
+				json_easy_string_match(&jm->easy, kx,
+				                       "ADMINISTRATOR",
+				                       &is_admin);
+			if (is_admin)
 				memb->role = SIGNAL_ROLE_ADMINISTRATOR;
 			else
 				memb->role = SIGNAL_ROLE_DEFAULT;
