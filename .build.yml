@@ -59,7 +59,7 @@ tasks:
       mv ~/packages/deploy/x86_64/cbot-$VER-r0.apk ~/artifacts/
   - github_release: |
       cd cbot
-      set +x; source ~/.github_token.sh; set -x
+      set +x; source ~/.github_token; set -x
       TAG=$(echo "$GITHUB_REF" | \
             grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
@@ -74,7 +74,7 @@ tasks:
       gh release create $TAG ~/artifacts/* -t $TAG -F /tmp/changelog
   - docker_build: |
       cd cbot
-      set +x; source ~/.github_token.sh; set -x
+      set +x; source ~/.github_token; set -x
       TAG=$(echo "$GITHUB_REF" | \
             grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
             || echo "")
