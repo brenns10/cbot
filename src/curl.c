@@ -49,8 +49,8 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 	sc_lwt_set_state(bot->curl_lwt, SC_LWT_RUNNABLE);
 	sc_list_insert_end(&waitlist, &wait.list);
 	while (!wait.done) {
-		CL_DEBUG("curl: %s request, yielding\n",
-		         first ? "enqueued" : "continue");
+		CL_VERB("curl: %s request, yielding\n",
+		        first ? "enqueued" : "continue");
 		first = false;
 		/*
 		 * The LWT system may wake us up in the case of a shutdown.
@@ -60,7 +60,7 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 		 */
 		sc_lwt_set_state(wait.thread, SC_LWT_BLOCKED);
 		sc_lwt_yield();
-		CL_DEBUG("curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
+		CL_VERB("curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
 	}
 	return wait.result;
 }
@@ -108,17 +108,17 @@ void cbot_curl_run(void *data)
 			ts.tv_sec = millis / 1000;
 			ts.tv_nsec = millis * 1000000;
 			sc_lwt_settimeout(cur, &ts);
-			CL_DEBUG("curlthread: set timeout %d millis\n", millis);
+			CL_VERB("curlthread: set timeout %d millis\n", millis);
 		} else if (millis == 0) {
 			block = false;
 		}
 
 		/* Only block if curl gave a non-zero timeout */
 		if (block) {
-			CL_DEBUG("curlthread: yielding\n");
+			CL_VERB("curlthread: yielding\n");
 			sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 			sc_lwt_yield();
-			CL_DEBUG("curlthread: wake up\n");
+			CL_VERB("curlthread: wake up\n");
 			if (sc_lwt_shutting_down()) {
 				CL_DEBUG("curlthread: shutting down\n");
 				break;
