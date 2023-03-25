@@ -71,7 +71,6 @@ Plugin API
 
 See [doc/Plugins.md](doc/Plugins.md) for a details on plugin development.
 
-
 License
 -------
 
