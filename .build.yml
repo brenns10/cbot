@@ -35,9 +35,7 @@ tasks:
       ninja -C build
   - source_release: |
       cd cbot
-      TAG=$(echo "$GITHUB_REF" | \
-            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
-            || echo "")
+      TAG=$(git tag --points-at HEAD)
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       ./make-release.sh
@@ -45,9 +43,7 @@ tasks:
       mv cbot-$VER.tar.gz ~/artifacts/
   - alpine_package: |
       cd cbot
-      TAG=$(echo "$GITHUB_REF" | \
-            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
-            || echo "")
+      TAG=$(git tag --points-at HEAD)
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       export PACKAGER_PRIVKEY=~/packager.key
@@ -60,9 +56,7 @@ tasks:
   - github_release: |
       cd cbot
       set +x; source ~/.github_token; set -x
-      TAG=$(echo "$GITHUB_REF" | \
-            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
-            || echo "")
+      TAG=$(git tag --points-at HEAD)
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       # Get the blurb for the current release from CHANGELOG
@@ -75,9 +69,7 @@ tasks:
   - docker_build: |
       cd cbot
       set +x; source ~/.github_token; set -x
-      TAG=$(echo "$GITHUB_REF" | \
-            grep -o 'v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$' \
-            || echo "")
+      TAG=$(git tag --points-at HEAD)
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       cd deploy
