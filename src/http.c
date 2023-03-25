@@ -136,12 +136,15 @@ static void cbot_http_run(void *data)
 
 		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 		sc_lwt_yield();
+		if (sc_lwt_shutting_down())
+			break;
 
 		rv = MHD_run(daemon);
 		if (rv == MHD_NO) {
 			fprintf(stderr, "MHD_run says no\n");
 		}
 	}
+	MHD_stop_daemon(daemon);
 }
 
 static void cbot_http_root(struct cbot_http_event *evt, void *unused)
