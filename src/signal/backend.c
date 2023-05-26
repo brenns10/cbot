@@ -221,10 +221,12 @@ static void cbot_signal_run(struct cbot *bot)
 
 	cbot_init_user_grp(sig);
 
-	sig_subscribe(sig);
+	if (sig_subscribe(sig) < 0)
+		return;
 	sig_expect(sig, "listen_started");
 
-	sig_set_name(sig, bot->name);
+	if (sig_set_name(sig, bot->name) < 0)
+		return;
 
 	while (1) {
 		jm = jmsg_next(sig);

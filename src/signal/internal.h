@@ -38,6 +38,8 @@ struct cbot_signal_backend {
 
 	/* Reference to the bot */
 	struct cbot *bot;
+
+	uint64_t id;
 };
 
 /***** jmsg.c *****/
@@ -67,6 +69,12 @@ struct jmsg *jmsg_next(struct cbot_signal_backend *sig);
  * @return jmsg or NULL on error
  */
 struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type);
+
+/**
+ * Wait for a jmsg where @a field has value @a value
+ */
+struct jmsg *jmsg_wait_field(struct cbot_signal_backend *sig, const char *field,
+                             const char *value);
 
 /**
  * Free a JSON message object, in whatever lifetime state it may be.
@@ -232,6 +240,12 @@ struct signal_user {
 void sig_expect(struct cbot_signal_backend *sig, const char *type);
 
 /**
+ * Wait for a message from signald whose ID matches the command we just sent
+ * one, and expect it to have type @a type. On failure, return -1.
+ */
+int sig_result(struct cbot_signal_backend *sig, const char *type);
+
+/**
  * Get the profile of a user (by phone number).
  * @param sig Signal backend
  * @param phone Phone number of user
@@ -277,14 +291,14 @@ void sig_group_free_all(struct sc_list_head *list);
  * Subscribe to messages from Signald.
  * @param sig Signal backend
  */
-void sig_subscribe(struct cbot_signal_backend *sig);
+int sig_subscribe(struct cbot_signal_backend *sig);
 
 /**
  * Set our profile name.
  * @param sig Signal backend
  * @param name Name to set
  */
-void sig_set_name(struct cbot_signal_backend *sig, const char *name);
+int sig_set_name(struct cbot_signal_backend *sig, const char *name);
 
 /**
  * Send a message to a group.

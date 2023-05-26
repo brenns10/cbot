@@ -174,7 +174,8 @@ struct jmsg *jmsg_next(struct cbot_signal_backend *sig)
 	return jmsg_first(&sig->messages);
 }
 
-static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
+static struct jmsg *jmsg_find_by_field(struct sc_list_head *list,
+                                       const char *field, const char *value)
 {
 	struct jmsg *jm;
 	uint32_t ix_type;
@@ -184,11 +185,11 @@ static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
 		int ret;
 		bool match;
 
-		ret = json_easy_object_get(&jm->easy, 0, "type", &ix_type);
+		ret = json_easy_object_get(&jm->easy, 0, field, &ix_type);
 		if (ret != JSON_OK)
 			continue;
 
-		ret = json_easy_string_match(&jm->easy, ix_type, type, &match);
+		ret = json_easy_string_match(&jm->easy, ix_type, value, &match);
 		if (ret != JSON_OK)
 			continue;
 
@@ -201,10 +202,11 @@ static struct jmsg *jmsg_find_type(struct sc_list_head *list, const char *type)
 	return NULL;
 }
 
-struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
+struct jmsg *jmsg_wait_field(struct cbot_signal_backend *sig, const char *field,
+                             const char *value)
 {
 	struct sc_list_head list;
-	struct jmsg *jm = jmsg_find_type(&sig->messages, type);
+	struct jmsg *jm = jmsg_find_by_field(&sig->messages, field, value);
 	if (jm)
 		return jm;
 
@@ -215,11 +217,15 @@ struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
 			sc_list_move(&list, sig->messages.prev);
 			return NULL;
 		}
-		jm = jmsg_find_type(&list, type);
+		jm = jmsg_find_by_field(&list, field, value);
 		sc_list_move(&list, sig->messages.prev);
 		if (jm)
 			return jm;
 	}
+}
+struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
+{
+	return jmsg_wait_field(sig, "type", type);
 }
 
 void jmsg_free(struct jmsg *jm)

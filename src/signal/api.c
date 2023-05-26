@@ -211,29 +211,77 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 	return count;
 }
 
-void sig_subscribe(struct cbot_signal_backend *sig)
+int sig_subscribe(struct cbot_signal_backend *sig)
 {
-	char fmt[] = "\n{\"type\":\"subscribe\",\"username\":\"%s\"}\n";
-	fprintf(sig->ws, fmt, sig->sender);
-	sig_expect(sig, "subscribed");
+	char fmt[] = "\n{\"id\": "
+	             "\"%lu\",\"type\":\"subscribe\",\"username\":\"%s\"}\n";
+	fprintf(sig->ws, fmt, sig->id++, sig->sender);
+	return sig_result(sig, "subscribed");
 }
 
-void sig_set_name(struct cbot_signal_backend *sig, const char *name)
+int sig_set_name(struct cbot_signal_backend *sig, const char *name)
 {
 	fprintf(sig->ws,
-	        "\n{\"account\":\"%s\",\"name\":\"%s\",\"type\":\"set_"
-	        "profile\",\"version\":\"v1\"}\n",
-	        sig->sender, name);
-	sig_expect(sig, "set_profile");
+	        "\n{\"id\":\"%lu\",\"account\":\"%s\",\"name\":\"%s\",\"type\":"
+	        "\"set_profile\",\"version\":\"v1\"}\n",
+	        sig->id++, sig->sender, name);
+	return sig_result(sig, "set_profile");
+}
+
+int sig_result(struct cbot_signal_backend *sig, const char *type)
+{
+	char buf[16];
+	struct jmsg *jm;
+	uint32_t ix_type;
+	bool match;
+	int ret;
+	CL_DEBUG("sig_result: wait for id %lu, type \"%s\"\n", sig->id - 1,
+	         type);
+
+	snprintf(buf, sizeof(buf), "%lu", sig->id - 1);
+	jm = jmsg_wait_field(sig, "id", buf);
+
+	ret = json_easy_object_get(&jm->easy, 0, "type", &ix_type);
+	if (ret != JSON_OK)
+		goto out_json_error;
+
+	ret = json_easy_string_match(&jm->easy, ix_type, type, &match);
+	if (ret != JSON_OK)
+		goto out_json_error;
+
+	ret = 0;
+	if (!match) {
+		char *actual = NULL;
+		json_easy_string_get(&jm->easy, ix_type, &actual);
+		CL_CRIT("error: response to request %lu does was \"%s\", not "
+		        "\"%s\"\n",
+		        sig->id - 1, actual ? actual : "(unknown)", type);
+		free(actual);
+		ret = -1;
+	}
+
+	CL_DEBUG("sig_result: wait for id %lu completed, %s\n", sig->id - 1,
+	         match ? "match" : "no match");
+	jmsg_free(jm);
+	return ret;
+out_json_error:
+	CL_CRIT("error: response to request %lu: %s\n", sig->id - 1,
+	        json_strerror(ret));
+	json_easy_format(&jm->easy, 0, stderr);
+	jmsg_free(jm);
+	return -1;
 }
 
 void sig_expect(struct cbot_signal_backend *sig, const char *type)
 {
+	CL_DEBUG("sig_expect: \"%s\"\n", type);
 	struct jmsg *jm = jmsg_wait(sig, type);
 	jmsg_free(jm);
+	CL_DEBUG("sig_expect: completed \"%s\"\n", type);
 }
 
 const static char fmt_send_group[] = ("\n{"
+                                      "\"id\": \"%lu\","
                                       "\"username\":\"%s\","
                                       "\"recipientGroupId\":\"%s\","
                                       "\"messageBody\":\"%s\","
@@ -247,12 +295,14 @@ void sig_send_group(struct cbot_signal_backend *sig, const char *to,
 {
 	char *quoted, *mentions = NULL;
 	quoted = json_quote_and_mention(msg, &mentions);
-	fprintf(sig->ws, fmt_send_group, sig->sender, to, quoted, mentions);
+	fprintf(sig->ws, fmt_send_group, sig->id++, sig->sender, to, quoted,
+	        mentions);
 	free(quoted);
 	free(mentions);
 }
 
 const static char fmt_send_single[] = ("\n{"
+                                       "\"id\": \"%lu\","
                                        "\"username\":\"%s\","
                                        "\"recipientAddress\":{"
                                        "\"uuid\":\"%s\""
@@ -268,7 +318,8 @@ void sig_send_single(struct cbot_signal_backend *sig, const char *to,
 {
 	char *quoted, *mentions = NULL;
 	quoted = json_quote_and_mention(msg, &mentions);
-	fprintf(sig->ws, fmt_send_single, sig->sender, to, quoted, mentions);
+	fprintf(sig->ws, fmt_send_single, sig->id++, sig->sender, to, quoted,
+	        mentions);
 	free(quoted);
 	free(mentions);
 }
