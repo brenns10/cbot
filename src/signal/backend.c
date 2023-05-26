@@ -121,12 +121,14 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	char *repl;
 	uint32_t mention_index = 0;
 
-	msgb = jmsg_lookup_string(jm, "data.dataMessage.body");
+	json_easy_format(&jm->easy, 0, stdout);
+
+	msgb = jmsg_lookup_string(jm, "data.data_message.body");
 	if (!msgb)
 		return 0;
 
-	jmsg_lookup(jm, "data.dataMessage.mentions", &mention_index);
-	if (mention_index) {
+	int ret = jmsg_lookup(jm, "data.data_message.mentions", &mention_index);
+	if (ret == JSON_OK) {
 		repl = mention_from_json(msgb, jm, mention_index);
 		free(msgb);
 		msgb = repl;
@@ -137,7 +139,7 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		goto out;
 	srcb = mention_format(srcb, "uuid");
 
-	group = jmsg_lookup_string(jm, "data.dataMessage.groupV2.id");
+	group = jmsg_lookup_string(jm, "data.data_message.groupV2.id");
 	if (group) {
 		if (!should_continue_group(sig, group))
 			goto out;
@@ -223,7 +225,7 @@ static void cbot_signal_run(struct cbot *bot)
 
 	if (sig_subscribe(sig) < 0)
 		return;
-	sig_expect(sig, "listen_started");
+	sig_expect(sig, "ListenerState");
 
 	if (sig_set_name(sig, bot->name) < 0)
 		return;

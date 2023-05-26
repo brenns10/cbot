@@ -213,10 +213,10 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 
 int sig_subscribe(struct cbot_signal_backend *sig)
 {
-	char fmt[] = "\n{\"id\": "
-	             "\"%lu\",\"type\":\"subscribe\",\"username\":\"%s\"}\n";
+	char fmt[] = "\n{\"id\":\"%lu\",\"version\":\"v1\","
+	             "\"type\":\"subscribe\",\"account\":\"%s\"}\n";
 	fprintf(sig->ws, fmt, sig->id++, sig->sender);
-	return sig_result(sig, "subscribed");
+	return sig_result(sig, "subscribe");
 }
 
 int sig_set_name(struct cbot_signal_backend *sig, const char *name)
