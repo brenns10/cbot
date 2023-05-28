@@ -37,15 +37,15 @@ struct cbot_qmsg {
  * delegated to the backends.
  ********/
 
-void cbot_send(const struct cbot *cbot, const char *dest, const char *format,
-               ...)
+void cbot_sendr(const struct cbot *cbot, const char *dest,
+                const struct cbot_reaction_ops *ops, const char *format, ...)
 {
 	va_list va;
 	struct sc_charbuf cb;
 	va_start(va, format);
 	sc_cb_init(&cb, 1024);
 	sc_cb_vprintf(&cb, (char *)format, va);
-	cbot->backend_ops->send(cbot, dest, cb.buf);
+	cbot->backend_ops->send(cbot, dest, ops, cb.buf);
 	sc_cb_destroy(&cb);
 	va_end(va);
 }

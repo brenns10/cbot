@@ -19,10 +19,12 @@
  ***************/
 
 static void cbot_cli_send(const struct cbot *bot, const char *dest,
-                          const char *msg)
+                          const struct cbot_reaction_ops *ops, const char *msg)
 {
 	(void)bot; // unused
 	printf("[%s]%s: %s\n", dest, bot->name, msg);
+	if (ops && ops->free_fn)
+		ops->free_fn(ops->plugin, ops->arg);
 }
 
 static void cbot_cli_me(const struct cbot *bot, const char *dest,

@@ -57,6 +57,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	backend->sender = strdup(phone);
 	backend->ignore_dm = ignore_dm;
 	sc_list_init(&backend->messages);
+	sc_arr_init(&backend->pending, struct signal_reaction_cb, 16);
 
 	backend->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (backend->fd < 0) {
@@ -89,6 +90,8 @@ out2:
 	close(backend->fd);
 out1:
 	sig_user_free(backend->bot_profile);
+	/* TODO: free all callbacks */
+	sc_arr_destroy(&backend->pending);
 	free(backend);
 	return -1;
 }
@@ -108,6 +111,44 @@ static bool should_continue_group(struct cbot_signal_backend *sig,
 	return false;
 }
 
+static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
+                           uint32_t reaction_index)
+{
+	uint32_t idx;
+	uint64_t target_ts;
+	char *emoji;
+	bool remove;
+	struct signal_reaction_cb cb;
+	int ret =
+	        jmsg_lookup_at(jm, reaction_index, "targetSentTimestamp", &idx);
+	if (ret != JSON_OK) {
+		CL_CRIT("reaction missing targetSentTimestamp\n");
+		return -1;
+	}
+	ret = json_easy_number_getuint(&jm->easy, idx, &target_ts);
+	if (ret != JSON_OK) {
+		CL_CRIT("reaction targetSentTimestamp malformed\n");
+		return -1;
+	}
+	if (!sig_reaction_cb(sig, target_ts, &cb)) {
+		return 0;
+	}
+	ret = jmsg_lookup_at(jm, reaction_index, "remove", &idx);
+	if (ret != JSON_OK) {
+		CL_CRIT("reaction has no remove attribute\n");
+		return -1;
+	}
+	remove = jm->easy.tokens[idx].type == JSON_TRUE;
+	emoji = jmsg_lookup_string_at(jm, reaction_index, "emoji");
+	if (!emoji)
+		return -1;
+	CL_DEBUG("Sending reaction \"%s\" %s to message ts %lu to plugin\n",
+	         emoji, remove ? "remove" : "add", target_ts);
+	cb.ops.react_fn(cb.ops.plugin, cb.ops.arg, emoji, remove);
+	free(emoji);
+	return 0;
+}
+
 /*
  * Handles an incoming line from signald. This could be many types of API
  * message, so we don't return an error in case we don't find the right data
@@ -119,9 +160,14 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	char *srcb = NULL;
 	char *group = NULL;
 	char *repl;
-	uint32_t mention_index = 0;
+	uint32_t mention_index = 0, reaction_index;
 
-	json_easy_format(&jm->easy, 0, stdout);
+	// Uncomment below for understanding of the API requests
+	// json_easy_format(&jm->easy, 0, stdout);
+
+	if (jmsg_lookup(jm, "data.data_message.reaction", &reaction_index) ==
+	    JSON_OK)
+		handle_reaction(sig, jm, reaction_index);
 
 	msgb = jmsg_lookup_string(jm, "data.data_message.body");
 	if (!msgb)
@@ -241,25 +287,77 @@ static void cbot_signal_run(struct cbot *bot)
 	CL_CRIT("cbot signal: jmsg_read() returned NULL, exiting\n");
 }
 
+static int reaction_cmp(const struct signal_reaction_cb *lhs,
+                        const struct signal_reaction_cb *rhs)
+{
+	if (lhs->ts < rhs->ts)
+		return -1;
+	else if (lhs->ts > rhs->ts)
+		return 1;
+	else
+		return 0;
+}
+
+static void add_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
+                            const struct cbot_reaction_ops *ops)
+{
+	struct signal_reaction_cb cb = { ts, *ops };
+	struct sc_array *a = &sig->pending;
+	struct signal_reaction_cb *arr = sc_arr(a, struct signal_reaction_cb);
+	size_t i;
+
+	/* Linear search for insertion, since this is a less common case, and
+	 * bsearch() does not return the correct insertion point. */
+
+	for (i = 0; i < a->len; i++)
+		if (ts < arr[i].ts)
+			break;
+	sc_arr_insert(a, struct signal_reaction_cb, i, cb);
+}
+
+bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
+                     struct signal_reaction_cb *out)
+{
+	struct signal_reaction_cb cb = { ts, { 0 } };
+	struct sc_array *a = &sig->pending;
+	struct signal_reaction_cb *arr = sc_arr(a, struct signal_reaction_cb);
+	struct signal_reaction_cb *res =
+	        bsearch(&cb, arr, a->len, sizeof(*res), (void *)reaction_cmp);
+	if (res) {
+		*out = *res;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 static void cbot_signal_send(const struct cbot *bot, const char *to,
+                             const struct cbot_reaction_ops *ops,
                              const char *msg)
 {
 	struct cbot_signal_backend *sig = bot->backend;
 	char *dest_payload;
 	int kind;
+	uint64_t timestamp;
 
 	dest_payload = mention_parse(to, &kind, NULL);
 	switch (kind) {
 	case MENTION_USER:
-		sig_send_single(sig, dest_payload, msg);
+		timestamp = sig_send_single(sig, dest_payload, msg);
 		break;
 	case MENTION_GROUP:
-		sig_send_group(sig, dest_payload, msg);
+		timestamp = sig_send_group(sig, dest_payload, msg);
 		break;
 	default:
 		CL_CRIT("error: invalid signal destination \"%s\"\n", to);
+		return;
 	}
 	free(dest_payload);
+	if (ops && timestamp) {
+		add_reaction_cb(sig, timestamp, ops);
+	} else if (ops && ops->free_fn) {
+		ops->free_fn(ops->plugin, ops->arg);
+	}
 }
 
 static void cbot_signal_nick(const struct cbot *bot, const char *newnick)

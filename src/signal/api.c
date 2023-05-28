@@ -228,7 +228,7 @@ int sig_set_name(struct cbot_signal_backend *sig, const char *name)
 	return sig_result(sig, "set_profile");
 }
 
-int sig_result(struct cbot_signal_backend *sig, const char *type)
+struct jmsg *sig_get_result(struct cbot_signal_backend *sig, const char *type)
 {
 	char buf[16];
 	struct jmsg *jm;
@@ -249,7 +249,6 @@ int sig_result(struct cbot_signal_backend *sig, const char *type)
 	if (ret != JSON_OK)
 		goto out_json_error;
 
-	ret = 0;
 	if (!match) {
 		char *actual = NULL;
 		json_easy_string_get(&jm->easy, ix_type, &actual);
@@ -257,19 +256,30 @@ int sig_result(struct cbot_signal_backend *sig, const char *type)
 		        "\"%s\"\n",
 		        sig->id - 1, actual ? actual : "(unknown)", type);
 		free(actual);
-		ret = -1;
+		jmsg_free(jm);
+		return NULL;
 	}
 
 	CL_DEBUG("sig_result: wait for id %lu completed, %s\n", sig->id - 1,
 	         match ? "match" : "no match");
-	jmsg_free(jm);
-	return ret;
+	return jm;
 out_json_error:
 	CL_CRIT("error: response to request %lu: %s\n", sig->id - 1,
 	        json_strerror(ret));
 	json_easy_format(&jm->easy, 0, stderr);
 	jmsg_free(jm);
-	return -1;
+	return NULL;
+}
+
+int sig_result(struct cbot_signal_backend *sig, const char *type)
+{
+	struct jmsg *jm = sig_get_result(sig, type);
+	if (jm) {
+		jmsg_free(jm);
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 void sig_expect(struct cbot_signal_backend *sig, const char *type)
@@ -278,6 +288,24 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type)
 	struct jmsg *jm = jmsg_wait(sig, type);
 	jmsg_free(jm);
 	CL_DEBUG("sig_expect: completed \"%s\"\n", type);
+}
+
+static uint64_t get_timestamp(struct jmsg *jm)
+{
+	uint32_t tsidx;
+	uint64_t timestamp;
+	int ret = jmsg_lookup(jm, "data.timestamp", &tsidx);
+	if (ret != JSON_OK) {
+		CL_CRIT("failed to find data.timestamp field in message\n");
+		return 0;
+	}
+	ret = json_easy_number_getuint(&jm->easy, tsidx, &timestamp);
+	if (ret != JSON_OK) {
+		CL_CRIT("failed to parse data.timestamp: %s\n",
+		        json_strerror(ret));
+		return 0;
+	}
+	return timestamp;
 }
 
 const static char fmt_send_group[] = ("\n{"
@@ -290,15 +318,21 @@ const static char fmt_send_group[] = ("\n{"
                                       "\"version\":\"v1\""
                                       "}\n");
 
-void sig_send_group(struct cbot_signal_backend *sig, const char *to,
-                    const char *msg)
+uint64_t sig_send_group(struct cbot_signal_backend *sig, const char *to,
+                        const char *msg)
 {
 	char *quoted, *mentions = NULL;
+	struct jmsg *jm;
+	uint64_t timestamp;
 	quoted = json_quote_and_mention(msg, &mentions);
 	fprintf(sig->ws, fmt_send_group, sig->id++, sig->sender, to, quoted,
 	        mentions);
 	free(quoted);
 	free(mentions);
+	jm = sig_get_result(sig, "send");
+	timestamp = get_timestamp(jm);
+	jmsg_free(jm);
+	return timestamp;
 }
 
 const static char fmt_send_single[] = ("\n{"
@@ -313,15 +347,21 @@ const static char fmt_send_single[] = ("\n{"
                                        "\"version\":\"v1\""
                                        "}\n");
 
-void sig_send_single(struct cbot_signal_backend *sig, const char *to,
-                     const char *msg)
+uint64_t sig_send_single(struct cbot_signal_backend *sig, const char *to,
+                         const char *msg)
 {
 	char *quoted, *mentions = NULL;
+	struct jmsg *jm;
+	uint64_t timestamp;
 	quoted = json_quote_and_mention(msg, &mentions);
 	fprintf(sig->ws, fmt_send_single, sig->id++, sig->sender, to, quoted,
 	        mentions);
 	free(quoted);
 	free(mentions);
+	jm = sig_get_result(sig, "send");
+	timestamp = get_timestamp(jm);
+	jmsg_free(jm);
+	return timestamp;
 }
 
 char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind,

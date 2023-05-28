@@ -8,6 +8,7 @@
 #include <libconfig.h>
 #include <sqlite3.h>
 #include <stddef.h>
+#include <sys/time.h>
 
 #include "sc-collections.h"
 
@@ -102,15 +103,26 @@ struct cbot_user_info {
 	struct sc_list_head list;
 };
 
+typedef int (*cbot_react_fn)(struct cbot_plugin *, void *, char *, bool);
+typedef int (*cbot_react_free_fn)(struct cbot_plugin *, void *);
+
+struct cbot_reaction_ops {
+	cbot_react_fn react_fn;
+	cbot_react_free_fn free_fn;
+	struct timespec duration;
+	void *arg;
+	struct cbot_plugin *plugin;
+};
+
 /**
- * Send a message to a destination.
- * @param bot The bot provided in the event struct.
- * @param dest Either a channel name or a user name.
- * @param format Format string for your message.
- * @param ... Arguments to the format string.
+ * Send a message, and register callbacks for reactions to this message
+ * @param ops If non-null, a pointer to an operations struct which will be
+ * copied..
  */
-void cbot_send(const struct cbot *bot, const char *dest, const char *format,
-               ...);
+void cbot_sendr(const struct cbot *bot, const char *dest,
+                const struct cbot_reaction_ops *ops, const char *format, ...);
+
+#define cbot_send(bot, dest, ...) cbot_sendr(bot, dest, NULL, __VA_ARGS__)
 
 /**
  * Send a message to a destination, rate limited.

@@ -53,7 +53,8 @@ struct cbot_backend_ops {
 	const char *name;
 	int (*configure)(struct cbot *cbot, config_setting_t *group);
 	void (*run)(struct cbot *cbot);
-	void (*send)(const struct cbot *cbot, const char *to, const char *msg);
+	void (*send)(const struct cbot *cbot, const char *to,
+	             const struct cbot_reaction_ops *ops, const char *msg);
 	void (*me)(const struct cbot *cbot, const char *to, const char *msg);
 	void (*op)(const struct cbot *cbot, const char *channel,
 	           const char *username);

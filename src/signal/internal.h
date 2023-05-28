@@ -4,10 +4,18 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+#include <cbot/cbot.h>
 #include <nosj.h>
 #include <sc-collections.h>
 
 struct signal_user;
+
+struct signal_reaction_cb {
+	/* Timestamp of the message which we sent, that may get reacted */
+	uint64_t ts;
+	/* Operations from the plugin */
+	struct cbot_reaction_ops ops;
+};
 
 struct cbot_signal_backend {
 
@@ -38,6 +46,9 @@ struct cbot_signal_backend {
 
 	/* Reference to the bot */
 	struct cbot *bot;
+
+	/* Array of message timestamps and information on callbacks */
+	struct sc_array pending;
 
 	uint64_t id;
 };
@@ -244,6 +255,7 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type);
  * one, and expect it to have type @a type. On failure, return -1.
  */
 int sig_result(struct cbot_signal_backend *sig, const char *type);
+struct jmsg *sig_get_result(struct cbot_signal_backend *sig, const char *type);
 
 /**
  * Get the profile of a user (by phone number).
@@ -306,8 +318,8 @@ int sig_set_name(struct cbot_signal_backend *sig, const char *name);
  * @param groupId Group ID to send to
  * @param msg Message (may contain mentioned usernames)
  */
-void sig_send_group(struct cbot_signal_backend *sig, const char *groupId,
-                    const char *msg);
+uint64_t sig_send_group(struct cbot_signal_backend *sig, const char *groupId,
+                        const char *msg);
 
 /**
  * Send a message to a single user recipient.
@@ -315,7 +327,9 @@ void sig_send_group(struct cbot_signal_backend *sig, const char *groupId,
  * @param uuid UUID of the user to send to
  * @param msg Message (may contain mentioned usernames)
  */
-void sig_send_single(struct cbot_signal_backend *sig, const char *uuid,
-                     const char *msg);
+uint64_t sig_send_single(struct cbot_signal_backend *sig, const char *uuid,
+                         const char *msg);
 
+bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
+                     struct signal_reaction_cb *out);
 #endif // CBOT_SIGNAL_INTERNAL_DOT_H
