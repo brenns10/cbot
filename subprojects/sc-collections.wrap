@@ -1,4 +1,4 @@
 [wrap-git]
 directory = sc-collections.git
 url = https://git.sr.ht/~brenns10/sc-collections
-revision = v0.8.1
+revision = v0.9.0

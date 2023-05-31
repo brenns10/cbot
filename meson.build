@@ -39,7 +39,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.8.1',
+  version: '>=0.9.0',
 )
 libsc_argparse_dep = dependency(
   'libsc-argparse',
