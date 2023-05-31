@@ -262,7 +262,7 @@ int cbot_http_init(struct cbot *bot, config_setting_t *config)
 	if (!bot->http) {
 		return -1;
 	}
-	bot->lwt = sc_lwt_create_task(bot->lwt_ctx, cbot_http_run, bot);
+	bot->http_lwt = sc_lwt_create_task(bot->lwt_ctx, cbot_http_run, bot);
 
 	cbot_register_priv(bot, NULL, CBOT_HTTP_ANY,
 	                   (cbot_handler_t)cbot_http_root, NULL, "/", 0);
