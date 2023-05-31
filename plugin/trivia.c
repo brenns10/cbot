@@ -94,6 +94,8 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		cbot_send(plugin->bot, CHANNEL,
 		          "I'm sorry, I tried to RSVP but failed to run the "
 		          "email command.");
+		sc_cb_destroy(&msg_attend);
+		sc_cb_destroy(&msg_sad);
 		return;
 	}
 
