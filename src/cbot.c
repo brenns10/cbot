@@ -862,10 +862,12 @@ static void cbot_callback_thread(void *arg)
 		CL_DEBUG("callback thread going to sleep\n");
 		sc_lwt_set_state(bot->callback_lwt, SC_LWT_BLOCKED);
 		sc_lwt_yield();
+		sc_lwt_cleartimeout(bot->callback_lwt);
 		if (sc_lwt_shutting_down())
 			break;
 		CL_DEBUG("callback thread wakes\n");
 	}
+	CL_DEBUG("callback thread bailing, we're shutting down\n");
 }
 
 struct cbot_callback *cbot_schedule_callback(struct cbot_plugin *plugin,
