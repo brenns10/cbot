@@ -6,6 +6,12 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.11.0 (2023-05-31)
+-------------------
+
+Add trivia reservation plugin.
+New ability to respond to Signal reactions.
+
 0.10.1,2 (2022-11-15)
 ---------------------
 
