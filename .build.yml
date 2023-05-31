@@ -27,6 +27,8 @@ tasks:
       tar xf gh_${ghver}_linux_amd64.tar.gz
       sudo mv gh_${ghver}_linux_amd64/bin/gh /usr/bin/gh
       cd .. && rm -r ghsetup
+      cd cbot
+      git remote add upstream https://github.com/brenns10/cbot
   - setup: |
       cd cbot
       meson build

@@ -1,7 +1,7 @@
 FROM alpine:3.14
 COPY cbot.apk /
 COPY run.sh /bin/
-RUN apk add --allow-untrusted ./cbot.apk gcompat tzdata && \
+RUN apk add --allow-untrusted ./cbot.apk gcompat tzdata msmtp && \
     rm ./cbot.apk && \
     adduser --disabled-password --uid 1002 cbot && \
     chmod 755 /bin/run.sh && \

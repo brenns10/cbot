@@ -21,6 +21,7 @@
 #define nelem(x) (sizeof(x) / sizeof(x[0]))
 
 char *TARGET_EMAIL;
+char *MSMTP_OPTS = "";
 char *CHANNEL;
 
 struct trivia_reaction {
@@ -84,7 +85,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	}
 
 	sc_cb_init(&cmd, 64);
-	sc_cb_printf(&cmd, "msmtp %s", TARGET_EMAIL);
+	sc_cb_printf(&cmd, "msmtp %s %s", MSMTP_OPTS, TARGET_EMAIL);
 	FILE *f = popen(cmd.buf, "w");
 	sc_cb_destroy(&cmd);
 
@@ -218,7 +219,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	time_t now = time(NULL);
 	time_t schedule;
 	struct tm tm;
-	const char *channel, *email;
+	const char *channel, *email, *msmtp_opts;
 	localtime_r(&now, &tm);
 	tm.tm_isdst = -1; /* reset it for mktime */
 
@@ -231,6 +232,10 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr, "trivia plugin: missing \"email\" config\n");
 		return -1;
+	}
+	rv = config_setting_lookup_string(conf, "msmtp_opts", &msmtp_opts);
+	if (rv != CONFIG_FALSE) {
+		MSMTP_OPTS = strdup(msmtp_opts);
 	}
 	CHANNEL = strdup(channel);
 	TARGET_EMAIL = strdup(email);
