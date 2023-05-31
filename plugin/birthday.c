@@ -287,77 +287,72 @@ static void cmd_bd_month(struct cbot_message_event *event)
 
 struct bdarg {
 	char *channel;
-	struct cbot *bot;
 	int hour;
 	int min;
 };
+static void birthday_callback(struct cbot_plugin *plugin, void *arg);
 
-static void bd_thread(void *arg)
+static void schedule_daily_callback(struct cbot_plugin *plugin,
+                                    struct bdarg *arg, bool tomorrow)
 {
-	struct bdarg *a = arg;
-	struct timespec to;
-	time_t cur;
+	time_t now, schedule;
 	struct tm tm;
-	int rep_day, count;
 
-	/* If started end of report loop, don't try to send birthday */
-	cur = time(NULL);
-	localtime_r(&cur, &tm);
-	tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
-	if (tm.tm_hour >= a->hour && tm.tm_min > a->min + LOOP_MIN) {
-		CL_DEBUG("birthday: it is %d/%d, time is past report "
-		         "threshold, wait for tomorrow\n",
-		         tm.tm_mon, tm.tm_mday);
-		rep_day = tm.tm_mday;
-	} else {
-		CL_DEBUG("birthday: it is %d/%d, not yet reached report "
-		         "threshold\n",
-		         tm.tm_mon, tm.tm_mday);
-		rep_day = 0;
+	now = time(NULL);
+	localtime_r(&now, &tm);
+
+	/*
+	 * User can pass "tomorrow" to ensure that we schedule it for tomorrow.
+	 * Otherwise, we detect the time of day and schedule it for the next
+	 * occurrence of the hour / time.
+	 */
+	if (tomorrow || tm.tm_hour > arg->hour ||
+	    (tm.tm_hour == arg->hour && tm.tm_min >= arg->min)) {
+		tm.tm_mday += 1;
 	}
 
-	for (;;) {
-		to.tv_nsec = 0;
-		to.tv_sec = LOOP_MIN * 60;
-		sc_lwt_sleep(&to);
-		if (sc_lwt_shutting_down())
-			break;
+	tm.tm_isdst = -1;
+	tm.tm_hour = arg->hour;
+	tm.tm_min = arg->min;
+	tm.tm_sec = 0;
+	schedule = mktime(&tm);
 
-		cur = time(NULL);
-		localtime_r(&cur, &tm);
-		tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
+	cbot_schedule_callback(plugin, birthday_callback, arg, schedule);
+}
 
-		/* if it is 9 o'clock of a different day to what we last
-		 * reported, go! */
-		if (!(tm.tm_mday != rep_day && tm.tm_hour == a->hour &&
-		      tm.tm_min >= a->min))
-			continue;
+static void birthday_callback(struct cbot_plugin *plugin, void *arg)
+{
+	struct bdarg *a = arg;
+	time_t cur;
+	struct tm tm;
+	int count;
 
-		CL_DEBUG("birthday: it is %d/%d, checking birthdays\n",
-		         tm.tm_mon, tm.tm_mday);
-		count = birthday_send_day_report(a->bot, a->channel, tm.tm_mon,
-		                                 tm.tm_mday);
-		CL_DEBUG("birthday: sent %d birthday messages\n", count);
-		rep_day = tm.tm_mday;
+	/* Schedule our next callback (ensuring it's tomorrow)  */
+	schedule_daily_callback(plugin, arg, true);
 
-		/* Now, we want to find out if tomorrow is the first of the
-		 * month. If so, and if we have birthdays, send a message with
-		 * the list of birthdays.
-		 */
-		cur += 86400;
-		localtime_r(&cur, &tm);
-		tm.tm_mon++; /* it's ZERO based? WHY? Days are 1-based! */
-		if (tm.tm_mday != 1)
-			continue;
+	cur = time(NULL);
+	localtime_r(&cur, &tm);
+	tm.tm_mon++; /* tm_mon is zero based but 1-based is nicer */
+
+	CL_DEBUG("birthday: it is %d/%d, checking birthdays\n", tm.tm_mon,
+	         tm.tm_mday);
+	count = birthday_send_day_report(plugin->bot, a->channel, tm.tm_mon,
+	                                 tm.tm_mday);
+	CL_DEBUG("birthday: sent %d birthday messages\n", count);
+
+	/* Now, we want to find out if tomorrow is the first of the
+	 * month. If so, and if we have birthdays, send a message with
+	 * the list of birthdays.
+	 */
+	cur += 86400;
+	localtime_r(&cur, &tm);
+	tm.tm_mon++;
+	if (tm.tm_mday == 1) {
 		CL_DEBUG("birthday: last day of month! send reminder\n");
-		count = birthday_send_month_report(a->bot, a->channel,
+		count = birthday_send_month_report(plugin->bot, a->channel,
 		                                   tm.tm_mon);
 		CL_DEBUG("birthday: reported %d birthdays in month\n", count);
 	}
-
-	CL_DEBUG("birthday: exiting thread\n");
-	free(a->channel);
-	free(a);
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
@@ -380,7 +375,6 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	arg->hour = hour;
 	arg->min = min;
 	arg->channel = strdup(channel);
-	arg->bot = plugin->bot;
 
 	rv = cbot_db_register(plugin, &tbl_birthday);
 	if (rv < 0) {
@@ -401,7 +395,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	              "birthday remove (.*)");
 	cbot_register(plugin, CBOT_HTTP_GET, (cbot_handler_t)cmd_bd_http_get,
 	              NULL, "/birthdays");
-	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), bd_thread, arg);
+
+	schedule_daily_callback(plugin, arg, false);
 
 	return 0;
 }

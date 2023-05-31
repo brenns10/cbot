@@ -6,6 +6,9 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+The birthday plugin has been dramatically simplified using the new callback
+system. It should be much less buggy now.
+
 0.11.4 (2023-05-31)
 -------------------
 
