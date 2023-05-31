@@ -6,6 +6,13 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.11.4 (2023-05-31)
+-------------------
+
+Fixed several bugs in the trivia reservation plugin.
+Added reaction capabilities to the CLI backend.
+Changed trivia reservation configuration (see commit log).
+
 0.11.0-3 (2023-05-31)
 ---------------------
 
