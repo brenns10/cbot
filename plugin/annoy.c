@@ -24,6 +24,8 @@
 char *channel = NULL;
 struct cbot *bot = NULL;
 
+struct cbot_callback *cb = NULL;
+
 static void annoy_loop(void *data)
 {
 	struct timespec ts;
@@ -38,25 +40,55 @@ static void annoy_loop(void *data)
 	}
 }
 
-static void start(struct cbot_message_event *event, void *user)
+static void annoy_cb(struct cbot_plugin *plugin, char *channel)
 {
-	printf("being annoying to %s\n", event->channel);
-	channel = strdup(event->channel);
-	bot = event->bot;
-	sc_lwt_create_task(cbot_get_lwt_ctx(event->bot), annoy_loop, NULL);
+	time_t now = time(NULL);
+	cbot_send(plugin->bot, channel,
+	          "hello! i'm an annoying bot using callbacks");
+	cb = cbot_schedule_callback(plugin, (void *)annoy_cb, channel, now + 3);
 }
 
 static void stop(struct cbot_message_event *event, void *user)
 {
-	free(channel);
-	channel = NULL;
-	bot = NULL;
+	if (channel) {
+		/* the loop stops itself by checking channel */
+		free(channel);
+		channel = NULL;
+		bot = NULL;
+	} else if (cb) {
+		/* we need to cancel the callback */
+		cbot_cancel_callback(cb);
+		free(channel);
+		channel = NULL;
+		cb = NULL;
+	}
+}
+
+static void start(struct cbot_message_event *event, void *user)
+{
+	if (channel || cb)
+		stop(event, user);
+
+	if (user) {
+		time_t when = time(NULL);
+		printf("being annoying to %s, via callback\n", event->channel);
+		cbot_schedule_callback(event->plugin, (void *)annoy_cb,
+		                       strdup(event->channel), when);
+	} else {
+		printf("being annoying to %s, via loop\n", event->channel);
+		channel = strdup(event->channel);
+		bot = event->bot;
+		sc_lwt_create_task(cbot_get_lwt_ctx(event->bot), annoy_loop,
+		                   NULL);
+	}
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)start, NULL,
 	              "be annoying");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)start, (void *)1,
+	              "be annoying with callbacks");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)stop, NULL,
 	              "stop it!?");
 	return 0;

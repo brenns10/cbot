@@ -32,6 +32,8 @@ struct cbot_qmsg {
 	struct sc_list_head list;
 };
 
+static void cbot_callback_thread(void *arg);
+
 /********
  * Functions which plugins can call to perform actions. These are generally
  * delegated to the backends.
@@ -196,6 +198,7 @@ struct cbot *cbot_create(void)
 	sc_list_init(&cbot->init_channels);
 	sc_list_init(&cbot->plugins);
 	sc_list_init(&cbot->msgq);
+	sc_list_init(&cbot->callback_list);
 	sc_arr_init(&cbot->aliases, 8, sizeof(char *));
 	return cbot;
 }
@@ -414,6 +417,9 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 	bot->lwt_ctx = sc_lwt_init();
 	bot->lwt = sc_lwt_create_task(bot->lwt_ctx,
 	                              (void (*)(void *))cbot_run_in_lwt, bot);
+
+	bot->callback_lwt =
+	        sc_lwt_create_task(bot->lwt_ctx, cbot_callback_thread, bot);
 
 	rv = cbot_curl_init(bot);
 	if (rv < 0)
@@ -804,4 +810,86 @@ static void cbot_unload_all_plugins(struct cbot *bot)
 struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot)
 {
 	return bot->lwt_ctx;
+}
+
+static void cbot_callback_thread(void *arg)
+{
+	struct cbot *bot = arg;
+	while (true) {
+		time_t current, next_wake = (time_t)-1;
+		struct cbot_callback *cb, *next = NULL;
+		struct timespec sleeptime = { 0 };
+
+		CL_DEBUG("callback thread going to sleep\n");
+		sc_lwt_set_state(bot->callback_lwt, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		if (sc_lwt_shutting_down())
+			break;
+		CL_DEBUG("callback thread wakes\n");
+
+		current = time(NULL);
+
+		/*
+		 * It's possible, and actually quite common, to reschedule a
+		 * callback within another callback. When that's the case, we
+		 * may skip over the newly added callback at the end of the list
+		 * (since we fetch "next" prior to calling the callback).
+		 *
+		 * To ensure we process all callbacks and set our timeout
+		 * appropriately, be sure to go back through the list if
+		 * bot->callback_touched was set.
+		 */
+		do {
+			bot->callback_touched = false;
+			next_wake = -1;
+			sc_list_for_each_safe(cb, next, /* NOLINT */
+			                      &bot->callback_list, list,
+			                      struct cbot_callback)
+			{
+				CL_DEBUG("callback thread handling item %p in "
+				         "list\n",
+				         cb);
+				if (cb->when <= current) {
+					cb->func(cb->plugin, cb->arg);
+					sc_list_remove(&cb->list);
+					free(cb);
+				} else if (next_wake == -1 ||
+				           cb->when <= next_wake) {
+					next_wake = cb->when;
+				}
+			}
+		} while (bot->callback_touched);
+		if (next_wake != -1) {
+			sleeptime.tv_sec = next_wake - current;
+			sc_lwt_settimeout(bot->callback_lwt, &sleeptime);
+			CL_DEBUG("callback thread: timeout %lu\n",
+			         sleeptime.tv_sec);
+		}
+	}
+}
+
+struct cbot_callback *cbot_schedule_callback(struct cbot_plugin *plugin,
+                                             void (*func)(struct cbot_plugin *,
+                                                          void *),
+                                             void *arg, time_t when)
+{
+	struct cbot *bot = plugpriv(plugin)->bot;
+	struct cbot_callback *cb = calloc(1, sizeof(*cb));
+	cb->arg = arg;
+	cb->func = func;
+	cb->when = when;
+	cb->plugin = plugin;
+	sc_list_init(&cb->list);
+	sc_list_insert_end(&bot->callback_list, &cb->list);
+	bot->callback_touched = true;
+	sc_lwt_set_state(bot->callback_lwt, SC_LWT_RUNNABLE);
+	CL_DEBUG("scheduling callback\n");
+	return cb;
+}
+
+void cbot_cancel_callback(struct cbot_callback *cb)
+{
+	struct cbot *bot = plugpriv(cb->plugin)->bot;
+	sc_list_remove(&cb->list);
+	bot->callback_touched = true;
 }

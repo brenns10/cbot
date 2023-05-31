@@ -409,6 +409,37 @@ const char *cbot_get_name(struct cbot *bot);
  */
 struct sc_lwt_ctx *cbot_get_lwt_ctx(struct cbot *bot);
 
+/**
+ * Schedule a delayed callback
+ *
+ * Schedule @a func to be run as soon as is possible on or after the time @a
+ * when. The callback will be called with @a plugin and @a arg. An opaque
+ * pointer is returned, which can be used to cancel the callback prior to its
+ * execution. Once the callback has been executed, the pointer is no longer
+ * valid and should not be used.
+ *
+ * @param plugin Plugin which is calling to schedule the callback
+ * @param func Function to call
+ * @param arg The second argument passed to the plugin
+ * @param when The time at which the callback should be called
+ * @returns An opaque handle which can be used to cancel the callback
+ */
+struct cbot_callback *cbot_schedule_callback(struct cbot_plugin *plugin,
+                                             void (*func)(struct cbot_plugin *,
+                                                          void *),
+                                             void *arg, time_t when);
+
+/**
+ * Cancel a delayed callback
+ *
+ * Given the return of cbot_schedule_callback(), cancel the callback before it
+ * has been called. If the callback was already called, then it is no longer
+ * safe to use this function.
+ *
+ * @param cb Callback to cancel
+ */
+void cbot_cancel_callback(struct cbot_callback *cb);
+
 /*****************
  * Tokenizing API
  *****************/

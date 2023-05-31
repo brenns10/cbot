@@ -79,6 +79,14 @@ struct cbot_channel_conf {
 
 struct cbot_http;
 
+struct cbot_callback {
+	struct sc_list_head list;
+	struct cbot_plugin *plugin;
+	void *arg;
+	time_t when;
+	void (*func)(struct cbot_plugin *plugin, void *arg);
+};
+
 struct cbot {
 	/* Loaded from configuration */
 	char *name;
@@ -106,6 +114,10 @@ struct cbot {
 	struct MHD_Daemon *http;
 	struct sc_lwt *http_lwt;
 	struct cbot_http *httpriv;
+
+	struct sc_list_head callback_list;
+	struct sc_lwt *callback_lwt;
+	bool callback_touched;
 };
 
 struct cbot *cbot_create(void);
