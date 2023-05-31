@@ -40,6 +40,8 @@ static const char *sad_reacts[] = {
 	"😭",
 };
 
+static void send_trivia_message(struct cbot_plugin *plugin, void *arg);
+
 static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 {
 	struct trivia_reactions *rxns = arg;
@@ -47,15 +49,35 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	        sc_arr(&rxns->reactions, struct trivia_reaction);
 	int attending = 0, sad = 0;
 	struct sc_charbuf cmd, msg_attend, msg_sad;
+	time_t now, schedule;
+	struct tm tm;
 
+	/* Cancel receiving reactions for this message now */
 	cbot_unregister_reaction(plugin->bot, rxns->handle);
 
+	/* Schedule the next trivia night callback. It's good to do this before
+	 * sending the email since it's not particularly error-prone, so we can
+	 * have it done with regardless of the outcome of this email step. */
+	now = time(NULL);
+	localtime_r(&now, &tm);
+	tm.tm_mday += 7;
+	tm.tm_hour = HR_INITIAL;
+	tm.tm_min = MN_INITIAL;
+	tm.tm_sec = 0;
+	schedule = mktime(&tm);
+	cbot_schedule_callback(plugin, send_trivia_message, NULL, schedule);
+
+	/* Now we can compose the RSVP email */
 	sc_cb_init(&msg_attend, 256);
 	sc_cb_init(&msg_sad, 256);
 
 	for (size_t react = 0; react < rxns->reactions.len; react++) {
+		/* We will write to the normal buffer unless it is a
+		 * "sad" emoji according to our authoratative list :P */
 		struct sc_charbuf *dst = &msg_attend;
 		int *to_increment = &attending;
+		int amount = arr[react].users.len;
+
 		for (size_t i = 0; i < nelem(sad_reacts); i++) {
 			if (strcmp(arr[react].emoji, sad_reacts[i]) == 0) {
 				dst = &msg_sad;
@@ -63,18 +85,24 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 				break;
 			}
 		}
-		sc_cb_printf(dst, "%s: %d people\n", arr[react].emoji,
-		             arr[react].users.len);
-		*to_increment += 1;
+
+		/* Write the emoji count into the email and track it */
+		sc_cb_printf(dst, "%s: %d %s\n", arr[react].emoji, amount,
+		             amount ? "people" : "person");
+		*to_increment += amount;
+
+		/* Now free the descriptor, we're done with it */
 		char **user_arr = sc_arr(&arr[react].users, char *);
 		for (size_t i = 0; i < arr[react].users.len; i++)
 			free(user_arr[i]);
 		sc_arr_destroy(&arr[react].users);
 		free(arr[react].emoji);
 	}
+	/* We're also done with the reactions array and descriptor */
 	sc_arr_destroy(&rxns->reactions);
 	free(rxns);
 
+	/* If there's nobody attending, don't send the email */
 	if (!attending) {
 		sc_cb_destroy(&msg_attend);
 		sc_cb_destroy(&msg_sad);
@@ -84,6 +112,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		return;
 	}
 
+	/* Launch MSMTP and begin writing our message into the pipe */
 	sc_cb_init(&cmd, 64);
 	sc_cb_printf(&cmd, "msmtp %s %s", MSMTP_OPTS, TARGET_EMAIL);
 	FILE *f = popen(cmd.buf, "w");
