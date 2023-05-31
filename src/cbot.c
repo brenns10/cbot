@@ -820,13 +820,6 @@ static void cbot_callback_thread(void *arg)
 		struct cbot_callback *cb, *next = NULL;
 		struct timespec sleeptime = { 0 };
 
-		CL_DEBUG("callback thread going to sleep\n");
-		sc_lwt_set_state(bot->callback_lwt, SC_LWT_BLOCKED);
-		sc_lwt_yield();
-		if (sc_lwt_shutting_down())
-			break;
-		CL_DEBUG("callback thread wakes\n");
-
 		current = time(NULL);
 
 		/*
@@ -865,6 +858,13 @@ static void cbot_callback_thread(void *arg)
 			CL_DEBUG("callback thread: timeout %lu\n",
 			         sleeptime.tv_sec);
 		}
+
+		CL_DEBUG("callback thread going to sleep\n");
+		sc_lwt_set_state(bot->callback_lwt, SC_LWT_BLOCKED);
+		sc_lwt_yield();
+		if (sc_lwt_shutting_down())
+			break;
+		CL_DEBUG("callback thread wakes\n");
 	}
 }
 
