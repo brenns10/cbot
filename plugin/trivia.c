@@ -10,15 +10,15 @@
 
 #include "cbot/cbot.h"
 
-#define TRIVIA_WDAY 3 /* Wednesday */
-
-#define HR_INITIAL 8 /* 8 AM */
-#define MN_INITIAL 0
-
-#define HR_SEND_RSVP 14 /* 2 PM */
-#define MN_SEND_RSVP 0
-
 #define nelem(x) (sizeof(x) / sizeof(x[0]))
+
+int TRIVIA_WDAY = 3;
+
+int HR_INITIAL = 8;
+int MN_INITIAL = 0;
+
+int HR_SEND_RSVP = 14;
+int MN_SEND_RSVP = 0;
 
 char *TARGET_EMAIL;
 char *MSMTP_OPTS = "";
@@ -239,6 +239,12 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	}
 	CHANNEL = strdup(channel);
 	TARGET_EMAIL = strdup(email);
+
+	config_setting_lookup_int(conf, "trivia_weekday", &TRIVIA_WDAY);
+	config_setting_lookup_int(conf, "init_hour", &HR_INITIAL);
+	config_setting_lookup_int(conf, "init_minute", &MN_INITIAL);
+	config_setting_lookup_int(conf, "send_hour", &HR_SEND_RSVP);
+	config_setting_lookup_int(conf, "send_minute", &MN_SEND_RSVP);
 
 	if (tm.tm_wday < TRIVIA_WDAY) {
 		/* mktime only looks at alterations to mday, not wday or yday.
