@@ -251,6 +251,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	struct tm tm;
 	const char *channel, *email, *msmtp_opts;
 
+	trivia_rxn_ops.plugin = plugin;
+
 	rv = config_setting_lookup_string(conf, "channel", &channel);
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr, "trivia plugin: missing \"channel\" config\n");
