@@ -57,6 +57,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	backend->sender = strdup(phone);
 	backend->ignore_dm = ignore_dm;
 	sc_list_init(&backend->messages);
+	sc_list_init(&backend->msgq);
 	sc_arr_init(&backend->pending, struct signal_reaction_cb, 16);
 
 	backend->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -164,6 +165,29 @@ static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
 	free(emoji);
 	free(srcb);
 	return 0;
+}
+
+static bool check_waiting(struct cbot_signal_backend *sig, struct jmsg *jm)
+{
+	struct signal_queued_item *item;
+	sc_list_for_each_entry(item, &sig->msgq, list,
+	                       struct signal_queued_item)
+	{
+		uint32_t index;
+		bool match;
+		if (jmsg_lookup(jm, item->field, &index) != JSON_OK)
+			continue;
+		if (json_easy_string_match(&jm->easy, index, item->value,
+		                           &match) != JSON_OK)
+			continue;
+		if (match) {
+			sc_list_remove(&item->list);
+			item->result = jm;
+			sc_lwt_set_state(item->thread, SC_LWT_RUNNABLE);
+			return true;
+		}
+	}
+	return false;
 }
 
 /*
@@ -297,6 +321,10 @@ static void cbot_signal_run(struct cbot *bot)
 		jm = jmsg_next(sig);
 		if (!jm)
 			break;
+		if (check_waiting(sig, jm))
+			/* Handing off ownership of jm to another
+			 * thread, DO NOT free it. */
+			continue;
 		handle_incoming(sig, jm);
 		jmsg_free(jm);
 		jm = NULL;

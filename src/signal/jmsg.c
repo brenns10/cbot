@@ -10,10 +10,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../cbot_private.h"
 #include "cbot/cbot.h"
 #include "internal.h"
 #include "nosj.h"
 #include "sc-collections.h"
+#include "sc-lwt.h"
 
 static int async_read(int fd, char *data, size_t nbytes)
 {
@@ -206,9 +208,26 @@ struct jmsg *jmsg_wait_field(struct cbot_signal_backend *sig, const char *field,
                              const char *value)
 {
 	struct sc_list_head list;
+	struct sc_lwt *cur;
 	struct jmsg *jm = jmsg_find_by_field(&sig->messages, field, value);
 	if (jm)
 		return jm;
+
+	cur = sc_lwt_current();
+	if (cur != sig->bot->lwt) {
+		struct signal_queued_item item = { 0 };
+		item.field = field;
+		item.value = value;
+		item.thread = cur;
+		sc_list_init(&item.list);
+		sc_list_insert_end(&sig->msgq, &item.list);
+		while (!item.result && !sc_lwt_shutting_down()) {
+			sc_lwt_set_state(cur, SC_LWT_BLOCKED);
+			sc_lwt_set_state(sig->bot->lwt, SC_LWT_RUNNABLE);
+			sc_lwt_yield();
+		}
+		return item.result;
+	}
 
 	for (;;) {
 		sc_list_init(&list);

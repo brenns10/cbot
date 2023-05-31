@@ -7,6 +7,7 @@
 #include <cbot/cbot.h>
 #include <nosj.h>
 #include <sc-collections.h>
+#include <sc-lwt.h>
 
 struct signal_user;
 
@@ -17,6 +18,14 @@ struct signal_reaction_cb {
 	struct cbot_reaction_ops ops;
 	/* Argument to plugin */
 	void *arg;
+};
+
+struct signal_queued_item {
+	struct sc_list_head list;
+	const char *field;
+	const char *value;
+	struct sc_lwt *thread;
+	struct jmsg *result;
 };
 
 struct cbot_signal_backend {
@@ -51,6 +60,9 @@ struct cbot_signal_backend {
 
 	/* Array of message timestamps and information on callbacks */
 	struct sc_array pending;
+
+	/* Queued messages to send */
+	struct sc_list_head msgq;
 
 	uint64_t id;
 };
