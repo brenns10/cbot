@@ -53,8 +53,9 @@ struct cbot_backend_ops {
 	const char *name;
 	int (*configure)(struct cbot *cbot, config_setting_t *group);
 	void (*run)(struct cbot *cbot);
-	void (*send)(const struct cbot *cbot, const char *to,
-	             const struct cbot_reaction_ops *ops, const char *msg);
+	uint64_t (*send)(const struct cbot *cbot, const char *to,
+	                 const struct cbot_reaction_ops *ops, void *arg,
+	                 const char *msg);
 	void (*me)(const struct cbot *cbot, const char *to, const char *msg);
 	void (*op)(const struct cbot *cbot, const char *channel,
 	           const char *username);
@@ -63,6 +64,7 @@ struct cbot_backend_ops {
 	void (*nick)(const struct cbot *cbot, const char *newnick);
 	int (*is_authorized)(const struct cbot *bot, const char *sender,
 	                     const char *message);
+	void (*unregister_reaction)(const struct cbot *bot, uint64_t id);
 };
 
 extern struct cbot_backend_ops irc_ops;

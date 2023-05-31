@@ -8,6 +8,7 @@
 #include <libconfig.h>
 #include <sqlite3.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/time.h>
 
 #include "sc-collections.h"
@@ -103,26 +104,60 @@ struct cbot_user_info {
 	struct sc_list_head list;
 };
 
-typedef int (*cbot_react_fn)(struct cbot_plugin *, void *, char *, bool);
-typedef int (*cbot_react_free_fn)(struct cbot_plugin *, void *);
+struct cbot_reaction_event {
+	struct cbot *bot;
+	struct cbot_plugin *plugin;
+	uint64_t handle;
+	const char *emoji;
+	const char *source;
+	bool remove;
+};
+
+/**
+ * Callback function whenever a reaction is added or changed
+ * arg 0: plugin pointer
+ * arg 1: argument provided in cbot_sendr
+ * arg 2: emoji of reaction
+ * arg 3: source user of reaction
+ * arg 4: true when reaction is REMOVED
+ *
+ * NOTE: For chat systems where a user is allowed only one reaction to a
+ * message, it is not guaranteed that changing a reaction will be composed of a
+ * "remove" followed by a new reaction. In particular, Signald simply sends the
+ * new reaction: you need to track the user who sent the reaction, so that you
+ * can remove their old one if necessary.
+ */
+typedef int (*cbot_react_fn)(struct cbot_reaction_event *event, void *arg);
 
 struct cbot_reaction_ops {
 	cbot_react_fn react_fn;
-	cbot_react_free_fn free_fn;
-	struct timespec duration;
-	void *arg;
 	struct cbot_plugin *plugin;
 };
 
 /**
- * Send a message, and register callbacks for reactions to this message
- * @param ops If non-null, a pointer to an operations struct which will be
- * copied..
+ * Send a message, and register reaction callbacks.
+ *
+ * If ops is provided as non-null, and the reaction callbacks were successfully
+ * registered, then the function returns a non-zero reaction handle. This is an
+ * opaque identifier representing this instance of the reaction operations for
+ * this message. Since CBot or the backends may maintain state according to each
+ * message which has recations registered, it is mandatory that plugins
+ * unregister this handle when they are done watching, using
+ * cbot_unregister_reaction().
+ *
+ * @param bot Bot we are working with
+ * @param dest Destination of message (user, or channel)
+ * @param ops Reaction operations
+ * @param arg Argument to reaction callbacks
+ * @param format Format string
  */
-void cbot_sendr(const struct cbot *bot, const char *dest,
-                const struct cbot_reaction_ops *ops, const char *format, ...);
+uint64_t cbot_sendr(const struct cbot *bot, const char *dest,
+                    const struct cbot_reaction_ops *ops, void *arg,
+                    const char *format, ...);
 
-#define cbot_send(bot, dest, ...) cbot_sendr(bot, dest, NULL, __VA_ARGS__)
+#define cbot_send(bot, dest, ...) cbot_sendr(bot, dest, NULL, NULL, __VA_ARGS__)
+
+void cbot_unregister_reaction(struct cbot *bot, uint64_t handle);
 
 /**
  * Send a message to a destination, rate limited.

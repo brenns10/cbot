@@ -117,6 +117,7 @@ static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
 	uint32_t idx;
 	uint64_t target_ts;
 	char *emoji;
+	char *srcb;
 	bool remove;
 	struct signal_reaction_cb cb;
 	int ret =
@@ -142,10 +143,26 @@ static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
 	emoji = jmsg_lookup_string_at(jm, reaction_index, "emoji");
 	if (!emoji)
 		return -1;
+	srcb = jmsg_lookup_string(jm, "data.source.uuid");
+	if (!srcb) {
+		free(emoji);
+		return -1;
+	}
+	srcb = mention_format(srcb, "uuid");
+
 	CL_DEBUG("Sending reaction \"%s\" %s to message ts %lu to plugin\n",
 	         emoji, remove ? "remove" : "add", target_ts);
-	cb.ops.react_fn(cb.ops.plugin, cb.ops.arg, emoji, remove);
+	struct cbot_reaction_event evt = {
+		.plugin = cb.ops.plugin,
+		.bot = sig->bot,
+		.emoji = emoji,
+		.source = srcb,
+		.remove = remove,
+		.handle = target_ts,
+	};
+	cb.ops.react_fn(&evt, cb.arg);
 	free(emoji);
+	free(srcb);
 	return 0;
 }
 
@@ -299,9 +316,9 @@ static int reaction_cmp(const struct signal_reaction_cb *lhs,
 }
 
 static void add_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
-                            const struct cbot_reaction_ops *ops)
+                            const struct cbot_reaction_ops *ops, void *arg)
 {
-	struct signal_reaction_cb cb = { ts, *ops };
+	struct signal_reaction_cb cb = { ts, *ops, arg };
 	struct sc_array *a = &sig->pending;
 	struct signal_reaction_cb *arr = sc_arr(a, struct signal_reaction_cb);
 	size_t i;
@@ -318,7 +335,7 @@ static void add_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
 bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
                      struct signal_reaction_cb *out)
 {
-	struct signal_reaction_cb cb = { ts, { 0 } };
+	struct signal_reaction_cb cb = { ts, { 0 }, 0 };
 	struct sc_array *a = &sig->pending;
 	struct signal_reaction_cb *arr = sc_arr(a, struct signal_reaction_cb);
 	struct signal_reaction_cb *res =
@@ -331,9 +348,23 @@ bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
 	}
 }
 
-static void cbot_signal_send(const struct cbot *bot, const char *to,
-                             const struct cbot_reaction_ops *ops,
-                             const char *msg)
+static void unregister_reaction(const struct cbot *bot, uint64_t ts)
+{
+	struct signal_reaction_cb cb = { ts, { 0 }, 0 };
+	struct cbot_signal_backend *sig = bot->backend;
+	struct sc_array *a = &sig->pending;
+	struct signal_reaction_cb *arr = sc_arr(a, struct signal_reaction_cb);
+	struct signal_reaction_cb *res =
+	        bsearch(&cb, arr, a->len, sizeof(*res), (void *)reaction_cmp);
+	if (res) {
+		size_t index = res - arr;
+		sc_arr_remove(a, struct signal_reaction_cb, index);
+	}
+}
+
+static uint64_t cbot_signal_send(const struct cbot *bot, const char *to,
+                                 const struct cbot_reaction_ops *ops, void *arg,
+                                 const char *msg)
 {
 	struct cbot_signal_backend *sig = bot->backend;
 	char *dest_payload;
@@ -350,13 +381,14 @@ static void cbot_signal_send(const struct cbot *bot, const char *to,
 		break;
 	default:
 		CL_CRIT("error: invalid signal destination \"%s\"\n", to);
-		return;
+		return 0;
 	}
 	free(dest_payload);
 	if (ops && timestamp) {
-		add_reaction_cb(sig, timestamp, ops);
-	} else if (ops && ops->free_fn) {
-		ops->free_fn(ops->plugin, ops->arg);
+		add_reaction_cb(sig, timestamp, ops, arg);
+		return timestamp;
+	} else {
+		return 0;
 	}
 }
 
@@ -396,4 +428,5 @@ struct cbot_backend_ops signal_ops = {
 	.send = cbot_signal_send,
 	.nick = cbot_signal_nick,
 	.is_authorized = cbot_signal_is_authorized,
+	.unregister_reaction = unregister_reaction,
 };

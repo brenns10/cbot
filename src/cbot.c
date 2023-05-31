@@ -37,17 +37,19 @@ struct cbot_qmsg {
  * delegated to the backends.
  ********/
 
-void cbot_sendr(const struct cbot *cbot, const char *dest,
-                const struct cbot_reaction_ops *ops, const char *format, ...)
+uint64_t cbot_sendr(const struct cbot *cbot, const char *dest,
+                    const struct cbot_reaction_ops *ops, void *arg,
+                    const char *format, ...)
 {
 	va_list va;
 	struct sc_charbuf cb;
 	va_start(va, format);
 	sc_cb_init(&cb, 1024);
 	sc_cb_vprintf(&cb, (char *)format, va);
-	cbot->backend_ops->send(cbot, dest, ops, cb.buf);
+	uint64_t ret = cbot->backend_ops->send(cbot, dest, ops, arg, cb.buf);
 	sc_cb_destroy(&cb);
 	va_end(va);
+	return ret;
 }
 
 static void cbot_sender_thread(void *arg)
@@ -164,6 +166,12 @@ int cbot_is_authorized(struct cbot *bot, const char *user, const char *msg)
 	if (bot->backend_ops->is_authorized)
 		return bot->backend_ops->is_authorized(bot, user, msg);
 	return 0;
+}
+
+void cbot_unregister_reaction(struct cbot *bot, uint64_t handle)
+{
+	if (bot->backend_ops->unregister_reaction)
+		bot->backend_ops->unregister_reaction(bot, handle);
 }
 
 /********

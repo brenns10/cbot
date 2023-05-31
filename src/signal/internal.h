@@ -15,6 +15,8 @@ struct signal_reaction_cb {
 	uint64_t ts;
 	/* Operations from the plugin */
 	struct cbot_reaction_ops ops;
+	/* Argument to plugin */
+	void *arg;
 };
 
 struct cbot_signal_backend {

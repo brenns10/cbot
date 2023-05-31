@@ -18,13 +18,13 @@
  * CBot Backend Callbacks
  ***************/
 
-static void cbot_cli_send(const struct cbot *bot, const char *dest,
-                          const struct cbot_reaction_ops *ops, const char *msg)
+static uint64_t cbot_cli_send(const struct cbot *bot, const char *dest,
+                              const struct cbot_reaction_ops *ops, void *arg,
+                              const char *msg)
 {
 	(void)bot; // unused
 	printf("[%s]%s: %s\n", dest, bot->name, msg);
-	if (ops && ops->free_fn)
-		ops->free_fn(ops->plugin, ops->arg);
+	return 0;
 }
 
 static void cbot_cli_me(const struct cbot *bot, const char *dest,
