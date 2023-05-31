@@ -247,12 +247,9 @@ static void send_trivia_message(struct cbot_plugin *plugin, void *arg)
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	int rv;
-	time_t now = time(NULL);
-	time_t schedule;
+	time_t schedule, now;
 	struct tm tm;
 	const char *channel, *email, *msmtp_opts;
-	localtime_r(&now, &tm);
-	tm.tm_isdst = -1; /* reset it for mktime */
 
 	rv = config_setting_lookup_string(conf, "channel", &channel);
 	if (rv == CONFIG_FALSE) {
@@ -276,6 +273,10 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	config_setting_lookup_int(conf, "init_minute", &MN_INITIAL);
 	config_setting_lookup_int(conf, "send_hour", &HR_SEND_RSVP);
 	config_setting_lookup_int(conf, "send_minute", &MN_SEND_RSVP);
+
+	now = time(NULL);
+	localtime_r(&now, &tm);
+	tm.tm_isdst = -1; /* reset it for mktime */
 
 	if (tm.tm_wday < TRIVIA_WDAY) {
 		/* mktime only looks at alterations to mday, not wday or yday.
