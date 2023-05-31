@@ -14,6 +14,19 @@
 #include "cbot_private.h"
 #include "sc-collections.h"
 
+/****************
+ * State held for reactions
+ ****************/
+struct react_message {
+	struct sc_list_head list;
+	uint64_t id;
+	const struct cbot_reaction_ops *ops;
+	void *arg;
+};
+
+struct sc_list_head rmsgs;
+uint64_t rmsgid = 1;
+
 /***************
  * CBot Backend Callbacks
  ***************/
@@ -24,6 +37,17 @@ static uint64_t cbot_cli_send(const struct cbot *bot, const char *dest,
 {
 	(void)bot; // unused
 	printf("[%s]%s: %s\n", dest, bot->name, msg);
+	if (ops) {
+		struct react_message *rmsg = calloc(1, sizeof(*rmsg));
+		rmsg->id = rmsgid++;
+		rmsg->ops = ops;
+		rmsg->arg = arg;
+		sc_list_init(&rmsg->list);
+		sc_list_insert(&rmsgs, &rmsg->list);
+		fprintf(stderr, "NOTE: this message has id %lu for reactions\n",
+		        rmsg->id);
+		return rmsg->id;
+	}
 	return 0;
 }
 
@@ -53,6 +77,20 @@ static void cbot_cli_nick(const struct cbot *bot, const char *newnick)
 	(void)bot; // unused
 	printf("%s becomes %s\n", bot->name, newnick);
 	cbot_set_nick((struct cbot *)bot, newnick);
+}
+
+static void cbot_cli_unregister_reaction(const struct cbot *bot,
+                                         uint64_t handle)
+{
+	struct react_message *msg;
+	sc_list_for_each_entry(msg, &rmsgs, list, struct react_message)
+	{
+		if (msg->id == handle) {
+			sc_list_remove(&msg->list);
+			free(msg);
+			return;
+		}
+	}
 }
 
 /***************
@@ -87,6 +125,38 @@ static void cbot_cli_cmd_get_members(struct cbot *bot, int argc, char **argv)
 	cbot_user_info_free_all(&head);
 }
 
+static void cbot_cli_cmd_react(struct cbot *bot, int argc, char **argv)
+{
+	struct react_message *msg;
+	uint64_t id = 0;
+	struct cbot_reaction_event event = { 0 };
+	if (argc != 4) {
+		fprintf(stderr, "usage: /react ID USER [-]EMOJI\n");
+		return;
+	}
+	id = strtoull(argv[1], NULL, 10);
+	event.bot = bot;
+	event.emoji = argv[3];
+	event.source = argv[2];
+	event.handle = id;
+	if (event.emoji[0] == '-') {
+		event.emoji = &event.emoji[1];
+		event.remove = true;
+	}
+	sc_list_for_each_entry(msg, &rmsgs, list, struct react_message)
+	{
+		if (msg->id == id) {
+			char *plugname = plugpriv(msg->ops->plugin)->name;
+			event.plugin = msg->ops->plugin;
+			msg->ops->react_fn(&event, msg->arg);
+			fprintf(stderr, "Success! Notified plugin %s\n",
+			        plugname);
+			return;
+		}
+	}
+	fprintf(stderr, "Failed to react to message with id %luu\n", id);
+}
+
 static void cbot_cli_cmd_help(struct cbot *bot, int argc, char **argv);
 
 struct cbot_cli_cmd {
@@ -105,6 +175,7 @@ const struct cbot_cli_cmd cmds[] = {
 	    "add a member to a cbot channel"),
 	CMD("/memberlist", cbot_cli_cmd_get_members,
 	    "list members in a cbot channel"),
+	CMD("/react", cbot_cli_cmd_react, "react to an eligible message"),
 	CMD("/help", cbot_cli_cmd_help, "list all commands"),
 };
 
@@ -182,6 +253,7 @@ static void cbot_cli_run(struct cbot *bot)
 	size_t n;
 	int newline, rv;
 	struct sc_lwt *cur = sc_lwt_current();
+	sc_list_init(&rmsgs);
 
 	while (true) {
 		printf("> ");
@@ -222,4 +294,5 @@ struct cbot_backend_ops cli_ops = {
 	.join = cbot_cli_join,
 	.nick = cbot_cli_nick,
 	.is_authorized = NULL,
+	.unregister_reaction = cbot_cli_unregister_reaction,
 };
