@@ -20,8 +20,7 @@ int MN_INITIAL = 0;
 int HR_SEND_RSVP = 14;
 int MN_SEND_RSVP = 0;
 
-char *TARGET_EMAIL;
-char *MSMTP_OPTS = "";
+char *SENDMAIL_COMMAND;
 char *CHANNEL;
 
 struct trivia_reaction {
@@ -48,7 +47,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	struct trivia_reaction *arr =
 	        sc_arr(&rxns->reactions, struct trivia_reaction);
 	int attending = 0, sad = 0;
-	struct sc_charbuf cmd, msg_attend, msg_sad;
+	struct sc_charbuf msg_attend, msg_sad;
 	time_t now, schedule;
 	struct tm tm;
 
@@ -113,10 +112,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	}
 
 	/* Launch MSMTP and begin writing our message into the pipe */
-	sc_cb_init(&cmd, 64);
-	sc_cb_printf(&cmd, "msmtp %s %s", MSMTP_OPTS, TARGET_EMAIL);
-	FILE *f = popen(cmd.buf, "w");
-	sc_cb_destroy(&cmd);
+	FILE *f = popen(SENDMAIL_COMMAND, "w");
 
 	if (!f) {
 		CL_CRIT("send rsvp: %d %s\n", errno, strerror(errno));
@@ -249,7 +245,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	int rv;
 	time_t schedule, now;
 	struct tm tm;
-	const char *channel, *email, *msmtp_opts;
+	const char *channel, *sendmail_command;
 
 	trivia_rxn_ops.plugin = plugin;
 
@@ -258,17 +254,15 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		fprintf(stderr, "trivia plugin: missing \"channel\" config\n");
 		return -1;
 	}
-	rv = config_setting_lookup_string(conf, "email", &email);
+	rv = config_setting_lookup_string(conf, "sendmail_command",
+	                                  &sendmail_command);
 	if (rv == CONFIG_FALSE) {
-		fprintf(stderr, "trivia plugin: missing \"email\" config\n");
+		fprintf(stderr,
+		        "trivia plugin: missing \"sendmail_command\" config\n");
 		return -1;
 	}
-	rv = config_setting_lookup_string(conf, "msmtp_opts", &msmtp_opts);
-	if (rv != CONFIG_FALSE) {
-		MSMTP_OPTS = strdup(msmtp_opts);
-	}
 	CHANNEL = strdup(channel);
-	TARGET_EMAIL = strdup(email);
+	SENDMAIL_COMMAND = strdup(sendmail_command);
 
 	config_setting_lookup_int(conf, "trivia_weekday", &TRIVIA_WDAY);
 	config_setting_lookup_int(conf, "init_hour", &HR_INITIAL);
