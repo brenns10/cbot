@@ -116,6 +116,7 @@ plugins = [
   'birthday',
   'buttcoin',
   'reactrack',
+  'trivia',
 ]
 plugin_libs = []
 foreach f: plugins
