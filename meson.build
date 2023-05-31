@@ -1,6 +1,6 @@
 project(
   'cbot', 'c',
-  version : '0.11.2',
+  version : '0.11.3',
   # be sure to update APKBUILD version too
 )
 
