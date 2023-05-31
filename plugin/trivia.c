@@ -88,7 +88,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 
 		/* Write the emoji count into the email and track it */
 		sc_cb_printf(dst, "%s: %d %s\n", arr[react].emoji, amount,
-		             amount ? "people" : "person");
+		             amount > 1 ? "people" : "person");
 		*to_increment += amount;
 
 		/* Now free the descriptor, we're done with it */
