@@ -22,6 +22,8 @@ int MN_SEND_RSVP = 0;
 
 char *SENDMAIL_COMMAND;
 char *CHANNEL;
+char *FROM;
+char *TO;
 
 struct trivia_reaction {
 	char *emoji;
@@ -125,13 +127,15 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	}
 
 	fprintf(f,
+	        "From: %s\n"
+	        "To: %s\n"
 	        "Subject: Trivia Reservation\n\n"
 	        "Hi Grace!\n\n"
 	        "Today our group should have a total of %d people for "
 	        "trivia:\n%s\n"
 	        "Can we reserve a table?\n\n"
 	        "Thanks,\nStephen's poorly trained bot",
-	        attending, msg_attend.buf);
+	        FROM, TO, attending, msg_attend.buf);
 	if (sad) {
 		fprintf(f,
 		        "\n\nPS: We also have %d %s who %s very sad to miss "
@@ -245,7 +249,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	int rv;
 	time_t schedule, now;
 	struct tm tm;
-	const char *channel, *sendmail_command;
+	const char *channel, *sendmail_command, *from, *to;
 
 	trivia_rxn_ops.plugin = plugin;
 
@@ -261,8 +265,20 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		        "trivia plugin: missing \"sendmail_command\" config\n");
 		return -1;
 	}
+	rv = config_setting_lookup_string(conf, "from", &from);
+	if (rv == CONFIG_FALSE) {
+		fprintf(stderr, "trivia plugin: mising \"from\" config\n");
+		return -1;
+	}
+	rv = config_setting_lookup_string(conf, "to", &to);
+	if (rv == CONFIG_FALSE) {
+		fprintf(stderr, "trivia plugin: missing \"to\" config\n");
+		return -1;
+	}
 	CHANNEL = strdup(channel);
 	SENDMAIL_COMMAND = strdup(sendmail_command);
+	FROM = strdup(from);
+	TO = strdup(to);
 
 	config_setting_lookup_int(conf, "trivia_weekday", &TRIVIA_WDAY);
 	config_setting_lookup_int(conf, "init_hour", &HR_INITIAL);
