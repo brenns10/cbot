@@ -41,6 +41,10 @@ static const char *sad_reacts[] = {
 	"😭",
 };
 
+static const char *plus_reacts[] = {
+	"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣",
+};
+
 static void send_trivia_message(struct cbot_plugin *plugin, void *arg);
 
 static void send_rsvp(struct cbot_plugin *plugin, void *arg)
@@ -78,6 +82,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		struct sc_charbuf *dst = &msg_attend;
 		int *to_increment = &attending;
 		int amount = arr[react].users.len;
+		int plus = 0;
 
 		for (size_t i = 0; i < nelem(sad_reacts); i++) {
 			if (strcmp(arr[react].emoji, sad_reacts[i]) == 0) {
@@ -87,10 +92,22 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 			}
 		}
 
+		for (size_t i = 0; i < nelem(plus_reacts); i++) {
+			if (strcmp(arr[react].emoji, plus_reacts[i]) == 0) {
+				plus = i + 1;
+				break;
+			}
+		}
+
 		/* Write the emoji count into the email and track it */
-		sc_cb_printf(dst, "%s: %d %s\n", arr[react].emoji, amount,
+		sc_cb_printf(dst, "%s: %d %s", arr[react].emoji, amount,
 		             amount > 1 ? "people" : "person");
-		*to_increment += amount;
+		if (plus)
+			sc_cb_printf(dst, " (+ %d %s%s)", plus,
+			             plus > 1 ? "guests" : "guest",
+			             amount > 1 ? " each" : "");
+		sc_cb_append(dst, '\n');
+		*to_increment += amount + amount * plus;
 
 		/* Now free the descriptor, we're done with it */
 		char **user_arr = sc_arr(&arr[react].users, char *);
