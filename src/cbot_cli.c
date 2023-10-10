@@ -279,6 +279,13 @@ static void cbot_cli_run(struct cbot *bot)
 	free(line);
 }
 
+static int cbot_cli_is_authorized(const struct cbot *bot, const char *user,
+                                  const char *msg)
+{
+	printf("is_authorized(... \"%s\")?\n", user);
+	return strcmp(user, "shell") == 0;
+}
+
 static int cbot_cli_configure(struct cbot *bot, config_setting_t *group)
 {
 	return 0;
@@ -293,6 +300,6 @@ struct cbot_backend_ops cli_ops = {
 	.op = cbot_cli_op,
 	.join = cbot_cli_join,
 	.nick = cbot_cli_nick,
-	.is_authorized = NULL,
+	.is_authorized = cbot_cli_is_authorized,
 	.unregister_reaction = cbot_cli_unregister_reaction,
 };
