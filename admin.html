@@ -147,6 +147,57 @@ options, for example:</p>
 Please see <code class="docutils literal notranslate"><span class="pre">sample.cfg</span></code> for examples of each plugin’s configuration.</p>
 </section>
 </section>
+<section id="plugins">
+<h2>Plugins<a class="headerlink" href="#plugins" title="Permalink to this heading">¶</a></h2>
+<p>This section documents the administration side of some plugins, in case they
+need a bit more explanation.</p>
+<section id="trivia">
+<h3>Trivia<a class="headerlink" href="#trivia" title="Permalink to this heading">¶</a></h3>
+<p>The trivia plugin is a powerful weekly reminder system for the group chat.
+Basically, every week at a given time, a message gets sent announcing the trivia
+night and requesting RSVP. Then, at the RSVP deadline, a message gets sent to
+the trivia host to RSVP a table.</p>
+<p>In order to RSVP, users react with any emoji, except for a few sad face emoji
+choices. If they react with a numeric emoji, that indicates bringing a guest.</p>
+<p>While it’s definitely nice to RSVP and reserve a table, the main benefit is
+actually for reminding everybody that it’s trivia day, and letting everybody see
+who else will be joining, without needing to fill the chat with lots of
+notifications.</p>
+<p>The RSVP message can be sent to trivia host in one of two ways:</p>
+<ol class="arabic simple">
+<li><p>Email</p></li>
+<li><p>SMS</p></li>
+</ol>
+<p>Strangely, signal is not an option here (but it could be easily added, if it
+were needed). The email option was the original, but the SMS option can be
+configured with “ntfy.sh” and the android app Tasker to automate the SMS
+sending.</p>
+<p>Configurations:</p>
+<ul class="simple">
+<li><p>channel: set the channel where trivia is organized (required)</p></li>
+<li><p>sendmail_command: set the command to run to send email (or SMS). This command
+is executed via <code class="docutils literal notranslate"><span class="pre">popen()</span></code>, which means that it is passed to the system
+shell, and the message text is written into the command via stdin.</p>
+<ul>
+<li><p>A configuration like <code class="docutils literal notranslate"><span class="pre">msmtp</span> <span class="pre">-t</span> <span class="pre">recipient&#64;example.com</span></code> works well for Email
+based sending.</p></li>
+<li><p>A configuration like <code class="docutils literal notranslate"><span class="pre">perl</span> <span class="pre">-pe</span> <span class="pre">'s/\n/\r\n'</span> <span class="pre">-</span> <span class="pre">|</span> <span class="pre">curl</span> <span class="pre">--data-binary</span> <span class="pre">&#64;-</span> <span class="pre">https://ntfy.sh/TOPIC</span></code>
+works for SMS. You’ll then need to configure ntfy.sh and the Android Tasker
+app as seen <a class="reference external" href="https://docs.ntfy.sh/subscribe/phone/#automation-apps">here</a>.</p></li>
+</ul>
+</li>
+<li><p>email_format: set this to false when you’re using SMS, true for email (default
+true)</p></li>
+<li><p>init_hour, init_minute: the start time for trivia</p></li>
+<li><p>send_hour, send_miniute: the rsvp time for trivia</p></li>
+<li><p>trivia_weekday: day of week (0 - Sunday, 1 - Monday, etc…)</p></li>
+<li><p>from_name: string name of sender</p></li>
+<li><p>to_name: string name of recipient</p></li>
+<li><p>from: sender email address (required when email_format is set)</p></li>
+<li><p>to: recipient email address (required when email_format is set)</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -173,6 +224,7 @@ Please see <code class="docutils literal notranslate"><span class="pre">sample.c
 <li class="toctree-l2"><a class="reference internal" href="#installing-docker">Installing (Docker)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installing-from-source">Installing (From Source)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuring">Configuring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plugins">Plugins</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dev.html">Development</a></li>

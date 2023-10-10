@@ -132,3 +132,58 @@ options, for example:
 
 If the plugin requires configuration, it can be provided in these objects.
 Please see ``sample.cfg`` for examples of each plugin's configuration.
+
+Plugins
+-------
+
+This section documents the administration side of some plugins, in case they
+need a bit more explanation.
+
+Trivia
+^^^^^^
+
+The trivia plugin is a powerful weekly reminder system for the group chat.
+Basically, every week at a given time, a message gets sent announcing the trivia
+night and requesting RSVP. Then, at the RSVP deadline, a message gets sent to
+the trivia host to RSVP a table.
+
+In order to RSVP, users react with any emoji, except for a few sad face emoji
+choices. If they react with a numeric emoji, that indicates bringing a guest.
+
+While it's definitely nice to RSVP and reserve a table, the main benefit is
+actually for reminding everybody that it's trivia day, and letting everybody see
+who else will be joining, without needing to fill the chat with lots of
+notifications.
+
+The RSVP message can be sent to trivia host in one of two ways:
+
+1. Email
+2. SMS
+
+Strangely, signal is not an option here (but it could be easily added, if it
+were needed). The email option was the original, but the SMS option can be
+configured with "ntfy.sh" and the android app Tasker to automate the SMS
+sending.
+
+Configurations:
+
+- channel: set the channel where trivia is organized (required)
+- sendmail_command: set the command to run to send email (or SMS). This command
+  is executed via ``popen()``, which means that it is passed to the system
+  shell, and the message text is written into the command via stdin.
+
+  - A configuration like ``msmtp -t recipient@example.com`` works well for Email
+    based sending.
+  - A configuration like ``perl -pe 's/\n/\r\n' - | curl --data-binary @- https://ntfy.sh/TOPIC``
+    works for SMS. You'll then need to configure ntfy.sh and the Android Tasker
+    app as seen `here <https://docs.ntfy.sh/subscribe/phone/#automation-apps>`_.
+
+- email_format: set this to false when you're using SMS, true for email (default
+  true)
+- init_hour, init_minute: the start time for trivia
+- send_hour, send_miniute: the rsvp time for trivia
+- trivia_weekday: day of week (0 - Sunday, 1 - Monday, etc...)
+- from_name: string name of sender
+- to_name: string name of recipient
+- from: sender email address (required when email_format is set)
+- to: recipient email address (required when email_format is set)

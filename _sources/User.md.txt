@@ -127,6 +127,19 @@ cbot> 94105: 🌦   🌡️+48°F 🌬️→19mph
 Given a ZIP code or other location, replies with an emoji-rich weather report on
 the current conditions. Straight from [wttr.in](http://wttr.in).
 
+#### trivia
+
+If you have a weekly trivia, your CBot admin can configure a reminder message.
+You can react to the reminder message to RSVP. At a specified time, the reminder
+message gets sent out to the trivia host, so that you can get a table reserved.
+
+Your reactions can be:
+
+- 😥, 😢, 😭 - explicitly RSVP no
+- 1️⃣ ... 9️⃣ - RSVP yes with the given number of guests
+- Any other emoji - RSVP yes with no guest, your emoji choice gets sent to the
+  host for fun!
+
 ### Plugins Not Frequently Used
 
 - annoy: `cbot annoy <user>` sends a message to user every few seconds. It's
