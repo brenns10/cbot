@@ -29,6 +29,11 @@ char *TO;
 char *FROMNAME = "Trivia Player";
 char *TONAME = "Trivia Master";
 
+enum trivia_state {
+	TS_IDLE,
+	TS_REACTING,
+};
+
 struct trivia_reaction {
 	char *emoji;
 	struct sc_array users;
@@ -37,6 +42,8 @@ struct trivia_reaction {
 struct trivia_reactions {
 	struct sc_array reactions;
 	uint64_t handle;
+	enum trivia_state state;
+	struct cbot_callback *cb;
 };
 
 static const char *sad_reacts[] = {
@@ -51,15 +58,44 @@ static const char *plus_reacts[] = {
 
 static void send_trivia_message(struct cbot_plugin *plugin, void *arg);
 
+static time_t next_trivia(void)
+{
+	struct tm tm;
+	time_t schedule, now = time(NULL);
+	localtime_r(&now, &tm);
+	tm.tm_isdst = -1; /* reset it for mktime */
+
+	if (tm.tm_wday < TRIVIA_WDAY) {
+		/* mktime only looks at alterations to mday, not wday or yday.
+		 * Add the correct number of days */
+		tm.tm_mday += TRIVIA_WDAY - tm.tm_wday;
+	} else if (tm.tm_wday > TRIVIA_WDAY) {
+		tm.tm_mday += 7 - tm.tm_wday + TRIVIA_WDAY;
+	} else if (tm.tm_hour > HR_INITIAL ||
+	           (tm.tm_hour == HR_INITIAL && tm.tm_min >= MN_INITIAL)) {
+		/* If today is wednesday, we have to skip once it's after
+		 * HR_INITIAL */
+		tm.tm_mday += 7;
+	}
+
+	tm.tm_sec = tm.tm_min = 0;
+	tm.tm_hour = HR_INITIAL;
+	tm.tm_min = MN_INITIAL;
+	tm.tm_sec = 0;
+	schedule = mktime(&tm);
+
+	CL_DEBUG("trivia: schedule callback for %lu seconds from now\n",
+	         schedule - now);
+	return schedule;
+}
+
 static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 {
-	struct trivia_reactions *rxns = arg;
+	struct trivia_reactions *rxns = plugin->data;
 	struct trivia_reaction *arr =
 	        sc_arr(&rxns->reactions, struct trivia_reaction);
 	int attending = 0, sad = 0;
 	struct sc_charbuf msg_attend, msg_sad;
-	time_t now, schedule;
-	struct tm tm;
 
 	/* Cancel receiving reactions for this message now */
 	cbot_unregister_reaction(plugin->bot, rxns->handle);
@@ -67,14 +103,9 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	/* Schedule the next trivia night callback. It's good to do this before
 	 * sending the email since it's not particularly error-prone, so we can
 	 * have it done with regardless of the outcome of this email step. */
-	now = time(NULL);
-	localtime_r(&now, &tm);
-	tm.tm_mday += 7;
-	tm.tm_hour = HR_INITIAL;
-	tm.tm_min = MN_INITIAL;
-	tm.tm_sec = 0;
-	schedule = mktime(&tm);
-	cbot_schedule_callback(plugin, send_trivia_message, NULL, schedule);
+	rxns->cb = cbot_schedule_callback(plugin, send_trivia_message, NULL,
+	                                  next_trivia());
+	rxns->state = TS_IDLE;
 
 	/* Now we can compose the RSVP email */
 	sc_cb_init(&msg_attend, 256);
@@ -122,7 +153,6 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	}
 	/* We're also done with the reactions array and descriptor */
 	sc_arr_destroy(&rxns->reactions);
-	free(rxns);
 
 	/* If there's nobody attending, don't send the email */
 	if (!attending) {
@@ -245,7 +275,7 @@ static void send_trivia_message(struct cbot_plugin *plugin, void *arg)
 {
 	time_t now, schedule;
 	struct tm tm;
-	struct trivia_reactions *rxns = calloc(1, sizeof(*rxns));
+	struct trivia_reactions *rxns = plugin->data;
 	sc_arr_init(&rxns->reactions, struct trivia_reaction, 1);
 	rxns->handle =
 	        cbot_sendr(plugin->bot, CHANNEL, &trivia_rxn_ops, rxns,
@@ -267,17 +297,52 @@ static void send_trivia_message(struct cbot_plugin *plugin, void *arg)
 	tm.tm_min = MN_SEND_RSVP;
 	tm.tm_sec = 0;
 	schedule = mktime(&tm);
-	cbot_schedule_callback(plugin, send_rsvp, rxns, schedule);
+	rxns->cb = cbot_schedule_callback(plugin, send_rsvp, rxns, schedule);
+	rxns->state = TS_REACTING;
+}
+
+static void rsvp_trivia(struct cbot_message_event *event, void *user)
+{
+	struct cbot_plugin *plugin = event->plugin;
+	struct trivia_reactions *rxns = plugin->data;
+
+	if (!cbot_is_authorized(event->bot, event->username, event->message))
+		return;
+
+	if (rxns->state != TS_REACTING) {
+		cbot_send(plugin->bot, event->channel,
+		          "Sorry, wrong state for that!");
+		return;
+	}
+	cbot_cancel_callback(rxns->cb);
+	send_rsvp(plugin, NULL);
+}
+
+static void start_trivia(struct cbot_message_event *event, void *user)
+{
+	struct cbot_plugin *plugin = event->plugin;
+	struct trivia_reactions *rxns = plugin->data;
+
+	if (!cbot_is_authorized(event->bot, event->username, event->message))
+		return;
+
+	if (rxns->state != TS_IDLE) {
+		cbot_send(plugin->bot, event->channel,
+		          "Sorry, wrong state for that!");
+		return;
+	}
+	cbot_cancel_callback(rxns->cb);
+	send_trivia_message(plugin, NULL);
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	int rv;
-	time_t schedule, now;
-	struct tm tm;
 	const char *channel, *sendmail_command, *from, *to;
+	struct trivia_reactions *rxns = calloc(1, sizeof(*rxns));
 
 	trivia_rxn_ops.plugin = plugin;
+	plugin->data = rxns;
 
 	config_setting_lookup_bool(conf, "email_format", (int *)&EMAIL_FORMAT);
 
@@ -322,31 +387,13 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	config_setting_lookup_int(conf, "send_hour", &HR_SEND_RSVP);
 	config_setting_lookup_int(conf, "send_minute", &MN_SEND_RSVP);
 
-	now = time(NULL);
-	localtime_r(&now, &tm);
-	tm.tm_isdst = -1; /* reset it for mktime */
+	rxns->cb = cbot_schedule_callback(plugin, send_trivia_message, NULL,
+	                                  next_trivia());
 
-	if (tm.tm_wday < TRIVIA_WDAY) {
-		/* mktime only looks at alterations to mday, not wday or yday.
-		 * Add the correct number of days */
-		tm.tm_mday += TRIVIA_WDAY - tm.tm_wday;
-	} else if (tm.tm_wday > TRIVIA_WDAY) {
-		tm.tm_mday += 7 - tm.tm_wday + TRIVIA_WDAY;
-	} else if (tm.tm_hour > HR_INITIAL ||
-	           (tm.tm_hour == HR_INITIAL && tm.tm_min >= MN_INITIAL)) {
-		/* If today is wednesday, we have to skip once it's after
-		 * HR_INITIAL */
-		tm.tm_mday += 7;
-	}
-
-	tm.tm_sec = tm.tm_min = 0;
-	tm.tm_hour = HR_INITIAL;
-	tm.tm_min = MN_INITIAL;
-	tm.tm_sec = 0;
-	schedule = mktime(&tm);
-	CL_DEBUG("trivia: schedule callback for %lu seconds from now\n",
-	         schedule - now);
-	cbot_schedule_callback(plugin, send_trivia_message, NULL, schedule);
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)start_trivia,
+	              NULL, "trivia start");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)rsvp_trivia, NULL,
+	              "trivia rsvp");
 	return 0;
 }
 
