@@ -20,6 +20,8 @@ int MN_INITIAL = 0;
 int HR_SEND_RSVP = 14;
 int MN_SEND_RSVP = 0;
 
+int EMAIL_FORMAT = 1;
+
 char *SENDMAIL_COMMAND;
 char *CHANNEL;
 char *FROM;
@@ -143,16 +145,21 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		return;
 	}
 
+	if (EMAIL_FORMAT)
+		fprintf(f,
+		        "From: %s\n"
+		        "To: %s\n"
+		        "Subject: Trivia Reservation\n\n",
+		        FROM, TO);
+
 	fprintf(f,
-	        "From: %s\n"
-	        "To: %s\n"
-	        "Subject: Trivia Reservation\n\n"
 	        "Hi Grace!\n\n"
 	        "Today our group should have a total of %d people for "
 	        "trivia:\n%s\n"
 	        "Can we reserve a table?\n\n"
-	        "Thanks,\nStephen's poorly trained bot",
-	        FROM, TO, attending, msg_attend.buf);
+	        "Thanks,\nStephen's poorly trained bot (but also Stephen"
+	        " if you reply to this message)",
+	        attending, msg_attend.buf);
 	if (sad) {
 		fprintf(f,
 		        "\n\nPS: We also have %d %s who %s very sad to miss "
@@ -270,6 +277,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 
 	trivia_rxn_ops.plugin = plugin;
 
+	config_setting_lookup_bool(conf, "email_format", (int *)&EMAIL_FORMAT);
+
 	rv = config_setting_lookup_string(conf, "channel", &channel);
 	if (rv == CONFIG_FALSE) {
 		fprintf(stderr, "trivia plugin: missing \"channel\" config\n");
@@ -283,19 +292,21 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		return -1;
 	}
 	rv = config_setting_lookup_string(conf, "from", &from);
-	if (rv == CONFIG_FALSE) {
+	if (rv == CONFIG_FALSE && EMAIL_FORMAT) {
 		fprintf(stderr, "trivia plugin: mising \"from\" config\n");
 		return -1;
 	}
 	rv = config_setting_lookup_string(conf, "to", &to);
-	if (rv == CONFIG_FALSE) {
+	if (rv == CONFIG_FALSE && EMAIL_FORMAT) {
 		fprintf(stderr, "trivia plugin: missing \"to\" config\n");
 		return -1;
 	}
 	CHANNEL = strdup(channel);
 	SENDMAIL_COMMAND = strdup(sendmail_command);
-	FROM = strdup(from);
-	TO = strdup(to);
+	if (EMAIL_FORMAT) {
+		FROM = strdup(from);
+		TO = strdup(to);
+	}
 
 	config_setting_lookup_int(conf, "trivia_weekday", &TRIVIA_WDAY);
 	config_setting_lookup_int(conf, "init_hour", &HR_INITIAL);
