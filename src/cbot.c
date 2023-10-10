@@ -894,4 +894,5 @@ void cbot_cancel_callback(struct cbot_callback *cb)
 	struct cbot *bot = plugpriv(cb->plugin)->bot;
 	sc_list_remove(&cb->list);
 	bot->callback_touched = true;
+	free(cb);
 }
