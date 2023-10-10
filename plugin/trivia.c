@@ -26,6 +26,8 @@ char *SENDMAIL_COMMAND;
 char *CHANNEL;
 char *FROM;
 char *TO;
+char *FROMNAME = "Trivia Player";
+char *TONAME = "Trivia Master";
 
 struct trivia_reaction {
 	char *emoji;
@@ -153,13 +155,13 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		        FROM, TO);
 
 	fprintf(f,
-	        "Hi Grace!\n\n"
+	        "Hello %s!\n\n"
 	        "Today our group should have a total of %d people for "
 	        "trivia:\n%s\n"
 	        "Can we reserve a table?\n\n"
-	        "Thanks,\nStephen's poorly trained bot (but also Stephen"
+	        "Thanks,\n%s's poorly trained bot (but also %s"
 	        " if you reply to this message)",
-	        attending, msg_attend.buf);
+	        TONAME, attending, msg_attend.buf, FROMNAME, FROMNAME);
 	if (sad) {
 		fprintf(f,
 		        "\n\nPS: We also have %d %s who %s very sad to miss "
@@ -307,6 +309,12 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		FROM = strdup(from);
 		TO = strdup(to);
 	}
+
+	config_setting_lookup_string(conf, "from_name",
+	                             (const char **)&FROMNAME);
+	config_setting_lookup_string(conf, "to_name", (const char **)&TONAME);
+	FROMNAME = strdup(FROMNAME);
+	TONAME = strdup(TONAME);
 
 	config_setting_lookup_int(conf, "trivia_weekday", &TRIVIA_WDAY);
 	config_setting_lookup_int(conf, "init_hour", &HR_INITIAL);
