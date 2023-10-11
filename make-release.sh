@@ -15,7 +15,7 @@
 set -euo pipefail
 
 RELEASE=${1:-$(git describe --tags)}
-RELNOV=$(echo $RELEASE | sed 's/^v//')
+RELNOV=${RELEASE#v}
 WORK=$(pwd)
 
 git worktree add /tmp/cbot-$RELEASE $RELEASE

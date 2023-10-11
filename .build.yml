@@ -29,7 +29,6 @@ tasks:
       cd .. && rm -r ghsetup
       cd cbot
       git remote add upstream https://github.com/brenns10/cbot
-      echo "GIT_REF=$GIT_REF"
   - setup: |
       cd cbot
       meson build
@@ -37,32 +36,29 @@ tasks:
       cd cbot
       ninja -C build
   - source_release: |
+      case $GIT_REF in refs/tags/*) true;; *) exit 0;; esac
+      TAG=${GIT_REF#refs/tags/}
       cd cbot
-      TAG=$(git tag --points-at HEAD)
-      [ -z "$TAG" ] && exit 0
-      VER=$(echo $TAG | sed s/v//)
-      ./make-release.sh
+      ./make-release.sh $TAG
       mkdir -p ~/artifacts
-      mv cbot-$VER.tar.gz ~/artifacts/
+      mv cbot-${TAG#v}.tar.gz ~/artifacts/
   - alpine_package: |
+      case $GIT_REF in refs/tags/*) true;; *) exit 0;; esac
+      TAG=${GIT_REF#refs/tags/}
       cd cbot
-      TAG=$(git tag --points-at HEAD)
-      [ -z "$TAG" ] && exit 0
-      VER=$(echo $TAG | sed s/v//)
       export PACKAGER_PRIVKEY=~/packager.key
       export PACKAGER_PUBKEY=~/cbot/deploy/stephen@brennan.io.rsa.pub
       cd deploy/alpine
-      cp ~/artifacts/cbot-$VER.tar.gz .
-      sed -i 's?source=.*$?source="'cbot-$VER.tar.gz'"?' APKBUILD
+      cp ~/artifacts/cbot-${TAG#v}.tar.gz .
+      sed -i 's?source=.*$?source="'cbot-${TAG#v}.tar.gz'"?' APKBUILD
       abuild checksum
       abuild
-      mv ~/packages/deploy/x86_64/cbot-$VER-r0.apk ~/artifacts/
+      mv ~/packages/deploy/x86_64/cbot-${TAG#v}-r0.apk ~/artifacts/
   - github_release: |
-      cd cbot
+      case $GIT_REF in refs/tags/*) true;; *) exit 0;; esac
+      TAG=${GIT_REF#refs/tags/}
       set +x; source ~/.github_token; set -x
-      TAG=$(git tag --points-at HEAD)
-      [ -z "$TAG" ] && exit 0
-      VER=$(echo $TAG | sed s/v//)
+      cd cbot
       # Get the blurb for the current release from CHANGELOG
       sed <CHANGELOG \
           -e '1,/^[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+ ([[:digit:]]\{4\}/d' \
@@ -71,13 +67,11 @@ tasks:
           -e '/./,$!d' | tac | sed '/./,$!d' | tac > /tmp/changelog
       gh release create $TAG ~/artifacts/* -t $TAG -F /tmp/changelog
   - docker_build: |
-      cd cbot
+      case $GIT_REF in refs/tags/*) true;; *) exit 0;; esac
+      TAG=${GIT_REF#refs/tags/}
       set +x; source ~/.github_token; set -x
-      TAG=$(git tag --points-at HEAD)
-      [ -z "$TAG" ] && exit 0
-      VER=$(echo $TAG | sed s/v//)
-      cd deploy
-      cp ~/artifacts/cbot-$VER-r0.apk cbot.apk
+      cd cbot/deploy
+      cp ~/artifacts/cbot-${TAG#v}-r0.apk cbot.apk
       sudo service docker start
       sudo docker login docker.io -u brenns10 --password-stdin < ~/.dockerpw
       sudo docker build -t brenns10/cbot:$TAG .
