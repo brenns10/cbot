@@ -50,6 +50,7 @@ tasks:
       [ -z "$TAG" ] && exit 0
       VER=$(echo $TAG | sed s/v//)
       export PACKAGER_PRIVKEY=~/packager.key
+      export PACKAGER_PUBKEY=~/cbot/deploy/stephen@brennan.io.rsa.pub
       cd deploy/alpine
       cp ~/artifacts/cbot-$VER.tar.gz .
       sed -i 's?source=.*$?source="'cbot-$VER.tar.gz'"?' APKBUILD
