@@ -29,7 +29,7 @@ tasks:
       cd .. && rm -r ghsetup
       cd cbot
       git remote add upstream https://github.com/brenns10/cbot
-      echo "GIT_REFERENCE=$GIT_REFERENCE"
+      echo "GIT_REF=$GIT_REF"
   - setup: |
       cd cbot
       meson build
