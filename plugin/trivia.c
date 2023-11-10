@@ -397,6 +397,20 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	return 0;
 }
 
+static void unload(struct cbot_plugin *plugin)
+{
+	struct trivia_reactions *rxns = plugin->data;
+	/* TODO: free queued reactions */
+	free(CHANNEL);
+	free(SENDMAIL_COMMAND);
+	free(FROM);
+	free(TO);
+	free(FROMNAME);
+	free(TONAME);
+	cbot_cancel_callback(rxns->cb);
+	free(rxns);
+}
+
 static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 {
 	sc_cb_concat(
@@ -407,5 +421,6 @@ static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 struct cbot_plugin_ops ops = {
 	.description = "a plugin that collects RSVPs for trivia night",
 	.load = load,
+	.unload = unload,
 	.help = help,
 };
