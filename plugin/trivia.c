@@ -56,6 +56,11 @@ static const char *plus_reacts[] = {
 	"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣",
 };
 
+static const char *maybe_reacts[] = {
+	"❓",
+	"❔",
+};
+
 static void send_trivia_message(struct cbot_plugin *plugin, void *arg);
 
 static time_t next_trivia(void)
@@ -94,7 +99,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 	struct trivia_reactions *rxns = plugin->data;
 	struct trivia_reaction *arr =
 	        sc_arr(&rxns->reactions, struct trivia_reaction);
-	int attending = 0, sad = 0;
+	int attending = 0, maybe = 0, sad = 0;
 	struct sc_charbuf msg_attend, msg_sad;
 
 	/* Cancel receiving reactions for this message now */
@@ -118,6 +123,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		int *to_increment = &attending;
 		int amount = arr[react].users.len;
 		int plus = 0;
+		bool is_maybe = false;
 
 		for (size_t i = 0; i < nelem(sad_reacts); i++) {
 			if (strcmp(arr[react].emoji, sad_reacts[i]) == 0) {
@@ -134,9 +140,18 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 			}
 		}
 
+		for (size_t i = 0; i < nelem(maybe_reacts); i++) {
+			if (strcmp(arr[react].emoji, maybe_reacts[i]) == 0) {
+				maybe += 1;
+				is_maybe = true;
+				break;
+			}
+		}
+
 		/* Write the emoji count into the email and track it */
-		sc_cb_printf(dst, "%s: %d %s", arr[react].emoji, amount,
-		             amount > 1 ? "people" : "person");
+		sc_cb_printf(dst, "%s: %d %s%s", arr[react].emoji, amount,
+		             amount > 1 ? "people" : "person",
+		             is_maybe ? " (maybe)" : "");
 		if (plus)
 			sc_cb_printf(dst, " (+ %d %s%s)", plus,
 			             plus > 1 ? "guests" : "guest",
@@ -184,14 +199,24 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 		        "Subject: Trivia Reservation\n\n",
 		        FROM, TO);
 
+	fprintf(f, "Hello %s!\n\n", TONAME);
+	if (maybe)
+		fprintf(f,
+		        "Today our group should have %d - %d people for "
+		        "trivia:\n",
+		        attending - maybe, attending);
+	else
+		fprintf(f,
+		        "Today our group should have a total of %d people for "
+		        "trivia:\n",
+		        attending);
+
 	fprintf(f,
-	        "Hello %s!\n\n"
-	        "Today our group should have a total of %d people for "
-	        "trivia:\n%s\n"
+	        "%s\n"
 	        "Can we reserve a table?\n\n"
 	        "Thanks,\n%s's poorly trained bot (but also %s"
 	        " if you reply to this message)",
-	        TONAME, attending, msg_attend.buf, FROMNAME, FROMNAME);
+	        msg_attend.buf, FROMNAME, FROMNAME);
 	if (sad) {
 		fprintf(f,
 		        "\n\nPS: We also have %d %s who %s very sad to miss "
