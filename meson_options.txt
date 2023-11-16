@@ -1,1 +1,3 @@
 option('doc', type : 'boolean', value : false)
+option('with_readline', type : 'boolean', value : false)
+option('with_libedit', type : 'boolean', value : false)

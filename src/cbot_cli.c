@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#if defined(WITH_READLINE)
+#include <readline/history.h>
+#include <readline/readline.h>
+#elif defined(WITH_LIBEDIT)
+#include <editline/readline.h>
+#endif
 
 #include "cbot/cbot.h"
 #include "cbot_private.h"
@@ -247,36 +253,114 @@ bool cbot_cli_execute_cmd(struct cbot *bot, char *line)
 	return false;
 }
 
-static void cbot_cli_run(struct cbot *bot)
+#if defined(WITH_READLINE) || defined(WITH_LIBEDIT)
+static char *cbot_cli_command_compentry(const char *text, int state)
 {
-	char *line = NULL;
-	size_t n;
-	int newline, rv;
-	struct sc_lwt *cur = sc_lwt_current();
-	sc_list_init(&rmsgs);
+	static int index, len;
+	if (!state) {
+		index = 0;
+		len = strlen(text);
+	}
+	for (; index < nelem(cmds); index++) {
+		if (strncmp(cmds[index].cmd, text, len) == 0) {
+			return strdup(cmds[index++].cmd);
+		}
+	}
+	return NULL;
+}
 
-	while (true) {
-		printf("> ");
-		fflush(stdout);
+static char **cbot_cli_completion(const char *text, int start, int end)
+{
+	/* Tell readline not to try completing filenames */
+	rl_attempted_completion_over = 1;
+
+	/* If we're completing the first character of the line, complete command
+	 * names */
+	if (start == 0)
+		return rl_completion_matches(text, cbot_cli_command_compentry);
+	else
+		return NULL;
+}
+
+char *saved_line;
+bool line_ready;
+
+static void sc_lwt_readline_cb(char *line)
+{
+	rl_callback_handler_remove();
+	saved_line = line;
+	if (line)
+		add_history(line);
+	line_ready = true;
+}
+
+static char *sc_lwt_readline(const char *prompt)
+{
+	struct sc_lwt *cur = sc_lwt_current();
+
+	saved_line = NULL;
+	line_ready = false;
+	rl_attempted_completion_function = cbot_cli_completion;
+	rl_callback_handler_install(prompt, &sc_lwt_readline_cb);
+	while (1) {
 		sc_lwt_wait_fd(cur, STDIN_FILENO, SC_LWT_W_IN, NULL);
 		sc_lwt_set_state(cur, SC_LWT_BLOCKED);
 		sc_lwt_yield();
-		sc_lwt_remove_fd(cur, STDIN_FILENO);
-		rv = getline(&line, &n, stdin);
-		if (rv < 0 && feof(stdin)) {
-			break;
-		} else if (rv < 0) {
-			perror("getline");
-			break;
+
+		int bits = sc_lwt_fd_status(cur, STDIN_FILENO, NULL);
+		if (bits & SC_LWT_W_IN) {
+			rl_callback_read_char();
+			if (line_ready) {
+				sc_lwt_remove_fd(cur, STDIN_FILENO);
+				return saved_line;
+			}
 		}
+	}
+}
+#else
+static char *sc_lwt_readline(const char *prompt)
+{
+	char *line = NULL;
+	size_t n;
+	int rv;
+	struct sc_lwt *cur = sc_lwt_current();
+
+	fputs(prompt, stdout);
+	fflush(stdout);
+
+	sc_lwt_wait_fd(cur, STDIN_FILENO, SC_LWT_W_IN, NULL);
+	sc_lwt_set_state(cur, SC_LWT_BLOCKED);
+	sc_lwt_yield();
+	sc_lwt_remove_fd(cur, STDIN_FILENO);
+
+	rv = getline(&line, &n, stdin);
+	if (rv < 0) {
+		if (!feof(stdin))
+			perror("getline");
+		return NULL;
+	}
+	return line;
+}
+#endif
+
+static void cbot_cli_run(struct cbot *bot)
+{
+	char *line = NULL;
+	int newline;
+	sc_list_init(&rmsgs);
+
+	while (true) {
+		line = sc_lwt_readline("> ");
+		if (!line)
+			break;
 		newline = strlen(line);
 		if (newline > 0 && line[newline - 1] == '\n')
 			line[newline - 1] = '\0';
 		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
 			continue;
 		cbot_handle_message(bot, "stdin", "shell", line, false, false);
+		free(line);
 	}
-	free(line);
 }
 
 static int cbot_cli_is_authorized(const struct cbot *bot, const char *user,

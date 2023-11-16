@@ -49,7 +49,7 @@ libsc_argparse_dep = dependency(
 libsc_lwt_dep = dependency(
   'libsc-lwt',
   fallback: ['sc-lwt', 'libsc_lwt_dep'],
-  version: '>=0.7.1',
+  version: '>=0.7.2',
 )
 libnosj_dep = dependency(
   'libnosj',
@@ -78,6 +78,15 @@ cbot_deps = [
     curl_dep,
     uhttp_dep,
 ]
+
+if get_option('with_readline')
+  cbot_deps += dependency('readline')
+  add_project_arguments(['-DWITH_READLINE'], language : 'c')
+elif get_option('with_libedit')
+  cbot_deps += dependency('libedit')
+  add_project_arguments(['-DWITH_LIBEDIT'], language : 'c')
+endif
+
 
 libcbot = shared_library(
   'cbot', sources,
