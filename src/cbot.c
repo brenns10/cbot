@@ -338,7 +338,7 @@ static void cbot_init_logging(struct cbot *bot, config_setting_t *group)
 	}
 	if (strcmp(file, ":stderr:") == 0)
 		cbot_set_log_file(stderr);
-	else if ((f = fopen(file, "r")))
+	else if ((f = fopen(file, "w")))
 		cbot_set_log_file(f);
 	else
 		perror("cbot: non-fatal error setting up logging");
