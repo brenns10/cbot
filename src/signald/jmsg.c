@@ -2,9 +2,10 @@
  * Functions to read a JSON message and provide it and an API to access data
  * from it.
  */
-#include <assert.h>
 #include <errno.h>
 #include <sc-lwt.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

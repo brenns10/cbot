@@ -9,7 +9,6 @@
 #include <stdbool.h>
 
 #include "cbot/cbot.h"
-#include "libirc_rfcnumeric.h"
 #include "libircclient.h"
 
 struct names_rq {

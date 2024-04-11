@@ -4,6 +4,9 @@
 #include <errno.h>
 #include <libconfig.h>
 #include <sc-collections.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>

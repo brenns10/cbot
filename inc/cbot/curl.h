@@ -2,6 +2,7 @@
 #define CBOT_CURL_H
 
 #include "cbot/cbot.h"
+#include "sc-collections.h"
 #include <curl/curl.h>
 
 /**

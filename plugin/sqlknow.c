@@ -6,6 +6,7 @@
 
 #include "cbot/cbot.h"
 #include "cbot/db.h"
+#include "sc-collections.h"
 #include "sc-regex.h"
 
 struct cbot;

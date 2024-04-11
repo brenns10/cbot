@@ -5,7 +5,9 @@
 #include <curl/multi.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/time.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <time.h>
 
 #include "cbot/cbot.h"
 #include "cbot/curl.h"

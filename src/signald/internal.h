@@ -1,8 +1,9 @@
 #ifndef CBOT_SIGNALD_INTERNAL_DOT_H
 #define CBOT_SIGNALD_INTERNAL_DOT_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <sys/types.h>
 
 #include <cbot/cbot.h>
 #include <nosj.h>

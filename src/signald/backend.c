@@ -4,6 +4,7 @@
 #include <libconfig.h>
 #include <sc-collections.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
 #include "internal.h"
+#include "nosj.h"
 #include "sc-lwt.h"
 
 static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)

@@ -1,16 +1,17 @@
 repos:
 -   repo: local
     hooks:
+    -   id: clang-include-cleaner
+        name: "Run clang-include-cleaner"
+        language: system
+        files: "^.*\\.[ch]$"
+        exclude: "plugin/help.h"
+        entry: clang-include-cleaner --edit --insert --remove
     -   id: clang-format
         name: "Run clang-format"
         language: system
         files: "^.*\\.[ch]$"
         entry: clang-format -i
-    -   id: iwyu
-        name: "Run include-what-you-use"
-        language: system
-        files: "^.*\\.[ch]$"
-        entry: ./.iwyu.sh
     -   id: clang-tidy
         name: "Run clang-tidy"
         language: system

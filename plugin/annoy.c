@@ -20,6 +20,7 @@
 #include <time.h>
 
 #include "cbot/cbot.h"
+#include "sc-collections.h"
 
 char *channel = NULL;
 struct cbot *bot = NULL;

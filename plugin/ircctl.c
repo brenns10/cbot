@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "cbot/cbot.h"
+#include "sc-collections.h"
 #include "sc-regex.h"
 
 static void op_handler(struct cbot_message_event *event, void *user_data)

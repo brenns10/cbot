@@ -2,6 +2,7 @@
  * weather.c: CBot plugin implementing weather queries
  */
 #include <curl/curl.h>
+#include <curl/easy.h>
 #include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>

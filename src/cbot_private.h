@@ -5,16 +5,17 @@
 #ifndef CBOT_PRIVATE_H
 #define CBOT_PRIVATE_H
 
-#include <inttypes.h>
-#include <stdarg.h>
+#include <curl/multi.h>
 
-#include <curl/curl.h>
 #include <libconfig.h>
 #include <microhttpd.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <sc-regex.h>
 #include <sqlite3.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 
 #include "cbot/cbot.h"
 

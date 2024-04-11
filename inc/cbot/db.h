@@ -42,10 +42,7 @@
 
 #include <string.h>
 
-#include <sc-collections.h>
 #include <sqlite3.h>
-
-#include "cbot/cbot.h"
 
 /******
  * [internal] Binding macros/functions: these should be named:

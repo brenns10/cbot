@@ -7,9 +7,11 @@
 
 #include <libconfig.h>
 #include <sqlite3.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/time.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "sc-collections.h"
 

@@ -1,13 +1,14 @@
 /*
  * aqi.c: Plugin implementing AQI queries
  */
-#include <assert.h>
 #include <curl/curl.h>
+#include <curl/easy.h>
 #include <libconfig.h>
 #include <nosj.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "cbot/cbot.h"
+#include "sc-collections.h"
 
 static void become(struct cbot_message_event *event, void *user)
 {

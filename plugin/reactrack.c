@@ -2,6 +2,7 @@
  * reactrack.c: CBot plugin which tests out the ability to receive reactions and
  * act upon them
  */
+#include <libconfig.h>
 #include <stdlib.h>
 #include <string.h>
 

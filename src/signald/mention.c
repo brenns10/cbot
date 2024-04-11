@@ -3,6 +3,7 @@
  */
 #include <assert.h>
 #include <sc-collections.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

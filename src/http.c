@@ -2,14 +2,20 @@
  * Integrating libmicrohttpd with cbot
  */
 
+#include <libconfig.h>
 #include <microhttpd.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <time.h>
 
 #include "cbot/cbot.h"
 #include "cbot_private.h"
+#include "sc-collections.h"
 #include "sc-lwt.h"
+#include "sc-regex.h"
 
 #define PORT 8888
 

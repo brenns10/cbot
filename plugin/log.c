@@ -2,8 +2,7 @@
  * log.c: CBot plugin which logs channel messages
  */
 
-#define _XOPEN_SOURCE 700
-
+#include <bits/time.h>
 #include <libconfig.h>
 #include <stdio.h>
 #include <time.h>

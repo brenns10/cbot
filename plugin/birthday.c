@@ -1,8 +1,11 @@
 /**
  * birthday.c: CBot plugin which sends happy birthday messages
  */
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 #include <time.h>
 
 #include <libconfig.h>
@@ -11,7 +14,6 @@
 #include "cbot/cbot.h"
 #include "cbot/db.h"
 #include "sc-collections.h"
-#include "sc-lwt.h"
 #include "sc-regex.h"
 
 #define LOOP_MIN   5

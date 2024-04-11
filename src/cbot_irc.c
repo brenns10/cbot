@@ -5,6 +5,8 @@
 #include <libconfig.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
