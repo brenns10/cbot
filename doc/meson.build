@@ -80,6 +80,7 @@ sphinx_files = [
 	'User.md',
 	'admin.rst',
 	'dev.rst',
+	'Backends.md',
 ]
 foreach file : sphinx_files
 	configure_file(input: file, output: file, copy: true)
