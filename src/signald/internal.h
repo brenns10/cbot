@@ -1,5 +1,5 @@
-#ifndef CBOT_SIGNAL_INTERNAL_DOT_H
-#define CBOT_SIGNAL_INTERNAL_DOT_H
+#ifndef CBOT_SIGNALD_INTERNAL_DOT_H
+#define CBOT_SIGNALD_INTERNAL_DOT_H
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -346,4 +346,4 @@ uint64_t sig_send_single(struct cbot_signal_backend *sig, const char *uuid,
 
 bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
                      struct signal_reaction_cb *out);
-#endif // CBOT_SIGNAL_INTERNAL_DOT_H
+#endif // CBOT_SIGNALD_INTERNAL_DOT_H

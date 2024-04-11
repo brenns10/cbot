@@ -449,7 +449,7 @@ static int cbot_signal_is_authorized(const struct cbot *bot, const char *sender,
 	return rv;
 }
 
-struct cbot_backend_ops signal_ops = {
+struct cbot_backend_ops signald_ops = {
 	.name = "signal",
 	.configure = cbot_signal_configure,
 	.run = cbot_signal_run,

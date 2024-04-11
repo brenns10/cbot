@@ -13,10 +13,10 @@ sources = [
   'src/fmt.c',
   'src/curl.c',
   'src/log.c',
-  'src/signal/backend.c',
-  'src/signal/api.c',
-  'src/signal/jmsg.c',
-  'src/signal/mention.c',
+  'src/signald/backend.c',
+  'src/signald/api.c',
+  'src/signald/jmsg.c',
+  'src/signald/mention.c',
   'src/http.c',
 ]
 
