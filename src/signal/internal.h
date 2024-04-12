@@ -157,6 +157,19 @@ static inline char *jmsg_lookup_string(struct jmsg *jm, const char *key)
 	return jmsg_lookup_string_at(jm, 0, key);
 }
 
+/***** some helpers related to JSON (move to nosj eventually) */
+
+int je_get_object(struct json_easy *je, uint32_t start, const char *key,
+                  uint32_t *out);
+int je_get_array(struct json_easy *je, uint32_t start, const char *key,
+                 uint32_t *out);
+int je_get_uint(struct json_easy *je, uint32_t start, const char *key,
+                uint64_t *out);
+int je_get_int(struct json_easy *je, uint32_t start, const char *key,
+               int64_t *out);
+int je_get_string(struct json_easy *je, uint32_t start, const char *key,
+                  char **out);
+
 /***** mention.c *****/
 
 #define MENTION_ERR   0
@@ -203,11 +216,11 @@ char *mention_parse(const char *string, int *kind, int *offset);
  * Our placeholder can be translated back at the end (see below). To preserve
  * mentions which may contain @, we also identify the @ sign and double it.
  * @param str Message string
- * @param jm The JSON message buffer
+ * @param je The JSON message buffer
  * @param list The index of the array to read menitons from
  * @return A newly allocated string with mentions expanded to placeholders.
  */
-char *mention_from_json(const char *str, struct jmsg *jm, uint32_t list);
+char *mention_from_json(const char *str, struct json_easy *je, uint32_t list);
 
 /**
  * Return a newly allocated string with necessary escaping for JSON. Return a
