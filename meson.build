@@ -148,3 +148,7 @@ if get_option('doc')
 else
 	message('Documentation will not be built. Use -Ddoc to build it.')
 endif
+
+if get_option('test')
+	subdir('tests')
+endif

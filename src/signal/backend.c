@@ -218,7 +218,7 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 
 	int ret = jmsg_lookup(jm, "data.data_message.mentions", &mention_index);
 	if (ret == JSON_OK) {
-		repl = mention_from_json(msgb, jm, mention_index);
+		repl = mention_from_json(msgb, &jm->easy, mention_index);
 		free(msgb);
 		msgb = repl;
 	}

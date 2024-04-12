@@ -1,0 +1,24 @@
+{
+    "test_basic": {
+        "message": "hello 💩 ￼",
+        "mentions": [
+            {"uuid": "foo", "start": 9, "length": 1}
+        ],
+        "result": "hello 💩 @(uuid:foo)"
+    },
+    "test_two": {
+        "message": "hello 💩 ￼ 💩 ￼ :)",
+        "mentions": [
+            {"uuid": "foo", "start": 9, "length": 1},
+            {"uuid": "bar", "start": 14, "length": 1}
+        ],
+        "result": "hello 💩 @(uuid:foo) 💩 @(uuid:bar) :)"
+    },
+    "test_replace_text": {
+        "message": "hello XXX!",
+        "mentions": [
+            {"uuid": "foo", "start": 6, "length": 3}
+        ],
+        "result": "hello @(uuid:foo)!"
+    }
+}

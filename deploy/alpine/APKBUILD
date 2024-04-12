@@ -23,6 +23,7 @@ build() {
 		--localstatedir=/var \
 		--buildtype=debugoptimized \
 		$pkgname-$pkgver output \
+                -Dtest=false \
                 -Ddefault_library=static
         # default_library=static: any dependency we pull in via subproject
         # should be build static and compiled into the binary
