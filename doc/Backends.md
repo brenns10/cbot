@@ -53,12 +53,6 @@ Request
 }
 ```
 
-Response
-
-```json
-TBD
-```
-
 ### Get user profile
 
 ```json
@@ -213,9 +207,9 @@ It looks like any update to the group will trigger a message like this.
   "method": "receive",
   "params": {
     "envelope": {
-      "source": "5a0107c7-3e4d-40c9-a099-506c0850f6cb",
+      "source": "**REMOVED**",
       "sourceNumber": null,
-      "sourceUuid": "5a0107c7-3e4d-40c9-a099-506c0850f6cb",
+      "sourceUuid": "**REMOVED**",
       "sourceName": "Stephen Brennan",
       "sourceDevice": 3,
       "timestamp": 1712870390764,
@@ -225,12 +219,12 @@ It looks like any update to the group will trigger a message like this.
         "expiresInSeconds": 0,
         "viewOnce": false,
         "groupInfo": {
-          "groupId": "k/sTamQO+Of8Tlq91tl8pDFnYNcRMNftJu1iWWOWaW0=",
+          "groupId": "**REMOVED**",
           "type": "UPDATE"
         }
       }
     },
-    "account": "+17079925125"
+    "account": "**Removed**"
   }
 }
 ```
