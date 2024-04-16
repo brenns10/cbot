@@ -2,13 +2,13 @@
  * log.c: CBot plugin which logs channel messages
  */
 
-#include <bits/time.h>
-#include <libconfig.h>
 #include <stdio.h>
 #include <time.h>
 
+#include <libconfig.h>
+#include <sc-collections.h>
+
 #include "cbot/cbot.h"
-#include "sc-collections.h"
 
 static void write_string(FILE *f, const char *str)
 {
