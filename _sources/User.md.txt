@@ -140,6 +140,15 @@ Your reactions can be:
 - Any other emoji - RSVP yes with no guest, your emoji choice gets sent to the
   host for fun!
 
+#### sports_schedule
+
+This plugin can let you know about any professional sports games in town on a
+particular day, which may gum up traffic or otherwise cause issues. Use:
+
+- `cbot games` or `cbot games today` - check for Giants & Warriors games today
+- `cbot games tomorrow` - check tomorrow
+- `cbot games YYYY-MM-DD` - check a specific day
+
 ### Plugins Not Frequently Used
 
 - annoy: `cbot annoy <user>` sends a message to user every few seconds. It's
