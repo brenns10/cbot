@@ -1,19 +1,21 @@
 /*
  * Thin wrapping over the libcurl multi API.
  */
-#include <curl/curl.h>
-#include <curl/multi.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/select.h>
-#include <sys/types.h>
 #include <time.h>
+
+#include <curl/curl.h>
+#include <curl/easy.h>
+#include <curl/multi.h>
+#include <sc-collections.h>
+#include <sc-lwt.h>
 
 #include "cbot/cbot.h"
 #include "cbot/curl.h"
 #include "cbot_private.h"
-#include "sc-collections.h"
-#include "sc-lwt.h"
 
 static ssize_t write_cb(char *data, size_t size, size_t nmemb, void *user)
 {
@@ -65,6 +67,32 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle)
 		CL_VERB("curl: wakeup, done? %s\n", wait.done ? "yes" : "no");
 	}
 	return wait.result;
+}
+
+char *cbot_curl_get(struct cbot *bot, const char *url, ...)
+{
+	va_list vl;
+	struct sc_charbuf url_fmt, resp;
+
+	va_start(vl, url);
+	sc_cb_init(&url_fmt, 256);
+	sc_cb_vprintf(&url_fmt, url, vl);
+	va_end(vl);
+
+	CURL *easy = curl_easy_init();
+	curl_easy_setopt(easy, CURLOPT_URL, url_fmt.buf);
+	sc_cb_init(&resp, 4096);
+	cbot_curl_charbuf_response(easy, &resp);
+	CURLcode rv = cbot_curl_perform(bot, easy);
+	char *result = resp.buf;
+	if (rv != CURLE_OK) {
+		CL_WARN("curl: error: %s\n", curl_easy_strerror(rv));
+		result = NULL;
+		sc_cb_destroy(&resp);
+	}
+	curl_easy_cleanup(easy);
+	sc_cb_destroy(&url_fmt);
+	return result;
 }
 
 void cbot_curl_run(void *data)

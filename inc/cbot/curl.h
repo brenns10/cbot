@@ -32,4 +32,13 @@ CURLcode cbot_curl_perform(struct cbot *bot, CURL *handle);
  */
 void cbot_curl_charbuf_response(CURL *easy, struct sc_charbuf *buf);
 
+/**
+ * @brief Make a HTTP request to a URL and return the result
+ *
+ * This is as simple as it gets. On error, NULL is returned and a message is
+ * logged to cbot's logging. On success, a malloc-allocated buffer is returned
+ * with the contents of the response.
+ */
+char *cbot_curl_get(struct cbot *bot, const char *url, ...);
+
 #endif
