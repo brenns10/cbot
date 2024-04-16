@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -280,6 +281,10 @@ static int pipecmd(struct cbot_signal_backend *sig, char *cmd, int *input_fd,
 		close(stdin[READ]);
 		/* and the write end of stdout */
 		close(stdout[WRITE]);
+
+		/* ensure stdout (which we read from) is non-blocking */
+		fcntl(stdout[READ], F_SETFL,
+		      fcntl(stdout[READ], F_GETFL) | O_NONBLOCK);
 
 		*input_fd = stdin[WRITE];
 		*output_fd = stdout[READ];
