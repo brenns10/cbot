@@ -16,6 +16,7 @@ jobs:
 
       - name: Setup Environment
         run: |
+          sudo apt update -y
           sudo apt install -y python3-pip doxygen meson gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev libmicrohttpd-dev
           sudo pip install sphinx breathe myst_parser
 
