@@ -7,13 +7,49 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <libconfig.h>
 #include <sc-collections.h>
+#include <unistd.h>
 
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
 #include "internal.h"
+
+int cbot_signal_socket(struct cbot_signal_backend *sig, const char *path)
+{
+	struct sockaddr_un addr;
+	if (strlen(path) >= sizeof(addr.sun_path)) {
+		CL_CRIT("cbot signal: signald socket path too long\n");
+		return -1;
+	}
+
+	sig->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (sig->fd < 0) {
+		perror("create socket");
+		return -1;
+	}
+	sig->ws = fdopen(sig->fd, "w");
+	if (!sig->ws) {
+		perror("fdopen socket");
+		close(sig->fd);
+		return -1;
+	}
+	setvbuf(sig->ws, NULL, _IONBF, 0);
+
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+	int rv = connect(sig->fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (rv) {
+		perror("connect");
+		fclose(sig->ws);
+		close(sig->fd);
+		return -1;
+	}
+	return 0;
+}
 
 static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 {

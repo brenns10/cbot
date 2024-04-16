@@ -250,4 +250,14 @@ bool signal_get_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
 bool signal_is_group_listening(struct cbot_signal_backend *sig,
                                const char *group);
 
+/**
+ * Connect to a Unix socket for the backend
+ *
+ * Shared by both signald and signal-cli modes.
+ * @param sig Signal backend
+ * @param path Unix socket path
+ * @returns 0 on success, -1 on failure
+ */
+int cbot_signal_socket(struct cbot_signal_backend *sig, const char *path);
+
 #endif // CBOT_SIGNALD_INTERNAL_DOT_H

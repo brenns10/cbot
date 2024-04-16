@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
 
 #include <libconfig.h>
 #include <nosj.h>
@@ -309,7 +306,6 @@ static int signald_configure(struct cbot *bot, config_setting_t *group)
 {
 	struct cbot_signal_backend *sig = bot->backend;
 	const char *signald_socket;
-	struct sockaddr_un addr;
 
 	int rv = config_setting_lookup_string(group, "signald_socket",
 	                                      &signald_socket);
@@ -318,34 +314,7 @@ static int signald_configure(struct cbot *bot, config_setting_t *group)
 		        "signald bridge\n");
 		return -1;
 	}
-	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
-		CL_CRIT("cbot signal: signald socket path too long\n");
-		return -1;
-	}
-
-	sig->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-	if (sig->fd < 0) {
-		perror("create socket");
-		return -1;
-	}
-	sig->ws = fdopen(sig->fd, "w");
-	if (!sig->ws) {
-		perror("fdopen socket");
-		close(sig->fd);
-		return -1;
-	}
-	setvbuf(sig->ws, NULL, _IONBF, 0);
-
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, signald_socket, sizeof(addr.sun_path));
-	rv = connect(sig->fd, (struct sockaddr *)&addr, sizeof(addr));
-	if (rv) {
-		perror("connect");
-		fclose(sig->ws);
-		close(sig->fd);
-		return -1;
-	}
-	return 0;
+	return cbot_signal_socket(sig, signald_socket);
 }
 
 struct signal_bridge_ops signald_bridge = {

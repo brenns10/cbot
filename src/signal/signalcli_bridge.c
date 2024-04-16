@@ -301,16 +301,21 @@ static int pipecmd(struct cbot_signal_backend *sig, char *cmd, int *input_fd,
 static int signalcli_configure(struct cbot *bot, config_setting_t *group)
 {
 	struct cbot_signal_backend *sig = bot->backend;
-	const char *signalcli_cmd;
-	int rv = config_setting_lookup_string(group, "signalcli_cmd",
-	                                      &signalcli_cmd);
-	if (rv == CONFIG_FALSE) {
-		CL_CRIT("cbot signal: key \"signalcli_cmd\" required for "
-		        "signal-cli bridge\n");
+	const char *signalcli_cmd = NULL, *signalcli_socket = NULL;
+
+	config_setting_lookup_string(group, "signalcli_cmd", &signalcli_cmd);
+	config_setting_lookup_string(group, "signalcli_socket",
+	                             &signalcli_socket);
+	if (signalcli_socket) {
+		return cbot_signal_socket(sig, signalcli_socket);
+	} else if (!signalcli_cmd) {
+		CL_CRIT("cbot signal: key \"signalcli_cmd\" or "
+		        "\"signalcli_socket\""
+		        " required for signal-cli bridge\n");
 		return -1;
 	}
 
-	rv = pipecmd(sig, (char *)signalcli_cmd, &sig->write_fd, &sig->fd);
+	int rv = pipecmd(sig, (char *)signalcli_cmd, &sig->write_fd, &sig->fd);
 	if (rv < 0)
 		return rv;
 
