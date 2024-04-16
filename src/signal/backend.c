@@ -18,6 +18,7 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	struct cbot_signal_backend *backend;
 	int rv;
 	const char *phone;
+	const char *uuid;
 	const char *auth = NULL;
 	const char *bridge;
 	int ignore_dm = 0;
@@ -25,6 +26,13 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 	rv = config_setting_lookup_string(group, "phone", &phone);
 	if (rv == CONFIG_FALSE) {
 		CL_CRIT("cbot signal: key \"phone\" wrong type or not "
+		        "exists\n");
+		return -1;
+	}
+
+	rv = config_setting_lookup_string(group, "uuid", &uuid);
+	if (rv == CONFIG_FALSE) {
+		CL_CRIT("cbot signal: key \"uuid\" wrong type or not "
 		        "exists\n");
 		return -1;
 	}
@@ -45,12 +53,13 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 
 	backend = calloc(1, sizeof(*backend));
 	backend->sender = strdup(phone);
+	backend->uuid = strdup(uuid);
 	backend->ignore_dm = ignore_dm;
 	sc_list_init(&backend->messages);
 	sc_list_init(&backend->msgq);
 	sc_arr_init(&backend->pending, struct signal_reaction_cb, 16);
 	if (auth)
-		backend->auth = strdup(auth);
+		backend->auth_uuid = strdup(auth);
 
 	backend->bot = bot;
 	bot->backend = backend;
@@ -63,13 +72,24 @@ static int cbot_signal_configure(struct cbot *bot, config_setting_t *group)
 		CL_CRIT("cbot signal: unknown bridge \"%s\"\n", bridge);
 		goto out;
 	}
+
+	/* Setup the real @mention (with UUID) as an alias for the bot. */
+	char *alias = mention_format_p(uuid, "uuid");
+	cbot_add_alias(bot, mention_format_p(uuid, "uuid"));
+	free(alias);
+	/* Setup the text "@cbot" and "@@cbot" as aliases for the bot. */
+	asprintf(&alias, "@@%s", bot->name);
+	cbot_add_alias(bot, alias);
+	cbot_add_alias(bot, &alias[1]);
+	free(alias);
+
 	rv = backend->bridge->configure(bot, group);
 	if (rv == 0)
 		return 0;
 out:
 	free(backend->sender);
-	free(backend->auth);
-	sig_user_free(backend->bot_profile);
+	free(backend->uuid);
+	free(backend->auth_uuid);
 	/* TODO: free all callbacks */
 	sc_arr_destroy(&backend->pending);
 	free(backend);
@@ -203,7 +223,7 @@ static int cbot_signal_is_authorized(const struct cbot *bot, const char *sender,
 	int kind, rv = 0;
 	char *uuid;
 
-	if (!sig->auth_profile)
+	if (!sig->auth_uuid)
 		return 0;
 
 	uuid = mention_parse(sender, &kind, NULL);
@@ -212,7 +232,7 @@ static int cbot_signal_is_authorized(const struct cbot *bot, const char *sender,
 		return 0;
 	}
 
-	if (strcmp(uuid, sig->auth_profile->uuid) == 0)
+	if (strcmp(uuid, sig->auth_uuid) == 0)
 		rv = 1;
 	free(uuid);
 	return rv;

@@ -68,13 +68,12 @@ struct cbot_signal_backend {
 	 */
 	FILE *ws;
 
-	/* Phone number of the bot sender */
+	/* Phone number & uuid of the bot sender */
 	char *sender;
-	struct signal_user *bot_profile;
+	char *uuid;
 
-	/* Phone number of authorized user */
-	char *auth;
-	struct signal_user *auth_profile;
+	/* uuid of authorized user */
+	char *auth_uuid;
 
 	/* Reference to the bot */
 	struct cbot *bot;
@@ -216,7 +215,7 @@ bool je_string_match(struct json_easy *je, uint32_t start, const char *key,
  * @param prefix The prefix to apply (e.g. uuid, group)
  * @returns A newly allocated string with the mention text.
  */
-char *mention_format_p(char *string, const char *prefix);
+char *mention_format_p(const char *string, const char *prefix);
 
 /**
  * Formats a mention placeholder, freeing old string.

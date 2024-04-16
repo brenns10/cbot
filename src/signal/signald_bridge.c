@@ -255,22 +255,6 @@ static void cbot_init_user_grp(struct cbot_signal_backend *sig)
 		CL_INFO("  Number: %s\n", user->number);
 	}
 	sig_user_free_all(&head);
-
-	/* set our bot UUID mention as an alias */
-	user = sig_get_profile(sig, sig->sender);
-	if (user) {
-		cbot_add_alias(sig->bot, mention_format_p(user->uuid, "uuid"));
-		sig->bot_profile = user;
-	}
-
-	struct sc_charbuf alias;
-	sc_cb_init(&alias, 64);
-	sc_cb_printf(&alias, "@@%s", sig->bot->name);
-	sc_cb_trim(&alias);
-	cbot_add_alias(sig->bot, alias.buf);
-	sc_cb_destroy(&alias);
-
-	sig->auth_profile = sig_get_profile(sig, sig->auth);
 }
 
 int sig_subscribe(struct cbot_signal_backend *sig)

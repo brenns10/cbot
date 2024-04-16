@@ -204,8 +204,6 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		msgb = repl;
 	}
 
-	CL_INFO("handling message (group: %s)\n", group);
-
 	if (group)
 		cbot_handle_message(sig->bot, group, srcb, msgb, false, false);
 	else

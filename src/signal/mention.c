@@ -12,7 +12,7 @@
 #include "internal.h"
 #include "nosj.h"
 
-char *mention_format_p(char *string, const char *prefix)
+char *mention_format_p(const char *string, const char *prefix)
 {
 	struct sc_charbuf cb;
 	sc_cb_init(&cb, 64);
