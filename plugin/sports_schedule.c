@@ -290,7 +290,7 @@ static void callback(struct cbot_plugin *plugin, void *arg)
 	struct arg *a = calloc(1, sizeof(*a));
 	a->channel = strdup(CHANNEL);
 	a->bot = bot;
-	a->report_empty = false;
+	a->report_empty = true;
 	a->reschedule = true;
 	localtime_r(&ts, &a->tm);
 	a->tm.tm_year += 1900;
