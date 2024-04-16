@@ -92,7 +92,9 @@ static uint64_t signalcli_send_group(struct cbot_signal_backend *sig,
 
 static const char fmt_nick[] =
         ("\{\"jsonrpc\":\"2.0\",\"method\":\"updateProfile\","
-         "\"id\":\"%lu\",\"params\":{\"name\":\"%s\"}}\n");
+         "\"id\":\"%lu\",\"params\":{\"name\":\"%s\","
+         "\"aboutEmoji\":\"🤖\",\"about\",\"I'm a bot! "
+         "https://github.com/brenns10/cbot\"}}\n");
 
 static void signalcli_nick(const struct cbot *bot, const char *newnick)
 {
@@ -224,6 +226,7 @@ static void signalcli_run(struct cbot *bot)
 	sc_lwt_wait_fd(cur, sig->fd, SC_LWT_W_IN, NULL);
 
 	CL_INFO("signalcli: running\n");
+	signalcli_nick(bot, bot->name);
 
 	while (1) {
 		jm = jmsg_next(sig);
