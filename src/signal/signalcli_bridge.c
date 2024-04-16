@@ -1,3 +1,6 @@
+/*
+ * signal/signalcli_bridge.c: code that communicates to signal-cli's jsonRpc API
+ */
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -10,10 +13,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "nosj.h"
-#include "sc-collections.h"
-#include "sc-lwt.h"
 #include <libconfig.h>
+#include <nosj.h>
+#include <sc-collections.h>
+#include <sc-lwt.h>
 
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
@@ -196,8 +199,8 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 		goto out;
 	}
 
-	ret = jmsg_lookup(jm, "params.envelope.dataMessage.mentions",
-	                  &mention_index);
+	ret = je_get_array(&jm->easy, 0, "params.envelope.dataMessage.mentions",
+	                   &mention_index);
 	if (ret == JSON_OK) {
 		CL_DEBUG("parsing mentions\n");
 		repl = mention_from_json(msgb, &jm->easy, mention_index);

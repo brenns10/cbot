@@ -1,8 +1,7 @@
 /*
- * Signal(d) API functions
+ * signal/signald_bridge.c: code that communicates with signald bridge
  */
 #include <inttypes.h>
-#include <libconfig.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,55 +11,29 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include "nosj.h"
-#include "sc-collections.h"
-#include "sc-lwt.h"
+#include <libconfig.h>
+#include <nosj.h>
+#include <sc-collections.h>
+#include <sc-lwt.h>
 
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
 #include "internal.h"
 
-int sig_subscribe(struct cbot_signal_backend *sig)
-{
-	char fmt[] = "\n{\"id\":\"%lu\",\"version\":\"v1\","
-	             "\"type\":\"subscribe\",\"account\":\"%s\"}\n";
-	fprintf(sig->ws, fmt, sig->id++, sig->sender);
-	return sig_result(sig, "subscribe");
-}
-
-int sig_set_name(struct cbot_signal_backend *sig, const char *name)
-{
-	fprintf(sig->ws,
-	        "\n{\"id\":\"%lu\",\"account\":\"%s\",\"name\":\"%s\",\"type\":"
-	        "\"set_profile\",\"version\":\"v1\"}\n",
-	        sig->id++, sig->sender, name);
-	return sig_result(sig, "set_profile");
-}
-
-struct jmsg *sig_get_result(struct cbot_signal_backend *sig, const char *type)
+static struct jmsg *signald_get_result(struct cbot_signal_backend *sig,
+                                       const char *type)
 {
 	char buf[16];
 	struct jmsg *jm;
-	uint32_t ix_type;
-	bool match;
-	int ret;
 	CL_DEBUG("sig_result: wait for id %lu, type \"%s\"\n", sig->id - 1,
 	         type);
 
 	snprintf(buf, sizeof(buf), "%lu", sig->id - 1);
 	jm = jmsg_wait_field(sig, "id", buf);
 
-	ret = json_easy_object_get(&jm->easy, 0, "type", &ix_type);
-	if (ret != JSON_OK)
-		goto out_json_error;
-
-	ret = json_easy_string_match(&jm->easy, ix_type, type, &match);
-	if (ret != JSON_OK)
-		goto out_json_error;
-
-	if (!match) {
+	if (!je_string_match(&jm->easy, 0, "type", type)) {
 		char *actual = NULL;
-		json_easy_string_get(&jm->easy, ix_type, &actual);
+		je_get_string(&jm->easy, 0, "type", &actual);
 		CL_CRIT("error: response to request %lu does was \"%s\", not "
 		        "\"%s\"\n",
 		        sig->id - 1, actual ? actual : "(unknown)", type);
@@ -69,20 +42,13 @@ struct jmsg *sig_get_result(struct cbot_signal_backend *sig, const char *type)
 		return NULL;
 	}
 
-	CL_DEBUG("sig_result: wait for id %lu completed, %s\n", sig->id - 1,
-	         match ? "match" : "no match");
+	CL_DEBUG("sig_result: wait for id %lu completed\n", sig->id - 1);
 	return jm;
-out_json_error:
-	CL_CRIT("error: response to request %lu: %s\n", sig->id - 1,
-	        json_strerror(ret));
-	json_easy_format(&jm->easy, 0, stderr);
-	jmsg_free(jm);
-	return NULL;
 }
 
-int sig_result(struct cbot_signal_backend *sig, const char *type)
+static int signald_result(struct cbot_signal_backend *sig, const char *type)
 {
-	struct jmsg *jm = sig_get_result(sig, type);
+	struct jmsg *jm = signald_get_result(sig, type);
 	if (jm) {
 		jmsg_free(jm);
 		return 0;
@@ -91,10 +57,10 @@ int sig_result(struct cbot_signal_backend *sig, const char *type)
 	}
 }
 
-void sig_expect(struct cbot_signal_backend *sig, const char *type)
+static void signald_expect(struct cbot_signal_backend *sig, const char *type)
 {
 	CL_DEBUG("sig_expect: \"%s\"\n", type);
-	struct jmsg *jm = jmsg_wait(sig, type);
+	struct jmsg *jm = jmsg_wait_field(sig, "type", type);
 	jmsg_free(jm);
 	CL_DEBUG("sig_expect: completed \"%s\"\n", type);
 }
@@ -109,6 +75,24 @@ static uint64_t get_timestamp(struct jmsg *jm)
 		return 0;
 	}
 	return timestamp;
+}
+
+static int signald_subscribe(struct cbot_signal_backend *sig)
+{
+	char fmt[] = "\n{\"id\":\"%lu\",\"version\":\"v1\","
+	             "\"type\":\"subscribe\",\"account\":\"%s\"}\n";
+	fprintf(sig->ws, fmt, sig->id++, sig->sender);
+	return signald_result(sig, "subscribe");
+}
+
+static void signald_nick(const struct cbot *bot, const char *newnick)
+{
+	struct cbot_signal_backend *sig = bot->backend;
+	fprintf(sig->ws,
+	        "\n{\"id\":\"%lu\",\"account\":\"%s\",\"name\":\"%s\",\"type\":"
+	        "\"set_profile\",\"version\":\"v1\"}\n",
+	        sig->id++, sig->sender, newnick);
+	signald_result(sig, "set_profile");
 }
 
 static char *format_mentions(const struct signal_mention *ms, size_t n)
@@ -147,7 +131,7 @@ static uint64_t signald_send_group(struct cbot_signal_backend *sig,
 	fprintf(sig->ws, fmt_send_group, sig->id++, sig->sender, to, quoted,
 	        mentions);
 	free(mentions);
-	jm = sig_get_result(sig, "send");
+	jm = signald_get_result(sig, "send");
 	/* jm could be NULL when shutting down */
 	if (jm) {
 		timestamp = get_timestamp(jm);
@@ -178,43 +162,10 @@ static uint64_t signald_send_single(struct cbot_signal_backend *sig,
 	fprintf(sig->ws, fmt_send_single, sig->id++, sig->sender, to, quoted,
 	        mentions);
 	free(mentions);
-	jm = sig_get_result(sig, "send");
+	jm = signald_get_result(sig, "send");
 	timestamp = get_timestamp(jm);
 	jmsg_free(jm);
 	return timestamp;
-}
-
-char *__sig_resolve_address(struct cbot_signal_backend *sig, const char *kind,
-                            const char *val)
-{
-	struct jmsg *jm;
-	char *ret;
-	fprintf(sig->ws,
-	        "\n{\"account\":\"%s\",\"type\":\"resolve_address\","
-	        "\"version\":\"v1\",\"partial\":{\"%s\":\"%s\"}}\n",
-	        sig->sender, kind, val);
-
-	jm = jmsg_next(sig);
-	if (!jm) {
-		CL_WARN("sig_resolve_address: error reading or parsing\n");
-		return NULL;
-	}
-	if (strcmp(kind, "number") == 0)
-		ret = jmsg_lookup_string(jm, "data.uuid");
-	else
-		ret = jmsg_lookup_string(jm, "data.number");
-	jmsg_free(jm);
-	return ret;
-}
-
-char *sig_get_number(struct cbot_signal_backend *sig, const char *uuid)
-{
-	return __sig_resolve_address(sig, "uuid", uuid);
-}
-
-char *sig_get_uuid(struct cbot_signal_backend *sig, const char *number)
-{
-	return __sig_resolve_address(sig, "number", number);
 }
 
 static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
@@ -281,28 +232,30 @@ static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
 	// Uncomment below for understanding of the API requests
 	// json_easy_format(&jm->easy, 0, stdout);
 
-	if (jmsg_lookup(jm, "data.data_message.reaction", &reaction_index) ==
-	    JSON_OK)
+	int ret = je_get_object(&jm->easy, 0, "data.data_message.reaction",
+	                        &reaction_index);
+	if (ret == JSON_OK)
 		handle_reaction(sig, jm, reaction_index);
 
-	msgb = jmsg_lookup_string(jm, "data.data_message.body");
-	if (!msgb)
+	ret = je_get_string(&jm->easy, 0, "data.data_message.body", &msgb);
+	if (ret != JSON_OK)
 		return 0;
 
-	int ret = jmsg_lookup(jm, "data.data_message.mentions", &mention_index);
+	ret = je_get_array(&jm->easy, 0, "data.data_message.mentions",
+	                   &mention_index);
 	if (ret == JSON_OK) {
 		repl = mention_from_json(msgb, &jm->easy, mention_index);
 		free(msgb);
 		msgb = repl;
 	}
 
-	srcb = jmsg_lookup_string(jm, "data.source.uuid");
-	if (!srcb)
+	ret = je_get_string(&jm->easy, 0, "data.source.uuid", &srcb);
+	if (ret != JSON_OK)
 		goto out;
 	srcb = mention_format(srcb, "uuid");
 
-	group = jmsg_lookup_string(jm, "data.data_message.groupV2.id");
-	if (group) {
+	je_get_string(&jm->easy, 0, "data.data_message.groupV2.id", &group);
+	if (ret == JSON_OK) {
 		if (!signal_is_group_listening(sig, group))
 			goto out;
 		group = mention_format(group, "group");
@@ -329,14 +282,12 @@ static void signald_run(struct cbot *bot)
 
 	sc_lwt_wait_fd(cur, sig->fd, SC_LWT_W_IN, NULL);
 
-	sig_expect(sig, "version");
+	signald_expect(sig, "version");
 
-	if (sig_subscribe(sig) < 0)
+	if (signald_subscribe(sig) < 0)
 		return;
-	sig_expect(sig, "ListenerState");
-
-	if (sig_set_name(sig, bot->name) < 0)
-		return;
+	signald_expect(sig, "ListenerState");
+	signald_nick(bot, bot->name);
 
 	while (1) {
 		jm = jmsg_next(sig);
@@ -351,12 +302,6 @@ static void signald_run(struct cbot *bot)
 		jm = NULL;
 	}
 	CL_CRIT("cbot signal: jmsg_read() returned NULL, exiting\n");
-}
-
-static void signald_nick(const struct cbot *bot, const char *newnick)
-{
-	struct cbot_signal_backend *sig = bot->backend;
-	sig_set_name(sig, newnick);
 }
 
 static int signald_configure(struct cbot *bot, config_setting_t *group)

@@ -1,13 +1,15 @@
 /*
- * CBot backend implementations for Signal
+ * signal/backend.c: defines the common backend code for Signal. Delegates a lot
+ * of functionality to a signal API bridge, but some code is shared.
  */
-#include <libconfig.h>
-#include <sc-collections.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <libconfig.h>
+#include <sc-collections.h>
 
 #include "../cbot_private.h"
 #include "cbot/cbot.h"

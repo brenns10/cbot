@@ -1,11 +1,13 @@
 /*
- * Functions which help add and remove mentions to Signal messages.
+ * signal/mention.c: Functions which help add and remove @mentions to Signal
+ * messages.
  */
-#include <sc-collections.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <sc-collections.h>
 
 #include "../utf8.h"
 #include "cbot/cbot.h"

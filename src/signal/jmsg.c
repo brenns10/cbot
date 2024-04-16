@@ -1,9 +1,7 @@
 /*
- * Functions to read a JSON message and provide it and an API to access data
- * from it.
+ * signal/jmsg.c: utilities for reading and parsing lines of JSON data
  */
 #include <errno.h>
-#include <sc-lwt.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,12 +9,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <nosj.h>
+#include <sc-collections.h>
+#include <sc-lwt.h>
+
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
 #include "internal.h"
-#include "nosj.h"
-#include "sc-collections.h"
-#include "sc-lwt.h"
 
 static int async_read(int fd, char *data, size_t nbytes)
 {
@@ -251,10 +250,6 @@ struct jmsg *jmsg_wait_field(struct cbot_signal_backend *sig, const char *field,
 			return jm;
 	}
 }
-struct jmsg *jmsg_wait(struct cbot_signal_backend *sig, const char *type)
-{
-	return jmsg_wait_field(sig, "type", type);
-}
 
 bool jmsg_deliver(struct cbot_signal_backend *sig, struct jmsg *jm)
 {
@@ -280,21 +275,6 @@ void jmsg_free(struct jmsg *jm)
 		json_easy_destroy(&jm->easy);
 		free(jm);
 	}
-}
-
-char *jmsg_lookup_string_at_len(struct jmsg *jm, uint32_t start,
-                                const char *key, size_t *len)
-{
-	char *data;
-	uint32_t idx;
-
-	if (json_easy_lookup(&jm->easy, start, key, &idx) != 0)
-		return NULL;
-	if (json_easy_string_get(&jm->easy, idx, &data) != 0)
-		return NULL;
-	if (len)
-		*len = jm->easy.tokens[idx].length;
-	return data;
 }
 
 int je_get_object(struct json_easy *je, uint32_t start, const char *key,
