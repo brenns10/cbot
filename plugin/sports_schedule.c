@@ -18,6 +18,11 @@
 #include "cbot/curl.h"
 #include "cbot/json.h"
 
+char *CHANNEL;
+int WDAY = 3;
+int HOUR = 14;
+int MIN = 0;
+
 // NBA Data References
 // https://github.com/swar/nba_api/issues/203
 const char *NBA_SCHED =
@@ -206,6 +211,7 @@ struct arg {
 	struct cbot *bot;
 	struct tm tm;
 	bool report_empty;
+	bool reschedule;
 };
 
 static void run_thread(void *varg)
@@ -245,6 +251,55 @@ static void run_thread(void *varg)
 	free(arg);
 }
 
+static time_t next_run(void)
+{
+	struct tm tm;
+	time_t schedule, now = time(NULL);
+	localtime_r(&now, &tm);
+	tm.tm_isdst = -1; /* reset it for mktime */
+
+	if (tm.tm_wday < WDAY) {
+		/* mktime only looks at alterations to mday, not wday or yday.
+		 * Add the correct number of days */
+		tm.tm_mday += WDAY - tm.tm_wday;
+	} else if (tm.tm_wday > WDAY) {
+		tm.tm_mday += 7 - tm.tm_wday + WDAY;
+	} else if (tm.tm_hour > HOUR ||
+	           (tm.tm_hour == HOUR && tm.tm_min >= MIN)) {
+		/* If today is the day, we have to skip once it's after
+		 * HR_INITIAL */
+		tm.tm_mday += 7;
+	}
+
+	tm.tm_sec = tm.tm_min = 0;
+	tm.tm_hour = HOUR;
+	tm.tm_min = MIN;
+	tm.tm_sec = 0;
+	schedule = mktime(&tm);
+
+	CL_DEBUG(
+	        "sports_schedule: schedule callback for %lu seconds from now\n",
+	        schedule - now);
+	return schedule;
+}
+
+static void callback(struct cbot_plugin *plugin, void *arg)
+{
+	struct cbot *bot = plugin->bot;
+	time_t ts = time(NULL);
+	struct arg *a = calloc(1, sizeof(*a));
+	a->channel = strdup(CHANNEL);
+	a->bot = bot;
+	a->report_empty = false;
+	a->reschedule = true;
+	localtime_r(&ts, &a->tm);
+	a->tm.tm_year += 1900;
+	a->tm.tm_mon++;
+	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), run_thread, a);
+	plugin->data =
+	        cbot_schedule_callback(plugin, &callback, NULL, next_run());
+}
+
 static void handler(struct cbot_message_event *evt, void *user)
 {
 	struct tm tm;
@@ -270,14 +325,31 @@ static void handler(struct cbot_message_event *evt, void *user)
 	arg->bot = evt->bot;
 	arg->tm = tm;
 	arg->report_empty = true;
+	arg->reschedule = false;
 	sc_lwt_create_task(cbot_get_lwt_ctx(evt->bot), run_thread, arg);
 }
 
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
+	const char *channel = NULL;
+	int rv = config_setting_lookup_string(conf, "channel", &channel);
+	if (rv != CONFIG_FALSE) {
+		CHANNEL = strdup(channel);
+		config_setting_lookup_int(conf, "weekday", &WDAY);
+		config_setting_lookup_int(conf, "hour", &HOUR);
+		config_setting_lookup_int(conf, "minute", &MIN);
+		plugin->data = cbot_schedule_callback(plugin, callback, NULL,
+		                                      next_run());
+	}
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)handler, NULL,
 	              "games( (today|tomorrow|\\d\\d\\d\\d-\\d\\d-\\d\\d))?");
 	return 0;
+}
+
+static void unload(struct cbot_plugin *plugin)
+{
+	free(CHANNEL);
+	cbot_cancel_callback(plugin->data);
 }
 
 static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
@@ -293,5 +365,6 @@ static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 struct cbot_plugin_ops ops = {
 	.description = "sports schedules",
 	.load = load,
+	.unload = unload,
 	.help = help,
 };
