@@ -148,23 +148,6 @@ bool jmsg_deliver(struct cbot_signal_backend *sig, struct jmsg *jm);
  */
 void jmsg_free(struct jmsg *jm);
 
-/***** some helpers related to JSON (move to nosj eventually) */
-
-int je_get_object(struct json_easy *je, uint32_t start, const char *key,
-                  uint32_t *out);
-int je_get_array(struct json_easy *je, uint32_t start, const char *key,
-                 uint32_t *out);
-int je_get_uint(struct json_easy *je, uint32_t start, const char *key,
-                uint64_t *out);
-int je_get_int(struct json_easy *je, uint32_t start, const char *key,
-               int64_t *out);
-int je_get_bool(struct json_easy *je, uint32_t start, const char *key,
-                bool *out);
-int je_get_string(struct json_easy *je, uint32_t start, const char *key,
-                  char **out);
-bool je_string_match(struct json_easy *je, uint32_t start, const char *key,
-                     const char *cmp);
-
 /***** mention.c *****/
 
 #define MENTION_ERR   0

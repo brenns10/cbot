@@ -20,6 +20,7 @@
 
 #include "../cbot_private.h"
 #include "cbot/cbot.h"
+#include "cbot/json.h"
 #include "internal.h"
 
 static struct jmsg *get_result(struct cbot_signal_backend *sig)

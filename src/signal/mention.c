@@ -11,6 +11,7 @@
 
 #include "../utf8.h"
 #include "cbot/cbot.h"
+#include "cbot/json.h"
 #include "internal.h"
 #include "nosj.h"
 

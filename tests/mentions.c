@@ -8,6 +8,7 @@
 #include <nosj.h>
 
 #include "../src/signal/internal.h"
+#include "cbot/json.h"
 
 // NB: meson incremental builds don't pick up on changes to the JSON file.
 // This generally isn't a big deal, but just know that you may need to touch

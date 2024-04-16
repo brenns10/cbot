@@ -19,6 +19,7 @@ sources = [
   'src/signal/jmsg.c',
   'src/signal/mention.c',
   'src/http.c',
+  'src/json.c',
 ]
 
 inc = include_directories('inc')
