@@ -2,13 +2,17 @@
  * signal/backend.c: defines the common backend code for Signal. Delegates a lot
  * of functionality to a signal API bridge, but some code is shared.
  */
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
+#include <time.h>
 
 #include <libconfig.h>
 #include <sc-collections.h>
@@ -18,11 +22,39 @@
 #include "cbot/cbot.h"
 #include "internal.h"
 
+static bool is_sock(const char *path)
+{
+	struct stat st;
+	int rv = stat(path, &st);
+	if (rv < 0 && errno == ENOENT) {
+		return false;
+	} else if (rv < 0) {
+		CL_CRIT("stat(%s): %s", path, strerror(errno));
+		return false;
+	}
+	return (st.st_mode & S_IFMT) == S_IFSOCK;
+}
+
 int cbot_signal_socket(struct cbot_signal_backend *sig, const char *path)
 {
 	struct sockaddr_un addr;
 	if (strlen(path) >= sizeof(addr.sun_path)) {
 		CL_CRIT("cbot signal: signald socket path too long\n");
+		return -1;
+	}
+
+	int timeout = 10;
+	while (!is_sock(path) && timeout--) {
+		CL_WARN("cbot signal: signald socket doesn't exist, waiting "
+		        "(%d)\n",
+		        timeout);
+		struct timespec tp = { 0 };
+		tp.tv_sec = 1;
+		nanosleep(&tp, NULL);
+	}
+	if (timeout < 0) {
+		CL_CRIT("cbot signal: timed out waiting for socket: %s\n",
+		        path);
 		return -1;
 	}
 
