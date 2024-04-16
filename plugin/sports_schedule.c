@@ -349,7 +349,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 static void unload(struct cbot_plugin *plugin)
 {
 	free(CHANNEL);
-	cbot_cancel_callback(plugin->data);
+	if (plugin->data)
+		cbot_cancel_callback(plugin->data);
 }
 
 static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
