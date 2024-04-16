@@ -1,6 +1,7 @@
 #ifndef CBOT_SIGNALD_INTERNAL_DOT_H
 #define CBOT_SIGNALD_INTERNAL_DOT_H
 
+#include <libconfig.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,9 +9,10 @@
 #include <cbot/cbot.h>
 #include <nosj.h>
 #include <sc-collections.h>
-#include <sc-lwt.h>
+#include <time.h>
 
 struct signal_user;
+struct cbot_signal_backend;
 
 struct signal_reaction_cb {
 	/* Timestamp of the message which we sent, that may get reacted */
@@ -21,18 +23,36 @@ struct signal_reaction_cb {
 	void *arg;
 };
 
-struct signal_queued_item {
-	struct sc_list_head list;
-	const char *field;
-	const char *value;
-	struct sc_lwt *thread;
-	struct jmsg *result;
+struct signal_mention {
+	uint64_t start;
+	uint64_t length;
+	char *uuid;
 };
 
-struct cbot_signal_backend {
+struct signal_bridge_ops {
+	uint64_t (*send_single)(struct cbot_signal_backend *, const char *to,
+	                        const char *quoted_msg,
+	                        const struct signal_mention *, size_t);
+	uint64_t (*send_group)(struct cbot_signal_backend *, const char *to,
+	                       const char *quoted_msg,
+	                       const struct signal_mention *, size_t);
+	void (*nick)(const struct cbot *bot, const char *newnick);
+	void (*run)(struct cbot *bot);
+	int (*configure)(struct cbot *bot, config_setting_t *group);
+};
 
-	/* The Unix domain socket connecting us to Signald */
+extern struct signal_bridge_ops signald_bridge;
+extern struct signal_bridge_ops signalcli_bridge;
+
+struct cbot_signal_backend {
+	/* Signal bridge operations */
+	struct signal_bridge_ops *bridge;
+
+	/* File descriptor for our signal bridge */
 	int fd;
+
+	int write_fd; /* Additional descriptor for bridge (ignore if 0) */
+	pid_t child;
 
 	/* Queued messages ready to read */
 	struct sc_list_head messages;
@@ -103,6 +123,16 @@ struct jmsg *jmsg_wait_field(struct cbot_signal_backend *sig, const char *field,
                              const char *value);
 
 /**
+ * Check if a message applies to any waiter. If so, deliver it
+ * @param sig Signal backend
+ * @param jm Message to deliver to waiter
+ * @returns true if the message is delivered to a waiter. When this is the case,
+ *   the waiter takes ownership of @a jm, and it must no longer be accessed by
+ *   the caller.
+ */
+bool jmsg_deliver(struct cbot_signal_backend *sig, struct jmsg *jm);
+
+/**
  * Free a JSON message object, in whatever lifetime state it may be.
  * @param jm Message to free.
  */
@@ -167,8 +197,12 @@ int je_get_uint(struct json_easy *je, uint32_t start, const char *key,
                 uint64_t *out);
 int je_get_int(struct json_easy *je, uint32_t start, const char *key,
                int64_t *out);
+int je_get_bool(struct json_easy *je, uint32_t start, const char *key,
+                bool *out);
 int je_get_string(struct json_easy *je, uint32_t start, const char *key,
                   char **out);
+bool je_string_match(struct json_easy *je, uint32_t start, const char *key,
+                     const char *cmp);
 
 /***** mention.c *****/
 
@@ -223,8 +257,8 @@ char *mention_parse(const char *string, int *kind, int *offset);
 char *mention_from_json(const char *str, struct json_easy *je, uint32_t list);
 
 /**
- * Return a newly allocated string with necessary escaping for JSON. Return a
- * second string (in mentions) which contains all mention JSON elements.
+ * Return a newly allocated string with necessary escaping for JSON. Return an
+ * array which contains all mention JSON elements.
  *
  * This is called with a message text just before sending it.
  *
@@ -238,10 +272,39 @@ char *mention_from_json(const char *str, struct json_easy *je, uint32_t list);
  * done by mention_from_json() above.
  *
  * @param instr Input string
- * @param[out] mentions Will be populated with a newly allocated string of JSON
- * mentions as an array.
+ * @param[out] ms Will be set to an array of mention objects parsed
+ * @param[out] n Will be set to the length of @a ms
  */
-char *json_quote_and_mention(const char *instr, char **mentions);
+char *json_quote_and_mention(const char *instr, struct signal_mention **ms,
+                             size_t *n);
+
+/**
+ * Return a newly allocated string with necessary JSON escaping.
+ * No handling of mentions is done. If there's a "mention" text, it will be
+ * left as-is.
+ */
+char *json_quote_nomention(const char *instr);
+
+/***** backend.c *****/
+
+/**
+ * Fetch the reaction callback for a given message timestamp
+ * @param sig Signal backend
+ * @param ts Message timestamp
+ * @param[out] out Structure filled with details if found
+ * @returns true if a reaction callback was found for the message
+ */
+bool signal_get_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
+                            struct signal_reaction_cb *out);
+
+/**
+ * Return true if the bot is listening to a group and we shoul handle messages
+ * @param sig Signal backend
+ * @param group Group ID (not in @(group:foo) format)
+ * @returns true if we should handle the message
+ */
+bool signal_is_group_listening(struct cbot_signal_backend *sig,
+                               const char *group);
 
 /***** api.c *****/
 
@@ -340,24 +403,4 @@ int sig_subscribe(struct cbot_signal_backend *sig);
  */
 int sig_set_name(struct cbot_signal_backend *sig, const char *name);
 
-/**
- * Send a message to a group.
- * @param sig Signal backend
- * @param groupId Group ID to send to
- * @param msg Message (may contain mentioned usernames)
- */
-uint64_t sig_send_group(struct cbot_signal_backend *sig, const char *groupId,
-                        const char *msg);
-
-/**
- * Send a message to a single user recipient.
- * @param sig Signal backend
- * @param uuid UUID of the user to send to
- * @param msg Message (may contain mentioned usernames)
- */
-uint64_t sig_send_single(struct cbot_signal_backend *sig, const char *uuid,
-                         const char *msg);
-
-bool sig_reaction_cb(struct cbot_signal_backend *sig, uint64_t ts,
-                     struct signal_reaction_cb *out);
 #endif // CBOT_SIGNALD_INTERNAL_DOT_H

@@ -29,8 +29,11 @@ static inline int utf8_nbytes(char first)
 		return 2;
 	else if ((first & UTF8_MASK3) == UTF8_VAL3)
 		return 3;
-	else
+	else if ((first & UTF8_MASK4) == UTF8_VAL4)
 		return 4;
+	else
+		/* Default case: continuation bytes */
+		return 0;
 }
 
 #endif // UTF8_H_

@@ -1,16 +1,24 @@
 /*
  * Signal(d) API functions
  */
+#include <inttypes.h>
+#include <libconfig.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 
-#include "cbot/cbot.h"
-#include "internal.h"
 #include "nosj.h"
 #include "sc-collections.h"
+#include "sc-lwt.h"
+
+#include "../cbot_private.h"
+#include "cbot/cbot.h"
+#include "internal.h"
 
 void sig_user_free(struct signal_user *user)
 {
@@ -213,6 +221,58 @@ int sig_list_groups(struct cbot_signal_backend *sig, struct sc_list_head *list)
 	return count;
 }
 
+static void cbot_init_user_grp(struct cbot_signal_backend *sig)
+{
+	struct sc_list_head head;
+	struct signal_group *grp;
+	struct signal_user *user;
+	int i;
+
+	sc_list_init(&head);
+	sig_list_groups(sig, &head);
+
+	sc_list_for_each_entry(grp, &head, list, struct signal_group)
+	{
+		CL_INFO("Group \"%s\"\n", grp->title);
+		CL_INFO("  Invite: %s\n", grp->invite_link);
+		CL_INFO("  Id:     %s\n", grp->id);
+		CL_INFO("  Members:\n");
+		for (i = 0; i < grp->n_members; i++)
+			CL_INFO("    Id: %s%s\n", grp->members[i].uuid,
+			        (grp->members[i].role ==
+			         SIGNAL_ROLE_ADMINISTRATOR)
+			                ? " (admin)"
+			                : "");
+	}
+	sig_group_free_all(&head);
+
+	sc_list_init(&head);
+	sig_list_contacts(sig, &head);
+	sc_list_for_each_entry(user, &head, list, struct signal_user)
+	{
+		CL_INFO("User \"%s %s\"\n", user->first_name, user->last_name);
+		CL_INFO("  Id: %s\n", user->uuid);
+		CL_INFO("  Number: %s\n", user->number);
+	}
+	sig_user_free_all(&head);
+
+	/* set our bot UUID mention as an alias */
+	user = sig_get_profile(sig, sig->sender);
+	if (user) {
+		cbot_add_alias(sig->bot, mention_format_p(user->uuid, "uuid"));
+		sig->bot_profile = user;
+	}
+
+	struct sc_charbuf alias;
+	sc_cb_init(&alias, 64);
+	sc_cb_printf(&alias, "@@%s", sig->bot->name);
+	sc_cb_trim(&alias);
+	cbot_add_alias(sig->bot, alias.buf);
+	sc_cb_destroy(&alias);
+
+	sig->auth_profile = sig_get_profile(sig, sig->auth);
+}
+
 int sig_subscribe(struct cbot_signal_backend *sig)
 {
 	char fmt[] = "\n{\"id\":\"%lu\",\"version\":\"v1\","
@@ -294,20 +354,30 @@ void sig_expect(struct cbot_signal_backend *sig, const char *type)
 
 static uint64_t get_timestamp(struct jmsg *jm)
 {
-	uint32_t tsidx;
 	uint64_t timestamp;
-	int ret = jmsg_lookup(jm, "data.timestamp", &tsidx);
+	int ret = je_get_uint(&jm->easy, 0, "data.timestamp", &timestamp);
 	if (ret != JSON_OK) {
-		CL_CRIT("failed to find data.timestamp field in message\n");
-		return 0;
-	}
-	ret = json_easy_number_getuint(&jm->easy, tsidx, &timestamp);
-	if (ret != JSON_OK) {
-		CL_CRIT("failed to parse data.timestamp: %s\n",
+		CL_CRIT("failed to get data.timestamp field in message: %s\n",
 		        json_strerror(ret));
 		return 0;
 	}
 	return timestamp;
+}
+
+static char *format_mentions(const struct signal_mention *ms, size_t n)
+{
+	struct sc_charbuf cb;
+	sc_cb_init(&cb, 128);
+
+	for (size_t i = 0; i < n; i++) {
+		if (i)
+			sc_cb_append(&cb, ',');
+		sc_cb_printf(&cb,
+		             "{\"length\": %" PRIu64 ", \"start\": %" PRIu64
+		             ", \"uuid\": \"%s\"}",
+		             ms[i].length, ms[i].start, ms[i].uuid);
+	}
+	return cb.buf;
 }
 
 const static char fmt_send_group[] = ("\n{"
@@ -320,20 +390,22 @@ const static char fmt_send_group[] = ("\n{"
                                       "\"version\":\"v1\""
                                       "}\n");
 
-uint64_t sig_send_group(struct cbot_signal_backend *sig, const char *to,
-                        const char *msg)
+static uint64_t signald_send_group(struct cbot_signal_backend *sig,
+                                   const char *to, const char *quoted,
+                                   const struct signal_mention *ms, size_t n)
 {
-	char *quoted, *mentions = NULL;
 	struct jmsg *jm;
-	uint64_t timestamp;
-	quoted = json_quote_and_mention(msg, &mentions);
+	uint64_t timestamp = 0;
+	char *mentions = format_mentions(ms, n);
 	fprintf(sig->ws, fmt_send_group, sig->id++, sig->sender, to, quoted,
 	        mentions);
-	free(quoted);
 	free(mentions);
 	jm = sig_get_result(sig, "send");
-	timestamp = get_timestamp(jm);
-	jmsg_free(jm);
+	/* jm could be NULL when shutting down */
+	if (jm) {
+		timestamp = get_timestamp(jm);
+		jmsg_free(jm);
+	}
 	return timestamp;
 }
 
@@ -349,16 +421,15 @@ const static char fmt_send_single[] = ("\n{"
                                        "\"version\":\"v1\""
                                        "}\n");
 
-uint64_t sig_send_single(struct cbot_signal_backend *sig, const char *to,
-                         const char *msg)
+static uint64_t signald_send_single(struct cbot_signal_backend *sig,
+                                    const char *to, const char *quoted,
+                                    const struct signal_mention *ms, size_t n)
 {
-	char *quoted, *mentions = NULL;
 	struct jmsg *jm;
 	uint64_t timestamp;
-	quoted = json_quote_and_mention(msg, &mentions);
+	char *mentions = format_mentions(ms, n);
 	fprintf(sig->ws, fmt_send_single, sig->id++, sig->sender, to, quoted,
 	        mentions);
-	free(quoted);
 	free(mentions);
 	jm = sig_get_result(sig, "send");
 	timestamp = get_timestamp(jm);
@@ -398,3 +469,198 @@ char *sig_get_uuid(struct cbot_signal_backend *sig, const char *number)
 {
 	return __sig_resolve_address(sig, "number", number);
 }
+
+static int handle_reaction(struct cbot_signal_backend *sig, struct jmsg *jm,
+                           uint32_t reaction_index)
+{
+	uint64_t target_ts;
+	char *emoji;
+	char *srcb;
+	bool remove;
+	struct signal_reaction_cb cb;
+	int ret = je_get_uint(&jm->easy, reaction_index, "targetSentTimestamp",
+	                      &target_ts);
+	if (ret != JSON_OK) {
+		CL_CRIT("error accessing targetSentTimestamp in reaction\n");
+		return -1;
+	}
+	if (!signal_get_reaction_cb(sig, target_ts, &cb)) {
+		return 0;
+	}
+	ret = je_get_bool(&jm->easy, reaction_index, "remove", &remove);
+	if (ret != JSON_OK) {
+		CL_CRIT("reaction has no remove attribute\n");
+		return -1;
+	}
+	ret = je_get_string(&jm->easy, reaction_index, "emoji", &emoji);
+	if (ret != JSON_OK)
+		return -1;
+	ret = je_get_string(&jm->easy, 0, "data.source.uuid", &srcb);
+	if (ret != JSON_OK) {
+		free(emoji);
+		return -1;
+	}
+	srcb = mention_format(srcb, "uuid");
+
+	CL_DEBUG("Sending reaction \"%s\" %s to message ts %lu to plugin\n",
+	         emoji, remove ? "remove" : "add", target_ts);
+	struct cbot_reaction_event evt = {
+		.plugin = cb.ops.plugin,
+		.bot = sig->bot,
+		.emoji = emoji,
+		.source = srcb,
+		.remove = remove,
+		.handle = target_ts,
+	};
+	cb.ops.react_fn(&evt, cb.arg);
+	free(emoji);
+	free(srcb);
+	return 0;
+}
+
+/*
+ * Handles an incoming line from signald. This could be many types of API
+ * message, so we don't return an error in case we don't find the right data
+ * field.
+ */
+static int handle_incoming(struct cbot_signal_backend *sig, struct jmsg *jm)
+{
+	char *msgb = NULL;
+	char *srcb = NULL;
+	char *group = NULL;
+	char *repl;
+	uint32_t mention_index = 0, reaction_index;
+
+	// Uncomment below for understanding of the API requests
+	// json_easy_format(&jm->easy, 0, stdout);
+
+	if (jmsg_lookup(jm, "data.data_message.reaction", &reaction_index) ==
+	    JSON_OK)
+		handle_reaction(sig, jm, reaction_index);
+
+	msgb = jmsg_lookup_string(jm, "data.data_message.body");
+	if (!msgb)
+		return 0;
+
+	int ret = jmsg_lookup(jm, "data.data_message.mentions", &mention_index);
+	if (ret == JSON_OK) {
+		repl = mention_from_json(msgb, &jm->easy, mention_index);
+		free(msgb);
+		msgb = repl;
+	}
+
+	srcb = jmsg_lookup_string(jm, "data.source.uuid");
+	if (!srcb)
+		goto out;
+	srcb = mention_format(srcb, "uuid");
+
+	group = jmsg_lookup_string(jm, "data.data_message.groupV2.id");
+	if (group) {
+		if (!signal_is_group_listening(sig, group))
+			goto out;
+		group = mention_format(group, "group");
+	} else if (sig->ignore_dm) {
+		goto out;
+	}
+
+	if (group)
+		cbot_handle_message(sig->bot, group, srcb, msgb, false, false);
+	else
+		cbot_handle_message(sig->bot, srcb, srcb, msgb, false, true);
+out:
+	free(group);
+	free(srcb);
+	free(msgb);
+	return 0;
+}
+
+static void signald_run(struct cbot *bot)
+{
+	struct sc_lwt *cur = sc_lwt_current();
+	struct cbot_signal_backend *sig = bot->backend;
+	struct jmsg *jm;
+
+	sc_lwt_wait_fd(cur, sig->fd, SC_LWT_W_IN, NULL);
+
+	sig_expect(sig, "version");
+
+	cbot_init_user_grp(sig);
+
+	if (sig_subscribe(sig) < 0)
+		return;
+	sig_expect(sig, "ListenerState");
+
+	if (sig_set_name(sig, bot->name) < 0)
+		return;
+
+	while (1) {
+		jm = jmsg_next(sig);
+		if (!jm)
+			break;
+		if (jmsg_deliver(sig, jm))
+			/* Handing off ownership of jm to another
+			 * thread, DO NOT free it. */
+			continue;
+		handle_incoming(sig, jm);
+		jmsg_free(jm);
+		jm = NULL;
+	}
+	CL_CRIT("cbot signal: jmsg_read() returned NULL, exiting\n");
+}
+
+static void signald_nick(const struct cbot *bot, const char *newnick)
+{
+	struct cbot_signal_backend *sig = bot->backend;
+	sig_set_name(sig, newnick);
+}
+
+static int signald_configure(struct cbot *bot, config_setting_t *group)
+{
+	struct cbot_signal_backend *sig = bot->backend;
+	const char *signald_socket;
+	struct sockaddr_un addr;
+
+	int rv = config_setting_lookup_string(group, "signald_socket",
+	                                      &signald_socket);
+	if (rv == CONFIG_FALSE) {
+		CL_CRIT("cbot signal: key \"signald_socket\" required for "
+		        "signald bridge\n");
+		return -1;
+	}
+	if (strlen(signald_socket) >= sizeof(addr.sun_path)) {
+		CL_CRIT("cbot signal: signald socket path too long\n");
+		return -1;
+	}
+
+	sig->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (sig->fd < 0) {
+		perror("create socket");
+		return -1;
+	}
+	sig->ws = fdopen(sig->fd, "w");
+	if (!sig->ws) {
+		perror("fdopen socket");
+		close(sig->fd);
+		return -1;
+	}
+	setvbuf(sig->ws, NULL, _IONBF, 0);
+
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, signald_socket, sizeof(addr.sun_path));
+	rv = connect(sig->fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (rv) {
+		perror("connect");
+		fclose(sig->ws);
+		close(sig->fd);
+		return -1;
+	}
+	return 0;
+}
+
+struct signal_bridge_ops signald_bridge = {
+	.send_single = signald_send_single,
+	.send_group = signald_send_group,
+	.nick = signald_nick,
+	.run = signald_run,
+	.configure = signald_configure,
+};

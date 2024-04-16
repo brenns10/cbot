@@ -88,6 +88,8 @@ char *mention_parse(const char *string, int *kind, int *offset)
 int index_of_utf16(const char *str, int index, int u16units, int end_u16,
                    int len)
 {
+	if (u16units == end_u16)
+		return index;
 	while (index < len) {
 		int nbytes = utf8_nbytes(str[index]);
 		index += nbytes;
@@ -99,7 +101,7 @@ int index_of_utf16(const char *str, int index, int u16units, int end_u16,
 
 		if (u16units == end_u16) {
 			return index;
-		} else if (u16units == end_u16) {
+		} else if (u16units > end_u16) {
 			/* BUG: can't split a surrogate pair for @mention */
 			CL_CRIT("attempted to split surrogate pair for "
 			        "@mention");
@@ -184,16 +186,17 @@ err:
 	return NULL;
 }
 
-char *json_quote_and_mention(const char *instr, char **mentions)
+char *json_quote_and_mention(const char *instr, struct signal_mention **ms,
+                             size_t *n)
 {
-	size_t i = 0;
+	size_t i = 0, u16extra = 0;
 	struct sc_charbuf cb;
-	struct sc_charbuf mb;
-
-	// XXX need to fix the start index to use UTF-16 code units
+	struct sc_array mb;
+	struct signal_mention ment;
 
 	sc_cb_init(&cb, strlen(instr));
-	sc_cb_init(&mb, 128);
+	sc_arr_init(&mb, struct signal_mention, 1);
+
 	for (i = 0; instr[i]; i++) {
 		if (instr[i] == '"' || instr[i] == '\\') {
 			sc_cb_append(&cb, '\\');
@@ -206,24 +209,45 @@ char *json_quote_and_mention(const char *instr, char **mentions)
 			i++;
 		} else if (instr[i] == '@' && instr[i + 1] != '@') {
 			int kind, offset;
-			char *mention;
-			mention = mention_parse(instr + i, &kind, &offset);
+			char *uuid = mention_parse(instr + i, &kind, &offset);
 			if (kind != MENTION_USER) {
 				sc_cb_append(&cb, '@');
+				free(uuid);
 			} else {
-				if (mb.length)
-					sc_cb_append(&mb, ',');
-				sc_cb_printf(&mb,
-				             "{\"length\": 0,\"start\": "
-				             "%d,\"uuid\":\"%s\"}",
-				             cb.length, mention);
+				ment.start = cb.length + u16extra;
+				ment.length = 1;
+				ment.uuid = uuid;
+				sc_cb_append(&cb, 'X');
+				sc_arr_append(&mb, struct signal_mention, ment);
 				i += offset - 1;
 			}
-			free(mention);
+		} else if (utf8_nbytes(instr[i]) == 4) {
+			u16extra++;
+			sc_cb_append(&cb, instr[i]);
 		} else {
 			sc_cb_append(&cb, instr[i]);
 		}
 	}
-	*mentions = mb.buf;
+	*ms = (struct signal_mention *)mb.arr;
+	*n = mb.len;
 	return cb.buf;
+}
+
+char *json_quote_nomention(const char *instr)
+{
+	struct sc_charbuf buf;
+	sc_cb_init(&buf, strlen(instr) + 1);
+	for (size_t i = 0; instr[i]; i++) {
+		switch (instr[i]) {
+		case '"':
+		case '\\':
+			sc_cb_append(&buf, '\\');
+			sc_cb_append(&buf, instr[i]);
+			break;
+		case '\n':
+			sc_cb_append(&buf, '\\');
+			sc_cb_append(&buf, 'n');
+		}
+	}
+	return buf.buf;
 }
