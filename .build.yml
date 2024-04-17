@@ -47,6 +47,7 @@ tasks:
       TAG=${GIT_REF#refs/tags/}
       cd cbot
       export PACKAGER_PRIVKEY=~/packager.key
+      sudo cp deploy/stephen@brennan.io.rsa.pub /etc/apk/keys/
       export PACKAGER_PUBKEY=~/cbot/deploy/stephen@brennan.io.rsa.pub
       cd deploy/alpine
       cp ~/artifacts/cbot-${TAG#v}.tar.gz .

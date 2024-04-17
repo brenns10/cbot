@@ -1,6 +1,7 @@
 FROM alpine:3.18
 COPY cbot.apk /
-RUN apk add --allow-untrusted ./cbot.apk gcompat tzdata msmtp perl curl && \
+COPY stephen@brennan.io.rsa.pub /etc/apk/keys/
+RUN apk add ./cbot.apk gcompat tzdata msmtp perl curl && \
     rm ./cbot.apk && \
     adduser --disabled-password --uid 1002 cbot && \
     mkdir /var/cores && chmod 777 /var/cores
