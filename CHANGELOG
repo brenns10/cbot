@@ -6,6 +6,23 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+Several major new features!
+
+Chat backends:
+
+- The signal backend is improved to support multiple Signal API bridges. The old
+  code is for Signald and it remains as an option.
+- Add support for a new Signal bridge: signal-cli!
+- The CLI backend has gained readline/libedit support, so we now have enhanced
+  line editing when testing.
+
+Plugins:
+
+- A new plugin, "sports_schedule" is added. This checks for local SF sports games
+  and reports them, optionally on a timer schedule. Useful for notifying about
+  potential traffic disruptions ahead of time.
+- The trivia plugin now allows a "?" reaction to mean "maybe".
+
 0.12.1 (2023-10-10)
 -------------------
 
