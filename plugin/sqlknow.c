@@ -71,6 +71,15 @@ static int knowledge_query_update(struct cbot *bot, char *key, char *value,
 	CBOTDB_NO_RESULT();
 }
 
+static int knowledge_query_delete(struct cbot *bot, char *key)
+{
+	CBOTDB_QUERY_FUNC_BEGIN(bot, struct knowledge,
+	                        "DELETE FROM knowledge "
+	                        "WHERE key=$key;");
+	CBOTDB_BIND_ARG(text, key);
+	CBOTDB_NO_RESULT();
+}
+
 #define GET_VALUE ((void *)1)
 #define GET_WHO   ((void *)2)
 
@@ -105,6 +114,26 @@ static void knowledge_set(struct cbot_message_event *event, void *user)
 	free(value);
 }
 
+static void knowledge_del(struct cbot_message_event *event, void *user)
+{
+	if (!cbot_is_authorized(event->bot, event->username, event->message)) {
+		cbot_send(event->bot, event->channel,
+		          "I'm sorry %s, I can't do that", event->username);
+		return;
+	}
+	char *key = sc_regex_get_capture(event->message, event->indices, 0);
+	struct knowledge *k = knowledge_query_get(event->bot, key);
+	if (!k) {
+		cbot_send(event->bot, event->channel,
+		          "Forget it? I didn't even know it!");
+		return;
+	}
+	knowledge_query_delete(event->bot, key);
+	cbot_send(event->bot, event->channel, "you got it, boss");
+	free(key);
+	knowledge_free(k);
+}
+
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	int rv;
@@ -121,6 +150,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	              GET_VALUE, "what is +(.+) *");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)knowledge_get,
 	              GET_WHO, "who taught you about +(.+)\\??");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)knowledge_del,
+	              GET_WHO, "forget +(.+)");
 
 	return 0;
 }
