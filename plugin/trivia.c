@@ -145,7 +145,7 @@ static void send_rsvp(struct cbot_plugin *plugin, void *arg)
 
 		for (size_t i = 0; i < nelem(maybe_reacts); i++) {
 			if (strcmp(arr[react].emoji, maybe_reacts[i]) == 0) {
-				maybe += 1;
+				maybe += amount;
 				is_maybe = true;
 				break;
 			}
