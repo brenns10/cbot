@@ -321,6 +321,12 @@ static void send_trivia_message(struct cbot_plugin *plugin, void *arg)
 	}
 	now = time(NULL);
 	localtime_r(&now, &tm);
+	/* In testing, it is possible to trigger the start of trivia after the
+	 * trivia RSVP time / hour. In that case, roll over the RSVP time to the
+	 * next day */
+	if (tm.tm_hour > HR_SEND_RSVP ||
+	    (tm.tm_hour == HR_SEND_RSVP && tm.tm_min > MN_SEND_RSVP))
+		tm.tm_mday++;
 	tm.tm_hour = HR_SEND_RSVP;
 	tm.tm_min = MN_SEND_RSVP;
 	tm.tm_sec = 0;
