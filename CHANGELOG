@@ -6,6 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.13.1 (2024-04-16)
+-------------------
+
+As usual, a fix to CI for automatic deployment.
+
 0.13.0 (2024-04-16)
 -------------------
 
