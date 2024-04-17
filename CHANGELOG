@@ -6,6 +6,18 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.13.2 (2024-04-16)
+-------------------
+
+Some tweaks:
+
+- The sqlknow plugin now uses non-greedy matching, which helps when the value
+  being stored is a long sentence using the word "is".
+- The sqlknow plugin now supports forgetting ("cbot forget $key"), but only
+  deletion by the admin. There's no good reason for that restriction, I guess
+  it's just a power trip.
+- The CLI backend now has a "/nick" command to test authorization.
+
 0.13.1 (2024-04-16)
 -------------------
 
