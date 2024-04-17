@@ -277,9 +277,7 @@ static time_t next_run(void)
 	tm.tm_sec = 0;
 	schedule = mktime(&tm);
 
-	CL_DEBUG(
-	        "sports_schedule: schedule callback for %lu seconds from now\n",
-	        schedule - now);
+	CL_DEBUG("sports_schedule: schedule callback for %s\n", asctime(&tm));
 	return schedule;
 }
 
