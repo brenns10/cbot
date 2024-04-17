@@ -6,6 +6,9 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.13.0 (2024-04-16)
+-------------------
+
 Several major new features!
 
 Chat backends:
