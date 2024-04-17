@@ -9,4 +9,4 @@ RUN apk add ./cbot.apk gcompat tzdata msmtp perl curl && \
 USER cbot
 WORKDIR /home/cbot
 ENV TZ=US/Pacific
-CMD ["cbot" "/home/cbot/config/cbot.cfg"]
+CMD ["/usr/bin/cbot" "/home/cbot/config/cbot.cfg"]
