@@ -116,7 +116,7 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		return rv;
 
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)knowledge_set,
-	              NULL, "know that +(.+) +is +(.+)");
+	              NULL, "know that +(.+?) +is +(.+)");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)knowledge_get,
 	              GET_VALUE, "what is +(.+) *");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)knowledge_get,
