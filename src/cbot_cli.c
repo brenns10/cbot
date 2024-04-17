@@ -318,6 +318,19 @@ static char *sc_lwt_readline(const char *prompt)
 		}
 	}
 }
+char *_cli_history_file;
+static void cli_history_init(void)
+{
+	char *home = getenv("HOME");
+	asprintf(&_cli_history_file, "%s/.cbot_history", home);
+	read_history(_cli_history_file);
+}
+static void cli_history_deinit(void)
+{
+	write_history(_cli_history_file);
+	history_truncate_file(_cli_history_file, 1000);
+	free(_cli_history_file);
+}
 #else
 static char *sc_lwt_readline(const char *prompt)
 {
@@ -342,6 +355,12 @@ static char *sc_lwt_readline(const char *prompt)
 	}
 	return line;
 }
+static void cli_history_init(void)
+{
+}
+static void cli_history_deinit(void)
+{
+}
 #endif
 
 static void cbot_cli_run(struct cbot *bot)
@@ -350,6 +369,7 @@ static void cbot_cli_run(struct cbot *bot)
 	int newline;
 	sc_list_init(&rmsgs);
 
+	cli_history_init();
 	while (true) {
 		line = sc_lwt_readline("> ");
 		if (!line)
@@ -362,6 +382,7 @@ static void cbot_cli_run(struct cbot *bot)
 		cbot_handle_message(bot, "stdin", "shell", line, false, false);
 		free(line);
 	}
+	cli_history_deinit();
 }
 
 static int cbot_cli_is_authorized(const struct cbot *bot, const char *user,
