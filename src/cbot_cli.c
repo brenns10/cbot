@@ -104,6 +104,21 @@ static void cbot_cli_unregister_reaction(const struct cbot *bot,
  * CLI Commands
  ***************/
 
+struct cli_backend {
+	char *name;
+};
+
+static void cbot_cli_cmd_nick(struct cbot *bot, int argc, char **argv)
+{
+	if (argc != 2) {
+		fprintf(stderr, "usage: /nick NEWNAME\n");
+		return;
+	}
+	struct cli_backend *b = bot->backend;
+	free(b->name);
+	b->name = strdup(argv[1]);
+}
+
 static void cbot_cli_cmd_add_membership(struct cbot *bot, int argc, char **argv)
 {
 	if (argc != 3) {
@@ -183,6 +198,7 @@ const struct cbot_cli_cmd cmds[] = {
 	CMD("/memberlist", cbot_cli_cmd_get_members,
 	    "list members in a cbot channel"),
 	CMD("/react", cbot_cli_cmd_react, "react to an eligible message"),
+	CMD("/nick", cbot_cli_cmd_nick, "change the current username"),
 	CMD("/help", cbot_cli_cmd_help, "list all commands"),
 };
 
@@ -369,6 +385,10 @@ static void cbot_cli_run(struct cbot *bot)
 	int newline;
 	sc_list_init(&rmsgs);
 
+	struct cli_backend b = { 0 };
+	b.name = strdup("shell");
+	bot->backend = &b;
+
 	cli_history_init();
 	while (true) {
 		line = sc_lwt_readline("> ");
@@ -379,16 +399,16 @@ static void cbot_cli_run(struct cbot *bot)
 			line[newline - 1] = '\0';
 		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
 			continue;
-		cbot_handle_message(bot, "stdin", "shell", line, false, false);
+		cbot_handle_message(bot, "stdin", b.name, line, false, false);
 		free(line);
 	}
 	cli_history_deinit();
+	free(b.name);
 }
 
 static int cbot_cli_is_authorized(const struct cbot *bot, const char *user,
                                   const char *msg)
 {
-	printf("is_authorized(... \"%s\")?\n", user);
 	return strcmp(user, "shell") == 0;
 }
 
