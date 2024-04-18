@@ -6,6 +6,14 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.13.3 (2024-04-17)
+-------------------
+
+Bug fix:
+
+- Use %Y-%m-%d instead of %F in strptime(), since %F is apparently a glibc
+  extension. Thanks, musl.
+
 0.13.2 (2024-04-16)
 -------------------
 
