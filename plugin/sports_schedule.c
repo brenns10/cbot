@@ -325,7 +325,7 @@ static void handler(struct cbot_message_event *evt, void *user)
 	}
 	tm.tm_year += 1900; // really
 	tm.tm_mon++;
-	CL_DEBUG("looking up schedules for: %04d-%02d-%02d", tm.tm_year,
+	CL_DEBUG("looking up schedules for: %04d-%02d-%02d\n", tm.tm_year,
 	         tm.tm_mon, tm.tm_mday);
 
 	struct arg *arg = calloc(1, sizeof(*arg));
