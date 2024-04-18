@@ -78,6 +78,7 @@ char *cbot_curl_get(struct cbot *bot, const char *url, ...)
 	sc_cb_init(&url_fmt, 256);
 	sc_cb_vprintf(&url_fmt, url, vl);
 	va_end(vl);
+	CL_DEBUG("cURL: %s\n", url_fmt.buf);
 
 	CURL *easy = curl_easy_init();
 	curl_easy_setopt(easy, CURLOPT_URL, url_fmt.buf);
