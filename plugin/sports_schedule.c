@@ -1,6 +1,7 @@
 /*
  * sports_schedule.c: warning about sports schedules
  */
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -177,7 +178,13 @@ static int search_mlb_games(struct json_easy *je, int year, int month, int day,
 			time_t epoch = timegm(&broken);
 			localtime_r(&epoch, &broken);
 			char *timeval = malloc(12);
-			strftime(timeval, 12, "%l:%M %p", &broken);
+			if (!strftime(timeval, 12, "%I:%M %p", &broken)) {
+				CL_WARN("mlb: failed to format game date: %s\n",
+				        strerror(errno));
+				free(timeval);
+				continue;
+			}
+			CL_INFO("mlb: timeval: %s\n", timeval);
 			*time = timeval;
 			return 1;
 		}
@@ -238,7 +245,7 @@ static void run_thread(void *varg)
 			sc_cb_concat(&msg, "The ");
 		/* mlb uses strftime() which can produce a preceding blank, skip
 		 * it */
-		char *s = mlb_time[0] == ' ' ? &mlb_time[1] : mlb_time;
+		char *s = mlb_time[0] == '0' ? &mlb_time[1] : mlb_time;
 		sc_cb_printf(&msg, "%s have a home game at %s.", MLB_TEAM, s);
 		free(mlb_time);
 	}
