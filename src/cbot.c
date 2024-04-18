@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "cbot/cbot.h"
 #include "cbot_private.h"
@@ -359,6 +360,34 @@ static void cbot_init_logging(struct cbot *bot, config_setting_t *group)
 		free(level);
 }
 
+static char *get_plugin_dir(config_setting_t *setting)
+{
+	const char *set_dir = NULL;
+	config_setting_lookup_string(setting, "plugin_dir", &set_dir);
+	if (set_dir)
+		return strdup(set_dir);
+
+	char *buf = malloc(4096);
+	ssize_t rv = readlink("/proc/self/exe", buf, 4096);
+	if (rv < 0) {
+		perror("readlink");
+		free(buf);
+		return NULL;
+	}
+	if (rv >= 4096) {
+		fprintf(stderr, "readlink: overflowed buffer\n");
+		free(buf);
+		return NULL;
+	}
+	buf[rv] = '\0';
+	char *lastslash = strrchr(buf, '/');
+
+	/* get parent directory name */
+	if (lastslash)
+		*lastslash = '\0';
+	return buf;
+}
+
 int cbot_load_config(struct cbot *bot, const char *conf_file)
 {
 	int rv, i;
@@ -382,7 +411,7 @@ int cbot_load_config(struct cbot *bot, const char *conf_file)
 
 	bot->name = conf_str_default(setting, "name", "cbot");
 	bot->backend_name = conf_str_default(setting, "backend", "irc");
-	bot->plugin_dir = conf_str_default(setting, "plugin_dir", "build");
+	bot->plugin_dir = get_plugin_dir(setting);
 	bot->db_file = conf_str_default(setting, "db", "db.sqlite3");
 	cbot_init_logging(bot, setting);
 
