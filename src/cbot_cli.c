@@ -337,8 +337,9 @@ static char *sc_lwt_readline(const char *prompt)
 char *_cli_history_file;
 static void cli_history_init(void)
 {
-	char *home = getenv("HOME");
-	asprintf(&_cli_history_file, "%s/.cbot_history", home);
+	char cwd[4096];
+	getcwd(cwd, sizeof(cwd));
+	asprintf(&_cli_history_file, "%s/.cbot_history", cwd);
 	read_history(_cli_history_file);
 }
 static void cli_history_deinit(void)
