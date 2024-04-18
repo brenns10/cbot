@@ -6,6 +6,14 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.13.5 (2024-04-18)
+-------------------
+
+Finally, fixed sports_schedule plugin for musl libc. There were multiple issues
+with strptime and strftime formats. Resolved those, and added some more error
+checking. Added better logging and some tweaks to make it easy to run cbot in an
+Alpine Docker container for doing final testing on my local machine.
+
 0.13.4 (2024-04-17)
 -------------------
 
