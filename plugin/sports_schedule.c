@@ -311,7 +311,7 @@ static void handler(struct cbot_message_event *evt, void *user)
 		tm.tm_mday++;
 		mktime(&tm); /* normalize across week days */
 	} else {
-		strptime(day, "%F", &tm);
+		strptime(day, "%Y-%m-%d", &tm);
 	}
 	tm.tm_year += 1900; // really
 	tm.tm_mon++;
