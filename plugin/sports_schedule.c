@@ -167,7 +167,8 @@ static int search_mlb_games(struct json_easy *je, int year, int month, int day,
 			 * EG: "gameDate": "2024-04-17T16:10:00Z"
 			 */
 			struct tm broken = { 0 };
-			char *ret = strptime(timestamp, "%FT%T%z", &broken);
+			char *ret = strptime(timestamp, "%Y-%m-%dT%H:%M:%S%z",
+			                     &broken);
 			free(timestamp);
 			if (!ret || *ret) {
 				CL_WARN("mlb: failed to parse 'gameDate'\n");
