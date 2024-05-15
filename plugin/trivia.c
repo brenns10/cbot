@@ -368,6 +368,43 @@ static void start_trivia(struct cbot_message_event *event, void *user)
 	send_trivia_message(plugin, NULL);
 }
 
+static void cancel_trivia(struct cbot_message_event *event, void *user)
+{
+	struct cbot_plugin *plugin = event->plugin;
+	struct trivia_reactions *rxns = plugin->data;
+
+	if (!cbot_is_authorized(event->bot, event->username, event->message))
+		return;
+
+	if (rxns->state == TS_REACTING) {
+		rxns->state = TS_IDLE;
+		/* Stop listening for trivia reactions */
+		cbot_unregister_reaction(plugin->bot, rxns->handle);
+
+		/* Cancel the callback to send the RSVP */
+		cbot_cancel_callback(rxns->cb);
+
+		/* Destroy all the recorded reactions */
+		struct trivia_reaction *arr =
+		        sc_arr(&rxns->reactions, struct trivia_reaction);
+		for (size_t react = 0; react < rxns->reactions.len; react++) {
+			sc_arr_destroy(&arr[react].users);
+			free(arr[react].emoji);
+		}
+		sc_arr_destroy(&rxns->reactions);
+
+		/* Schedule the callback to begin next week's trivia */
+		rxns->cb = cbot_schedule_callback(plugin, send_trivia_message,
+		                                  NULL, next_trivia());
+
+		cbot_send(plugin->bot, event->channel,
+		          "Ok, I'll ask again next week");
+	} else {
+		cbot_send(plugin->bot, event->channel,
+		          "There's no current trivia RSVP");
+	}
+}
+
 static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 {
 	int rv;
@@ -427,6 +464,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 	              NULL, "trivia start");
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)rsvp_trivia, NULL,
 	              "trivia rsvp");
+	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)cancel_trivia,
+	              NULL, "trivia (is cancell?ed|cancel)");
 	return 0;
 }
 
