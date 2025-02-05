@@ -109,6 +109,27 @@ static int check_nba(struct cbot *bot, int year, int month, int day,
 	} else {
 		ret = search_nba_games(&je, year, month, day, time, err);
 	}
+	if (ret >= 1) {
+		// The time string given is EST. Hard-code PST here.
+		struct tm tm;
+		if (!strptime(*time, "%I:%M %p", &tm)) {
+			CL_WARN("nba: error parsing time \"%s\" for TZ "
+			        "conversion\n",
+			        *time);
+		} else {
+			tm.tm_hour -= 3;
+			char *t = malloc(256);
+			if (!t || !strftime(t, 256, "%I:%M %p", &tm)) {
+				free(t);
+				CL_WARN("nba: error formatting time\n");
+			} else {
+				CL_DEBUG("nba: converted \"%s\" to \"%s\"\n",
+				         *time, t);
+				free(*time);
+				*time = t;
+			}
+		}
+	}
 	json_easy_destroy(&je);
 	free(data);
 	return ret;
