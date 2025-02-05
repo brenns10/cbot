@@ -2,20 +2,22 @@
  * cbot_cli.c: CBot backend for command line
  */
 
-#include <libconfig.h>
-#include <sc-lwt.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #if defined(WITH_READLINE)
 #include <readline/history.h>
 #include <readline/readline.h>
 #elif defined(WITH_LIBEDIT)
 #include <editline/readline.h>
 #endif
+#include <libconfig.h>
+
+#include <sc-lwt.h>
 
 #include "cbot/cbot.h"
 #include "cbot_private.h"
@@ -188,10 +190,7 @@ struct cbot_cli_cmd {
 	char *help;
 };
 
-#define CMD(cmd, func, help)                                                   \
-	{                                                                      \
-		cmd, sizeof(cmd) - 1, func, help                               \
-	}
+#define CMD(cmd, func, help) { cmd, sizeof(cmd) - 1, func, help }
 const struct cbot_cli_cmd cmds[] = {
 	CMD("/memberadd", cbot_cli_cmd_add_membership,
 	    "add a member to a cbot channel"),
@@ -366,6 +365,7 @@ static char *sc_lwt_readline(const char *prompt)
 
 	rv = getline(&line, &n, stdin);
 	if (rv < 0) {
+		free(line);
 		if (!feof(stdin))
 			perror("getline");
 		return NULL;
@@ -398,8 +398,10 @@ static void cbot_cli_run(struct cbot *bot)
 		newline = strlen(line);
 		if (newline > 0 && line[newline - 1] == '\n')
 			line[newline - 1] = '\0';
-		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line))
+		if (line[0] == '/' && cbot_cli_execute_cmd(bot, line)) {
+			free(line);
 			continue;
+		}
 		cbot_handle_message(bot, "stdin", b.name, line, false, false);
 		free(line);
 	}

@@ -41,7 +41,7 @@ libsc_regex_dep = dependency(
 libsc_collections_dep = dependency(
   'libsc-collections',
   fallback: ['sc-collections', 'libsc_collections_dep'],
-  version: '>=0.9.0',
+  version: '>=0.11.0',
 )
 libsc_argparse_dep = dependency(
   'libsc-argparse',
@@ -88,6 +88,15 @@ elif get_option('with_libedit')
   cbot_deps += dependency('libedit')
   add_project_arguments(['-DWITH_LIBEDIT'], language : 'c')
 endif
+add_project_arguments(
+  [
+    '-D_XOPEN_SOURCE=600',
+    '-D_POSIX_C_SOURCE=200809L',
+    '-D_DEFAULT_SOURCE',
+    '--std=c99',
+  ],
+  language : 'c',
+)
 
 
 libcbot = shared_library(

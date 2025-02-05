@@ -7,9 +7,11 @@
  *     cbot> hello, user!
  */
 
-#include <libconfig.h>
-#include <sc-collections.h>
 #include <stddef.h>
+
+#include <libconfig.h>
+
+#include <sc-collections.h>
 
 #include "cbot/cbot.h"
 

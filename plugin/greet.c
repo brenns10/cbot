@@ -6,10 +6,10 @@
  *     user> hi cbot
  *     cbot> hello, user!
  */
+#include <stdlib.h>
 
 #include <libconfig.h>
 #include <sc-collections.h>
-#include <stdlib.h>
 
 #include "cbot/cbot.h"
 

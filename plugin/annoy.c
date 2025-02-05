@@ -12,15 +12,17 @@
  *     user> cbot stop it
  */
 
-#include <libconfig.h>
-#include <sc-lwt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include <libconfig.h>
+
+#include <sc-collections.h>
+#include <sc-lwt.h>
+
 #include "cbot/cbot.h"
-#include "sc-collections.h"
 
 char *channel = NULL;
 struct cbot *bot = NULL;

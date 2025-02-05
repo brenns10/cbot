@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include <libconfig.h>
+
 #include <sc-collections.h>
 
 #include "cbot/cbot.h"
@@ -61,21 +62,23 @@ static void cbot_log_message(struct cbot_message_event *event, void *user)
 	             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
 	f = fopen(filename.buf, "a");
 
-	/*
-	 * Write log line.
-	 */
-	fprintf(f, "{\"timestamp\": %f, \"username\": ", time_float);
-	write_string(f, event->username);
-	fprintf(f, ", \"message\": ");
-	write_string(f, event->message);
-	if (event->is_action)
-		fprintf(f, ", action: true");
-	fprintf(f, "}\n");
+	if (f) {
+		/*
+		 * Write log line.
+		 */
+		fprintf(f, "{\"timestamp\": %f, \"username\": ", time_float);
+		write_string(f, event->username);
+		fprintf(f, ", \"message\": ");
+		write_string(f, event->message);
+		if (event->is_action)
+			fprintf(f, ", action: true");
+		fprintf(f, "}\n");
 
-	/*
-	 * Cleanup
-	 */
-	fclose(f);
+		/*
+		 * Cleanup
+		 */
+		fclose(f);
+	}
 	sc_cb_destroy(&filename);
 }
 

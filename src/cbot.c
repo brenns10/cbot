@@ -6,7 +6,6 @@
 #include <dlfcn.h>
 #include <libconfig.h>
 #include <openssl/evp.h>
-#include <sc-collections.h>
 #include <sqlite3.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -17,10 +16,12 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <sc-collections.h>
+#include <sc-lwt.h>
+#include <sc-regex.h>
+
 #include "cbot/cbot.h"
 #include "cbot_private.h"
-#include "sc-lwt.h"
-#include "sc-regex.h"
 
 struct cbot_backend_ops *all_ops[] = {
 	&irc_ops,

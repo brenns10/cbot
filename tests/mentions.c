@@ -13,8 +13,8 @@
 // NB: meson incremental builds don't pick up on changes to the JSON file.
 // This generally isn't a big deal, but just know that you may need to touch
 // the test C file after updating the JSON.
-asm("json_buf: .incbin \"mentions.json\"");
-asm("json_buf_end: .byte 0x00");
+__asm("json_buf: .incbin \"mentions.json\"");
+__asm("json_buf_end: .byte 0x00");
 extern char json_buf[];
 
 struct json_easy *je;
