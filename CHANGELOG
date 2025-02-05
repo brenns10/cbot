@@ -6,6 +6,11 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
+0.15.0 (2024-08-11)
+-------------------
+
+Fixed NBA eastern timezone.
+
 0.14.0 (2024-08-11)
 -------------------
 
