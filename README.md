@@ -63,8 +63,7 @@ Features
 Build & Run
 -----------
 
-See [doc/Install.md](doc/Install.md) for details on build / install.
-
+See [doc/admin.rst#installing-from-source](doc/admin.rst#installing-from-source) for details on build / install.
 
 Plugin API
 ----------

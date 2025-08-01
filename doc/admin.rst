@@ -62,7 +62,7 @@ project:
 .. code:: bash
 
     # creates a build directory named "build"
-    meson build
+    meson setup build
     # change to "build" and compile everything
     ninja -C build
 
