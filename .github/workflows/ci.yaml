@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Environment
+        run: |
+          sudo apt update -y
+          sudo apt install -y pre-commit clang-tidy clang-format
+          pre-commit install
+
+      - name: Lint
+        run: |
+          pre-commit run --all-files
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Environment
+        run: |
+          sudo apt update -y
+          sudo apt install -y python3-pip doxygen meson gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev libmicrohttpd-dev
+          sudo pip install sphinx breathe myst_parser
+
+      - name: Build
+        run: |
+          meson setup build --werror
+          ninja -C build
