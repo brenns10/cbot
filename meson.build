@@ -30,7 +30,7 @@ libircclient_dep = dependency(
   fallback: ['libircclient', 'libircclient_dep'],
   # There are some compiler warnings, silence them
   default_options: [
-    'libircclient:warning_level=0',
+    'warning_level=0',
   ],
 )
 libsc_regex_dep = dependency(

@@ -53,6 +53,8 @@ static const char *sad_reacts[] = {
 	"😥",
 	"😢",
 	"😭",
+	"😔",
+	"😩",
 };
 
 static const char *plus_reacts[] = {
