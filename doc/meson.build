@@ -28,7 +28,7 @@ base_data = configuration_data()
 base_data.set('PROJECT_NAME', meson.project_name())
 base_data.set('VERSION', meson.project_version())
 base_data.set('DOXYGEN_DIR', doxygen_database)
-base_data.set('SRC_ROOT', meson.source_root())
+base_data.set('SRC_ROOT', meson.project_source_root())
 base_data.set('AUTHOR', 'Stephen Brennan')
 base_data.set('COPYRIGHT', '2021 Stephen Brennan')
 
@@ -54,8 +54,8 @@ script_data = configuration_data()
 script_data.set('SRCDIR', meson.current_build_dir())
 script_data.set('OUTDIR', meson.current_build_dir() + '/doc')
 script_data.set('DOXYGEN_CONF', meson.current_build_dir() + '/doxygen.ini')
-script_data.set('DOXYGEN_CMD', doxygen.path())
-script_data.set('SPHINX_CMD', sphinx.path())
+script_data.set('DOXYGEN_CMD', doxygen.full_path())
+script_data.set('SPHINX_CMD', sphinx.full_path())
 script_doxy_sphinx = configure_file(
 	input: 'run_doxygen_sphinx.sh.in',
 	output: 'run_doxygen_sphinx.sh',
