@@ -49,6 +49,9 @@ struct trivia_reactions {
 	struct cbot_callback *cb;
 };
 
+// Seems we cannot have one-per line array initializers:
+// https://github.com/llvm/llvm-project/issues/61560
+// clang-format off
 static const char *sad_reacts[] = {
 	"😥",
 	"😢",
@@ -58,13 +61,22 @@ static const char *sad_reacts[] = {
 };
 
 static const char *plus_reacts[] = {
-	"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣",
+	"1️⃣",
+	"2️⃣",
+	"3️⃣",
+	"4️⃣",
+	"5️⃣",
+	"6️⃣",
+	"7️⃣",
+	"8️⃣",
+	"9️⃣",
 };
 
 static const char *maybe_reacts[] = {
 	"❓",
 	"❔",
 };
+// clang-format on
 
 static void send_trivia_message(struct cbot_plugin *plugin, void *arg);
 

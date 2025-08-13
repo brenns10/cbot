@@ -3,7 +3,6 @@
  */
 #include <libconfig.h>
 #include <microhttpd.h>
-#include <stdlib.h>
 
 #include "cbot/cbot.h"
 #include "sc-collections.h"

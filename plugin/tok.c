@@ -10,7 +10,6 @@
  */
 
 #include <libconfig.h>
-#include <stdlib.h>
 
 #include "cbot/cbot.h"
 
