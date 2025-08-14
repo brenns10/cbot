@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>CBot Backends &#8212; cbot 0.15.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=6625fa76" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=97b2f34b"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=ef97403f"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="Plugins - Advanced Topics" href="Plugins-2.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -31,26 +33,26 @@
           <div class="body" role="main">
             
   <section id="cbot-backends">
-<h1>CBot Backends<a class="headerlink" href="#cbot-backends" title="Permalink to this heading">¶</a></h1>
+<h1>CBot Backends<a class="headerlink" href="#cbot-backends" title="Link to this heading">¶</a></h1>
 <p>The backend is the part of CBot that allows the bot to communicate with whatever
 chat system it is using. Currently, that is IRC, Signal (via signald), or the
 console for testing. This page gives basic information about the backend
 responsibilities / APIs, and also information on selected backend
 implementations.</p>
 <section id="apis">
-<h2>APIs<a class="headerlink" href="#apis" title="Permalink to this heading">¶</a></h2>
+<h2>APIs<a class="headerlink" href="#apis" title="Link to this heading">¶</a></h2>
 <p>Backends must populate a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cbot_backend_ops</span></code> with function pointers to
 valid implementations. See the <code class="docutils literal notranslate"><span class="pre">cbot_private.h</span></code> header for details on these
 function pointers.</p>
 </section>
 <section id="signald-backend">
-<h2>Signald backend<a class="headerlink" href="#signald-backend" title="Permalink to this heading">¶</a></h2>
+<h2>Signald backend<a class="headerlink" href="#signald-backend" title="Link to this heading">¶</a></h2>
 <p>Communicates with <a class="reference external" href="https://signald.org/">signald</a> over a JSON API on a Unix
 socket. Signald has some pretty decent documentation on the structures and
 formats of each request.</p>
 <p>Here are sample JSON requests:</p>
 <section id="send-message">
-<h3>Send message<a class="headerlink" href="#send-message" title="Permalink to this heading">¶</a></h3>
+<h3>Send message<a class="headerlink" href="#send-message" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;v1&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;send&quot;</span><span class="p">,</span>
@@ -72,7 +74,7 @@ username instead?</p></li>
 </ul>
 </section>
 <section id="list-groups">
-<h3>List Groups<a class="headerlink" href="#list-groups" title="Permalink to this heading">¶</a></h3>
+<h3>List Groups<a class="headerlink" href="#list-groups" title="Link to this heading">¶</a></h3>
 <p>Request</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;v1&quot;</span><span class="p">,</span>
@@ -83,7 +85,7 @@ username instead?</p></li>
 </div>
 </section>
 <section id="get-user-profile">
-<h3>Get user profile<a class="headerlink" href="#get-user-profile" title="Permalink to this heading">¶</a></h3>
+<h3>Get user profile<a class="headerlink" href="#get-user-profile" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;v1&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;get_profile&quot;</span><span class="p">,</span>
@@ -98,7 +100,7 @@ username instead?</p></li>
 </section>
 </section>
 <section id="signal-cli-backend">
-<h2>Signal-CLI backend<a class="headerlink" href="#signal-cli-backend" title="Permalink to this heading">¶</a></h2>
+<h2>Signal-CLI backend<a class="headerlink" href="#signal-cli-backend" title="Link to this heading">¶</a></h2>
 <p>Communicates with <a class="reference external" href="https://github.com/AsamK/signal-cli">signal-cli</a> over the
 jsonRpc API. Compared to signald, signal-cli has much less documentation, but it
 does seem that the maintenance has kept up with the signal protocol changes
@@ -116,7 +118,7 @@ same as the CLI options, taking each word and turning it into camelCase.</p></li
 </ul>
 <p>To aid in development, here are sample JSON requests and responses.</p>
 <section id="incoming-message">
-<h3>Incoming Message<a class="headerlink" href="#incoming-message" title="Permalink to this heading">¶</a></h3>
+<h3>Incoming Message<a class="headerlink" href="#incoming-message" title="Link to this heading">¶</a></h3>
 <p>From docs:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
@@ -156,7 +158,7 @@ same as the CLI options, taking each word and turning it into camelCase.</p></li
 </div>
 </section>
 <section id="typing-started">
-<h3>Typing Started<a class="headerlink" href="#typing-started" title="Permalink to this heading">¶</a></h3>
+<h3>Typing Started<a class="headerlink" href="#typing-started" title="Link to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;jsonrpc&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;receive&quot;</span><span class="p">,</span>
@@ -181,7 +183,7 @@ same as the CLI options, taking each word and turning it into camelCase.</p></li
 </div>
 </section>
 <section id="reaction-add">
-<h3>Reaction Add<a class="headerlink" href="#reaction-add" title="Permalink to this heading">¶</a></h3>
+<h3>Reaction Add<a class="headerlink" href="#reaction-add" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;receive&quot;</span><span class="p">,</span>
@@ -222,7 +224,7 @@ same as the CLI options, taking each word and turning it into camelCase.</p></li
 </ul>
 </section>
 <section id="group-updates">
-<h3>Group Updates<a class="headerlink" href="#group-updates" title="Permalink to this heading">¶</a></h3>
+<h3>Group Updates<a class="headerlink" href="#group-updates" title="Link to this heading">¶</a></h3>
 <p>It looks like any update to the group will trigger a message like this.</p>
 <ul class="simple">
 <li><p>User joins/leaves</p></li>
@@ -259,7 +261,7 @@ same as the CLI options, taking each word and turning it into camelCase.</p></li
 need to query it.</p>
 </section>
 <section id="id1">
-<h3>List Groups<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<h3>List Groups<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
 <p>Request:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
@@ -323,7 +325,7 @@ need to query it.</p>
 </div>
 </section>
 <section id="list-contacts">
-<h3>List Contacts<a class="headerlink" href="#list-contacts" title="Permalink to this heading">¶</a></h3>
+<h3>List Contacts<a class="headerlink" href="#list-contacts" title="Link to this heading">¶</a></h3>
 <p>Request:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;listContacts&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">}</span>
 </pre></div>
@@ -373,7 +375,7 @@ need to query it.</p>
 </div>
 </section>
 <section id="id2">
-<h3>Send Message<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<h3>Send Message<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;send&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hello 💩💩 hello X!&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;groupId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GROUPID&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mentions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;15:1:UID&quot;</span><span class="p">]}}</span>
 
 <span class="p">{</span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;send&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hello world&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;recipient&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;UID&quot;</span><span class="p">}}</span>
@@ -381,7 +383,7 @@ need to query it.</p>
 </div>
 </section>
 <section id="success">
-<h3>Success<a class="headerlink" href="#success" title="Permalink to this heading">¶</a></h3>
+<h3>Success<a class="headerlink" href="#success" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -402,7 +404,7 @@ need to query it.</p>
 </div>
 </section>
 <section id="set-nick">
-<h3>Set Nick<a class="headerlink" href="#set-nick" title="Permalink to this heading">¶</a></h3>
+<h3>Set Nick<a class="headerlink" href="#set-nick" title="Link to this heading">¶</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;jsonrpc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;updateProfile&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;givenName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cbottest&quot;</span><span class="p">}}</span>
 </pre></div>
 </div>
@@ -415,7 +417,7 @@ need to query it.</p>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="index.html">cbot</a></h1>
 
@@ -426,7 +428,16 @@ need to query it.</p>
 
 
 
-<h3>Navigation</h3>
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="User.html">Users</a></li>
 <li class="toctree-l1"><a class="reference internal" href="admin.html">Administering CBot</a></li>
@@ -449,16 +460,6 @@ need to query it.</p>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -472,11 +473,11 @@ need to query it.</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2021 Stephen Brennan.
+      &#169;2021 Stephen Brennan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="_sources/Backends.md.txt"

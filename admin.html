@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Administering CBot &#8212; cbot 0.15.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=6625fa76" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=97b2f34b"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=ef97403f"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Development" href="dev.html" />
@@ -18,8 +19,9 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -32,25 +34,25 @@
           <div class="body" role="main">
             
   <section id="administering-cbot">
-<h1>Administering CBot<a class="headerlink" href="#administering-cbot" title="Permalink to this heading">¶</a></h1>
+<h1>Administering CBot<a class="headerlink" href="#administering-cbot" title="Link to this heading">¶</a></h1>
 <section id="installing-distribution-packages">
-<h2>Installing (Distribution Packages)<a class="headerlink" href="#installing-distribution-packages" title="Permalink to this heading">¶</a></h2>
+<h2>Installing (Distribution Packages)<a class="headerlink" href="#installing-distribution-packages" title="Link to this heading">¶</a></h2>
 <p>CBot has source releases on <a class="reference external" href="https://github.com/brenns10/cbot">Github</a> as well
 as binary package releases for Alpine Linux. You can install the Alpine packages
 with <code class="docutils literal notranslate"><span class="pre">apk</span> <span class="pre">add</span> <span class="pre">--allow-untrusted</span> <span class="pre">&lt;file&gt;</span></code>. For other Linux distributions, you’ll
 need to install from source.</p>
 </section>
 <section id="installing-docker">
-<h2>Installing (Docker)<a class="headerlink" href="#installing-docker" title="Permalink to this heading">¶</a></h2>
+<h2>Installing (Docker)<a class="headerlink" href="#installing-docker" title="Link to this heading">¶</a></h2>
 <p>CBot also has Docker images published on <a class="reference external" href="https://hub.docker.com/r/brenns10/cbot">Docker Hub</a>. Since version v0.8.0, these Docker
 images no longer contain Signald bundled. If you want to run CBot with Signal,
 you’ll need to setup Signald yourself, likely via their Docker image.
 Docker-Compose is great for this.</p>
 </section>
 <section id="installing-from-source">
-<h2>Installing (From Source)<a class="headerlink" href="#installing-from-source" title="Permalink to this heading">¶</a></h2>
+<h2>Installing (From Source)<a class="headerlink" href="#installing-from-source" title="Link to this heading">¶</a></h2>
 <section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading">¶</a></h3>
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
 <p>First, you’ll need to unpack your source release (or checkout a git revision of
 interest). Next, setup your dependencies. The following are dependencies of
 CBot.</p>
@@ -78,12 +80,12 @@ sudo<span class="w"> </span>pacman<span class="w"> </span>-Sy<span class="w"> </
 </div>
 </section>
 <section id="building">
-<h3>Building<a class="headerlink" href="#building" title="Permalink to this heading">¶</a></h3>
+<h3>Building<a class="headerlink" href="#building" title="Link to this heading">¶</a></h3>
 <p>Once you have setup the dependencies, you’ll need to build the project:</p>
 <p>This project uses the Meson build system. The following commands will build the
 project:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># creates a build directory named &quot;build&quot;</span>
-meson<span class="w"> </span>build
+meson<span class="w"> </span>setup<span class="w"> </span>build
 <span class="c1"># change to &quot;build&quot; and compile everything</span>
 ninja<span class="w"> </span>-C<span class="w"> </span>build
 </pre></div>
@@ -95,7 +97,7 @@ dependencies.</p>
 snappy.</p>
 </section>
 <section id="initial-run">
-<h3>Initial Run<a class="headerlink" href="#initial-run" title="Permalink to this heading">¶</a></h3>
+<h3>Initial Run<a class="headerlink" href="#initial-run" title="Link to this heading">¶</a></h3>
 <p>To test your built program, you can use <code class="docutils literal notranslate"><span class="pre">sample.cfg</span></code>, which sets up some
 plugins in the CLI. Simply run:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>build/cbot<span class="w"> </span>sample.cfg
@@ -104,12 +106,12 @@ plugins in the CLI. Simply run:</p>
 </section>
 </section>
 <section id="configuring">
-<h2>Configuring<a class="headerlink" href="#configuring" title="Permalink to this heading">¶</a></h2>
+<h2>Configuring<a class="headerlink" href="#configuring" title="Link to this heading">¶</a></h2>
 <p>A sample configuration file is bundled as <code class="docutils literal notranslate"><span class="pre">sample.cfg</span></code>. This should be used as
 the basis for your configuration. However, there are some very important things
 which ought to be documented.</p>
 <section id="choosing-configuring-backend">
-<h3>Choosing &amp; Configuring Backend<a class="headerlink" href="#choosing-configuring-backend" title="Permalink to this heading">¶</a></h3>
+<h3>Choosing &amp; Configuring Backend<a class="headerlink" href="#choosing-configuring-backend" title="Link to this heading">¶</a></h3>
 <p>In the <code class="docutils literal notranslate"><span class="pre">cbot</span></code> configuration object, you should find an option <code class="docutils literal notranslate"><span class="pre">backend</span></code>.
 This is required, and you can choose between:</p>
 <ul class="simple">
@@ -135,7 +137,7 @@ for the backend.</p>
 </ul>
 </section>
 <section id="configuring-cbot">
-<h3>Configuring CBot<a class="headerlink" href="#configuring-cbot" title="Permalink to this heading">¶</a></h3>
+<h3>Configuring CBot<a class="headerlink" href="#configuring-cbot" title="Link to this heading">¶</a></h3>
 <p>Beyond the backend configuration, the <code class="docutils literal notranslate"><span class="pre">plugins</span></code> top-level configuration option
 specifies each plugin which is loaded. Each plugin named in this mapping will be
 loaded. The plugin can be mapped to an empty config dict for plugins with no
@@ -148,11 +150,11 @@ Please see <code class="docutils literal notranslate"><span class="pre">sample.c
 </section>
 </section>
 <section id="plugins">
-<h2>Plugins<a class="headerlink" href="#plugins" title="Permalink to this heading">¶</a></h2>
+<h2>Plugins<a class="headerlink" href="#plugins" title="Link to this heading">¶</a></h2>
 <p>This section documents the administration side of some plugins, in case they
 need a bit more explanation.</p>
 <section id="trivia">
-<h3>Trivia<a class="headerlink" href="#trivia" title="Permalink to this heading">¶</a></h3>
+<h3>Trivia<a class="headerlink" href="#trivia" title="Link to this heading">¶</a></h3>
 <p>The trivia plugin is a powerful weekly reminder system for the group chat.
 Basically, every week at a given time, a message gets sent announcing the trivia
 night and requesting RSVP. Then, at the RSVP deadline, a message gets sent to
@@ -205,7 +207,7 @@ true)</p></li>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="index.html">cbot</a></h1>
 
@@ -216,7 +218,16 @@ true)</p></li>
 
 
 
-<h3>Navigation</h3>
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="User.html">Users</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Administering CBot</a><ul>
@@ -239,16 +250,6 @@ true)</p></li>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -262,11 +263,11 @@ true)</p></li>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2021 Stephen Brennan.
+      &#169;2021 Stephen Brennan.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="_sources/admin.rst.txt"
