@@ -7,20 +7,6 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Environment
-        run: |
-          sudo apt update -y
-          sudo apt install -y pre-commit clang-tidy clang-format
-          pre-commit install
-
-      - name: Lint
-        run: |
-          pre-commit run --all-files
   build:
     runs-on: ubuntu-24.04
     steps:
@@ -29,10 +15,15 @@ jobs:
       - name: Setup Environment
         run: |
           sudo apt update -y
-          sudo apt install -y python3-pip doxygen meson gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev libmicrohttpd-dev
+          sudo apt install -y python3-pip doxygen meson gcc libconfig-dev libsqlite3-dev libcurl4-openssl-dev libmicrohttpd-dev pre-commit clang-tidy clang-format
           sudo pip install sphinx breathe myst_parser
+          sudo ln -s clang-include-cleaner-18 /usr/bin/clang-include-cleaner
 
       - name: Build
         run: |
           meson setup build --werror
           ninja -C build
+
+      - name: Lint
+        run: |
+          pre-commit run --all-files
