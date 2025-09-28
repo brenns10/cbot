@@ -6,7 +6,7 @@ repos:
         language: system
         files: "^.*\\.[ch]$"
         exclude: "plugin/help.h"
-        entry: clang-include-cleaner --edit --insert --remove --ignore-headers=unity_internals.h,bits/time.h,asm-generic/errno.h,asm-generic/errno.h
+        entry: clang-include-cleaner --edit --insert --remove --ignore-headers=unity_internals.h,bits/time.h,asm-generic/errno.h,asm-generic/errno-base.h
     -   id: clang-format
         name: "Run clang-format"
         language: system
