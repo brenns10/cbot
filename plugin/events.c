@@ -1,5 +1,5 @@
 /*
- * sports_schedule.c: warning about sports schedules
+ * events.c: warning about events at local venues
  */
 #include <stdbool.h>
 #include <stdint.h>
@@ -249,7 +249,7 @@ static void handler(struct cbot_message_event *evt, void *user)
 	time_t now = time(NULL);
 	localtime_r(&now, &tm);
 
-	char *day = sc_regex_get_capture(evt->message, evt->indices, 1);
+	char *day = sc_regex_get_capture(evt->message, evt->indices, 2);
 	if (!*day || strcmp(day, "today") == 0) {
 		// already done above
 	} else if (strcmp(day, "tomorrow") == 0) {
@@ -283,7 +283,8 @@ static int load(struct cbot_plugin *plugin, config_setting_t *conf)
 		                                      next_run());
 	}
 	cbot_register(plugin, CBOT_ADDRESSED, (cbot_handler_t)handler, NULL,
-	              "games( (today|tomorrow|\\d\\d\\d\\d-\\d\\d-\\d\\d))?");
+	              "(games|events)( "
+	              "(today|tomorrow|\\d\\d\\d\\d-\\d\\d-\\d\\d))?");
 	return 0;
 }
 
@@ -300,13 +301,14 @@ static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 	        cb,
 	        "- This plugin checks for evening events (5-10 PM) at Chase "
 	        "Center & Oracle Park\n"
-	        "  Try 'cbot games today' or 'cbot games' for today.\n"
-	        "  Try 'cbot games tomorrow' or 'cbot games YYYY-MM-DD' for "
-	        "a specific day.");
+	        "  Try 'cbot events today' or 'cbot events' for today.\n"
+	        "  Try 'cbot events tomorrow' or 'cbot events YYYY-MM-DD' for "
+	        "a specific day.\n"
+	        "  'cbot games' also works for backward compatibility.");
 }
 
 struct cbot_plugin_ops ops = {
-	.description = "sports schedules",
+	.description = "venue events",
 	.load = load,
 	.unload = unload,
 	.help = help,
