@@ -1,7 +1,6 @@
 /*
  * sports_schedule.c: warning about sports schedules
  */
-#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,235 +9,133 @@
 #include <time.h>
 
 #include <libconfig.h>
-#include <nosj.h>
 #include <sc-collections.h>
 #include <sc-lwt.h>
 #include <sc-regex.h>
 
 #include "cbot/cbot.h"
 #include "cbot/curl.h"
-#include "cbot/json.h"
 
 char *CHANNEL;
 int WDAY = 3;
 int HOUR = 14;
 int MIN = 0;
 
-// NBA Data References
-// https://github.com/swar/nba_api/issues/203
-const char *NBA_SCHED =
-        ("https://stats.nba.com/stats/internationalbroadcasterschedule?"
-         "LeagueID=00&Season=%d&RegionID=1&Date=%02d/%02d/%d&EST=Y");
-const char *NBA_TEAM = "GSW";
-const char *NBA_TEAMNAME = "Golden State Warriors";
+// Chase Center Calendar (Warriors, Valkyries, and other events)
+const char *CHASE_CENTER_ICAL =
+        "https://www.chasecentercalendar.com/chasecenter.ics";
 
-static int search_nba_games(struct json_easy *je, int year, int month, int day,
-                            char **time, bool *err)
+// Oracle Park Calendar (Giants and other events)
+const char *ORACLE_PARK_ICAL =
+        "https://www.chasecentercalendar.com/oraclepark.ics";
+
+// Parse iCal time format (YYYYMMDDTHHMMSSZ) to local time
+static time_t parse_ical_time(const char *ical_time)
 {
-	uint32_t obj;
-	char date[12];
-	snprintf(date, sizeof(date), "%02d/%02d/%04d", month, day, year);
-
-	if (je_get_array(je, 0, "resultSets", &obj) != JSON_OK) {
-		CL_WARN("nba: no 'resultSets' key found");
-		*err = true;
-		return -1; /* not found */
+	struct tm tm = { 0 };
+	char *endptr = strptime(ical_time, "%Y%m%dT%H%M%SZ", &tm);
+	if (!endptr || *endptr) {
+		return 0; // Parse error
 	}
-	CL_DEBUG("resultSets = %u\n", obj);
-
-	je_arr_for_each(obj, je, obj)
-	{
-		CL_DEBUG("  element = %u\n", obj);
-		uint32_t k, v;
-		je_obj_for_each(k, v, je, obj)
-		{
-			CL_DEBUG("    object = %u, %u\n", k, v);
-			bool match;
-			json_easy_string_match(je, k, "NextGameList", &match);
-			if (!match)
-				json_easy_string_match(
-				        je, k, "CompleteGameList", &match);
-			if (!match)
-				continue;
-
-			uint32_t game;
-			je_arr_for_each(game, je, v)
-			{
-				CL_DEBUG("      CANDIDATE %lu\n", game);
-				if (!je_string_match(je, game, "date", date))
-					continue;
-				if (!je_string_match(je, game, "htAbbreviation",
-				                     NBA_TEAM))
-					continue;
-
-				CL_DEBUG("      FOUND %lu\n", game);
-				char *timestr = NULL;
-				if (je_get_string(je, game, "time", &timestr) !=
-				            JSON_OK ||
-				    !*timestr) {
-					free(timestr);
-					timestr = strdup("unknown time");
-				}
-				*time = timestr;
-				return 1;
-			}
-		}
-	}
-	return 0;
+	return timegm(&tm); // Convert UTC to time_t
 }
 
-static int check_nba(struct cbot *bot, int year, int month, int day,
-                     char **time, bool *err)
+// chasecentercalendar.com includes away games for Warriors and Valkyries. See
+// https://github.com/albertyw/chase-center-calendar/pull/41
+// We can easily filter them out by looking for the " at " rather than " vs ".
+// We could also parse the location field, but I'd rather filter out bad events
+// rather than restrict the location field to just a few possible values.
+static bool is_away_game(const char *desc)
 {
-	/* NBA season overlaps, use the earlier year. Latest the finals could be
-	 * is July */
-	int season = year;
-	if (month <= 7)
-		season--;
-	char *data = cbot_curl_get(bot, NBA_SCHED, season, month, day, year);
+	return (strncmp(desc, "Warriors at ", 12) == 0 ||
+	        strncmp(desc, "Valkyries at ", 13) == 0);
+}
+
+static int search_ical_events(const char *ical_data, time_t range_start,
+                              time_t range_end, struct sc_charbuf *events)
+{
+	const char *line = ical_data;
+	const char *next_line;
+	char current_event[512] = { 0 };
+	time_t current_start = 0, current_end = 0;
+	int found_events = 0;
+
+	while ((next_line = strchr(line, '\n')) != NULL) {
+		size_t line_len = next_line - line;
+		char line_buf[sizeof(current_event)];
+		if (line_len >= sizeof(line_buf) - 1) {
+			line = next_line + 1;
+			continue;
+		}
+
+		strncpy(line_buf, line, line_len);
+		line_buf[line_len] = '\0';
+
+		// Remove carriage return if present
+		if (line_len > 0 && line_buf[line_len - 1] == '\r')
+			line_buf[line_len - 1] = '\0';
+
+		if (strcmp(line_buf, "BEGIN:VEVENT") == 0) {
+			current_event[0] = '\0';
+			current_start = current_end = 0;
+		} else if (strncmp(line_buf, "SUMMARY:", 8) == 0) {
+			strncpy(current_event, line_buf + 8,
+			        sizeof(current_event) - 1);
+			current_event[sizeof(current_event) - 1] = '\0';
+		} else if (strncmp(line_buf, "DTSTART:", 8) == 0) {
+			current_start = parse_ical_time(line_buf + 8);
+		} else if (strncmp(line_buf, "DTEND:", 6) == 0) {
+			current_end = parse_ical_time(line_buf + 6);
+		} else if (strcmp(line_buf, "END:VEVENT") == 0 &&
+		           current_event[0] && range_end >= current_start &&
+		           range_start <= current_end &&
+		           !is_away_game(current_event)) {
+			struct tm local_start, local_end;
+			char start_str[16], end_str[16];
+
+			localtime_r(&current_start, &local_start);
+			localtime_r(&current_end, &local_end);
+			strftime(start_str, sizeof(start_str), "%I:%M%P",
+			         &local_start);
+			strftime(end_str, sizeof(end_str), "%I:%M%P",
+			         &local_end);
+			if (found_events > 0)
+				sc_cb_concat(events, " Also, ");
+			sc_cb_printf(events, "%s at %s--%s.", current_event,
+			             start_str[0] == '0' ? start_str + 1
+			                                 : start_str,
+			             end_str[0] == '0' ? end_str + 1 : end_str);
+			found_events++;
+		}
+
+		line = next_line + 1;
+	}
+
+	return found_events;
+}
+
+static int check_chase_center(struct cbot *bot, time_t range_start,
+                              time_t range_end, struct sc_charbuf *events)
+{
+	char *data = cbot_curl_get(bot, "%s", CHASE_CENTER_ICAL);
 	if (!data)
 		return -1;
 
-	struct json_easy je;
-	json_easy_init(&je, data);
-	int ret = json_easy_parse(&je);
-	if (ret != JSON_OK) {
-		CL_WARN("nba/json: error: %s\n", json_strerror(ret));
-		*err = true;
-		ret = -1;
-	} else {
-		ret = search_nba_games(&je, year, month, day, time, err);
-	}
-	if (ret >= 1) {
-		// The time string given is EST. Hard-code PST here.
-		struct tm tm;
-		if (!strptime(*time, "%I:%M %p", &tm)) {
-			CL_WARN("nba: error parsing time \"%s\" for TZ "
-			        "conversion\n",
-			        *time);
-		} else {
-			tm.tm_hour -= 3;
-			char *t = malloc(256);
-			if (!t || !strftime(t, 256, "%I:%M %p", &tm)) {
-				free(t);
-				CL_WARN("nba: error formatting time\n");
-			} else {
-				CL_DEBUG("nba: converted \"%s\" to \"%s\"\n",
-				         *time, t);
-				free(*time);
-				*time = t;
-			}
-		}
-	}
-	json_easy_destroy(&je);
+	int ret = search_ical_events(data, range_start, range_end, events);
 	free(data);
 	return ret;
 }
 
-// MLB Data References
-// https://github.com/brianhaferkamp/mlbapidata
-const char *MLB_SCHED =
-        ("http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&"
-         "startDate=%d-%02d-%02d&endDate=%d-%02d-%02d");
-const char *MLB_TEAM = "San Francisco Giants";
+// Oracle Park events (Giants and other events)
 
-static int search_mlb_games(struct json_easy *je, int year, int month, int day,
-                            char **time, bool *err)
+static int check_oracle_park(struct cbot *bot, time_t range_start,
+                             time_t range_end, struct sc_charbuf *events)
 {
-	uint32_t dates;
-	char date[12];
-	snprintf(date, sizeof(date), "%04d-%02d-%02d", year, month, day);
-
-	// json_easy_format(je, 0, stdout);
-
-	int ret = je_get_array(je, 0, "dates", &dates);
-	if (ret != JSON_OK) {
-		CL_WARN("mlb: 'dates' not found in result\n");
-		*err = true;
-		return -1;
-	}
-
-	uint32_t obj;
-	je_arr_for_each(obj, je, dates)
-	{
-		if (!je_string_match(je, obj, "date", date)) {
-			CL_DEBUG("mlb: skip non-matching date (%s)\n", date);
-			*err = true;
-			continue;
-		}
-		uint32_t games, game;
-		if (je_get_array(je, obj, "games", &games) != JSON_OK) {
-			CL_WARN("mlb: missing 'games' in date result\n");
-			*err = true;
-			continue;
-		}
-		je_arr_for_each(game, je, games)
-		{
-			if (!je_string_match(je, game, "teams.home.team.name",
-			                     MLB_TEAM))
-				continue;
-			char *timestamp;
-			if (je_get_string(je, game, "gameDate", &timestamp) !=
-			    JSON_OK) {
-				CL_WARN("mlb: could not load 'gameDate'\n");
-				*err = true;
-				continue;
-			}
-			/*
-			 * Time is provided in a ISO-8601 string, so we should
-			 * be able to parse it. The resulting "struct tm"
-			 * represents broken-down time for the time zone in the
-			 * string (seems to be UTC). We need to convert to a
-			 * time_t and then use localtime_r() to get a
-			 * broken-down time for our time zone, which we can then
-			 * present to the user.
-			 * EG: "gameDate": "2024-04-17T16:10:00Z"
-			 */
-			struct tm broken = { 0 };
-			char *ret = strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ",
-			                     &broken);
-			free(timestamp);
-			if (!ret || *ret) {
-				CL_WARN("mlb: failed to parse 'gameDate'\n");
-				*err = true;
-				continue;
-			}
-			time_t epoch = timegm(&broken);
-			localtime_r(&epoch, &broken);
-			char *timeval = malloc(12);
-			if (!strftime(timeval, 12, "%I:%M %p", &broken)) {
-				CL_WARN("mlb: failed to format game date: %s\n",
-				        strerror(errno));
-				free(timeval);
-				*err = true;
-				continue;
-			}
-			*time = timeval;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-static int check_mlb(struct cbot *bot, int year, int month, int day,
-                     char **time, bool *err)
-{
-	char *data = cbot_curl_get(bot, MLB_SCHED, year, month, day, year,
-	                           month, day);
+	char *data = cbot_curl_get(bot, "%s", ORACLE_PARK_ICAL);
 	if (!data)
 		return -1;
 
-	struct json_easy je;
-	json_easy_init(&je, data);
-	int ret = json_easy_parse(&je);
-	if (ret != JSON_OK) {
-		CL_WARN("mlb/json: error: %s\n", json_strerror(ret));
-		*err = true;
-		ret = -1;
-	} else {
-		ret = search_mlb_games(&je, year, month, day, time, err);
-	}
-	json_easy_destroy(&je);
+	int ret = search_ical_events(data, range_start, range_end, events);
 	free(data);
 	return ret;
 }
@@ -246,43 +143,42 @@ static int check_mlb(struct cbot *bot, int year, int month, int day,
 struct arg {
 	char *channel;
 	struct cbot *bot;
-	struct tm tm;
-	bool reschedule;
+	time_t start, end;
 };
 
 static void run_thread(void *varg)
 {
 	struct arg *arg = varg;
-	char *mlb_time, *nba_time;
-	struct sc_charbuf msg;
+	struct sc_charbuf chase_events, oracle_events, msg;
 	bool err = false;
 
-	sc_cb_init(&msg, 256);
-	int nba = check_nba(arg->bot, arg->tm.tm_year, arg->tm.tm_mon,
-	                    arg->tm.tm_mday, &nba_time, &err);
-	if (nba > 0) {
-		sc_cb_printf(&msg, "The %s have a home game at %s.",
-		             NBA_TEAMNAME, nba_time);
-		free(nba_time);
+	sc_cb_init(&chase_events, 256);
+	sc_cb_init(&oracle_events, 256);
+	sc_cb_init(&msg, 512);
+
+	int chase_count = check_chase_center(arg->bot, arg->start, arg->end,
+	                                     &chase_events);
+	int oracle_count = check_oracle_park(arg->bot, arg->start, arg->end,
+	                                     &oracle_events);
+
+	if (chase_count > 0) {
+		sc_cb_printf(&msg, "Chase Center events: %s", chase_events.buf);
 	}
-	int mlb = check_mlb(arg->bot, arg->tm.tm_year, arg->tm.tm_mon,
-	                    arg->tm.tm_mday, &mlb_time, &err);
-	if (mlb > 0) {
+	if (oracle_count > 0) {
 		if (msg.length)
-			sc_cb_concat(&msg, " Also, the ");
-		else
-			sc_cb_concat(&msg, "The ");
-		/* mlb uses strftime() which can produce a preceding blank, skip
-		 * it */
-		char *s = mlb_time[0] == '0' ? &mlb_time[1] : mlb_time;
-		sc_cb_printf(&msg, "%s have a home game at %s.", MLB_TEAM, s);
-		free(mlb_time);
+			sc_cb_concat(&msg, " ");
+		sc_cb_printf(&msg, "Oracle Park events: %s", oracle_events.buf);
 	}
-	if (!msg.length)
+	if (!msg.length) {
+		struct tm tm;
+		char date_str[16];
+		localtime_r(&arg->start, &tm);
+		strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm);
 		sc_cb_printf(&msg,
-		             "No home games for %s or %s on %04d-%02d-%02d.",
-		             NBA_TEAMNAME, MLB_TEAM, arg->tm.tm_year,
-		             arg->tm.tm_mon, arg->tm.tm_mday);
+		             "No evening events (5-10 PM) at Chase Center or "
+		             "Oracle Park on %s.",
+		             date_str);
+	}
 	if (err)
 		sc_cb_printf(&msg,
 		             " BTW: I encountered an error in my requests, so"
@@ -290,6 +186,8 @@ static void run_thread(void *varg)
 		             "details.");
 
 	cbot_send(arg->bot, arg->channel, "%s", msg.buf);
+	sc_cb_destroy(&chase_events);
+	sc_cb_destroy(&oracle_events);
 	sc_cb_destroy(&msg);
 	free(arg->channel);
 	free(arg);
@@ -329,13 +227,17 @@ static void callback(struct cbot_plugin *plugin, void *arg)
 {
 	struct cbot *bot = plugin->bot;
 	time_t ts = time(NULL);
+	struct tm tm;
 	struct arg *a = calloc(1, sizeof(*a));
 	a->channel = strdup(CHANNEL);
 	a->bot = bot;
-	a->reschedule = true;
-	localtime_r(&ts, &a->tm);
-	a->tm.tm_year += 1900;
-	a->tm.tm_mon++;
+	localtime_r(&ts, &tm);
+	tm.tm_hour = 17;
+	tm.tm_min = 0;
+	tm.tm_sec = 0;
+	a->start = mktime(&tm);
+	tm.tm_hour = 22;
+	a->end = mktime(&tm);
 	sc_lwt_create_task(cbot_get_lwt_ctx(plugin->bot), run_thread, a);
 	plugin->data =
 	        cbot_schedule_callback(plugin, &callback, NULL, next_run());
@@ -352,20 +254,19 @@ static void handler(struct cbot_message_event *evt, void *user)
 		// already done above
 	} else if (strcmp(day, "tomorrow") == 0) {
 		tm.tm_mday++;
-		mktime(&tm); /* normalize across week days */
 	} else {
 		strptime(day, "%Y-%m-%d", &tm);
 	}
-	tm.tm_year += 1900; // really
-	tm.tm_mon++;
-	CL_DEBUG("looking up schedules for: %04d-%02d-%02d\n", tm.tm_year,
-	         tm.tm_mon, tm.tm_mday);
-
 	struct arg *arg = calloc(1, sizeof(*arg));
 	arg->channel = strdup(evt->channel);
 	arg->bot = evt->bot;
-	arg->tm = tm;
-	arg->reschedule = false;
+	tm.tm_hour = 17;
+	tm.tm_min = 0;
+	tm.tm_sec = 0;
+	arg->start = mktime(&tm);
+	tm.tm_hour = 22;
+	arg->end = mktime(&tm);
+
 	sc_lwt_create_task(cbot_get_lwt_ctx(evt->bot), run_thread, arg);
 }
 
@@ -397,7 +298,8 @@ static void help(struct cbot_plugin *plugin, struct sc_charbuf *cb)
 {
 	sc_cb_concat(
 	        cb,
-	        "- This plugin checks for Giants & Warriors home games in SF\n"
+	        "- This plugin checks for evening events (5-10 PM) at Chase "
+	        "Center & Oracle Park\n"
 	        "  Try 'cbot games today' or 'cbot games' for today.\n"
 	        "  Try 'cbot games tomorrow' or 'cbot games YYYY-MM-DD' for "
 	        "a specific day.");
