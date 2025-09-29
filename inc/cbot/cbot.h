@@ -472,6 +472,67 @@ typedef int (*cbot_formatter_t)(struct sc_charbuf *, char *, void *);
 int cbot_format(struct sc_charbuf *buf, const char *fmt,
                 cbot_formatter_t formatter, void *user);
 
+/**
+ * Formatter function for the new formatting API.
+ *
+ * @param cb Output buffer to write to
+ * @param suffix The unconsumed format string after the matched prefix
+ * @param args Variable argument list that the formatter can consume from
+ * @returns Number of arguments consumed on success, negative on error
+ */
+typedef int (*cbot_formatter2_t)(struct sc_charbuf *cb, const char *suffix,
+                                 va_list *args);
+
+/**
+ * Formatter operations structure.
+ * Each formatter declares a prefix it handles and the function to call.
+ */
+typedef struct {
+	const char *prefix;
+	cbot_formatter2_t formatter;
+} cbot_formatter_ops_t;
+
+/**
+ * Special signal value for chaining formatter lists.
+ * When the formatter function pointer equals this value, the prefix field
+ * contains a pointer to another formatter ops array to chain to.
+ */
+#define CBOT_FMT_CHAIN_SIGNAL ((cbot_formatter2_t)(void *)1)
+
+/**
+ * Macro to reference another formatter list in a formatter ops array.
+ * Usage: CBOT_FMT_NEXT(other_formatters_array)
+ */
+#define CBOT_FMT_NEXT(next_ops)                                                \
+	{ (const char *)(next_ops), CBOT_FMT_CHAIN_SIGNAL }
+
+/**
+ * New general-purpose formatting function.
+ *
+ * @param cb Output buffer
+ * @param fmt Format string with "{prefix:suffix}" tokens
+ * @param ops Array of formatter operations, terminated by NULL prefix
+ * @param ... Variable arguments consumed by formatters
+ * @returns Number of format tokens processed, or negative on error
+ */
+int cbot_format2(struct sc_charbuf *cb, const char *fmt,
+                 const cbot_formatter_ops_t *ops, ...);
+
+/**
+ * Default set of formatters including:
+ * - printf (%): Printf-style formatting
+ * - local time (timel:): Local time formatting using strftime
+ * - UTC time (timeg:): UTC time formatting using strftime
+ * - struct tm (tm:): Direct struct tm pointer formatting using strftime
+ */
+extern const cbot_formatter_ops_t cbot_default_formatters[];
+
+/**
+ * Convenience macro for formatting with the default formatters
+ */
+#define cbot_dfmt(cb, fmt, ...)                                                \
+	cbot_format2(cb, fmt, cbot_default_formatters, ##__VA_ARGS__)
+
 /******************
  * HTTP Utilities
  ******************/
