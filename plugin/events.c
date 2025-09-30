@@ -90,21 +90,11 @@ static int search_ical_events(const char *ical_data, time_t range_start,
 		           current_event[0] && range_end >= current_start &&
 		           range_start <= current_end &&
 		           !is_away_game(current_event)) {
-			struct tm local_start, local_end;
-			char start_str[16], end_str[16];
-
-			localtime_r(&current_start, &local_start);
-			localtime_r(&current_end, &local_end);
-			strftime(start_str, sizeof(start_str), "%I:%M%P",
-			         &local_start);
-			strftime(end_str, sizeof(end_str), "%I:%M%P",
-			         &local_end);
 			if (found_events > 0)
 				sc_cb_concat(events, " Also, ");
-			sc_cb_printf(events, "%s at %s--%s.", current_event,
-			             start_str[0] == '0' ? start_str + 1
-			                                 : start_str,
-			             end_str[0] == '0' ? end_str + 1 : end_str);
+			cbot_dfmt(events,
+			          "{%s} at {timel:%l:%M%P}--{timel:%l:%M%P}.",
+			          current_event, current_start, current_end);
 			found_events++;
 		}
 
@@ -170,14 +160,10 @@ static void run_thread(void *varg)
 		sc_cb_printf(&msg, "Oracle Park events: %s", oracle_events.buf);
 	}
 	if (!msg.length) {
-		struct tm tm;
-		char date_str[16];
-		localtime_r(&arg->start, &tm);
-		strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm);
-		sc_cb_printf(&msg,
-		             "No evening events (5-10 PM) at Chase Center or "
-		             "Oracle Park on %s.",
-		             date_str);
+		cbot_dfmt(&msg,
+		          "No evening events (5-10 PM) at Chase Center or "
+		          "Oracle Park on {timel:%Y-%m-%d}.",
+		          arg->start);
 	}
 	if (err)
 		sc_cb_printf(&msg,
