@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM alpine:3.22
 COPY cbot.apk /
 COPY stephen@brennan.io.rsa.pub /etc/apk/keys/
 RUN apk add ./cbot.apk gcompat tzdata msmtp perl curl && \
