@@ -1,4 +1,4 @@
-image: alpine/3.18
+image: alpine/3.22
 packages:
   - meson
   - gcc
@@ -22,7 +22,7 @@ secrets:
 tasks:
   - ghsetup: |
       mkdir ghsetup && cd ghsetup
-      ghver=2.0.0
+      ghver=2.83.1
       wget https://github.com/cli/cli/releases/download/v$ghver/gh_${ghver}_linux_amd64.tar.gz
       tar xf gh_${ghver}_linux_amd64.tar.gz
       sudo mv gh_${ghver}_linux_amd64/bin/gh /usr/bin/gh
