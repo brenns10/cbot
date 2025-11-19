@@ -6,12 +6,22 @@ Be sure version number is updated in deploy/alpine/APKBUILD.
 Unreleased
 ----------
 
-0.15.0 (2024-08-11)
+0.16.0 (2025-11-19)
+-------------------
+
+- New alternative "sad reacts" for the trivia plugin, thanks to Luc & Adam.
+- Use the chasecentercalendar.com API for detecting events at local venues.
+  As a result, the "sports_schedule" plugin is now more generically named as
+  "events".
+- Some internal API improvements and the beginnings of some unit testing
+  infrastructure for plugins.
+
+0.15.0 (2025-02-05)
 -------------------
 
 Fixed NBA eastern timezone.
 
-0.14.0 (2024-08-11)
+0.14.0 (2024-09-11)
 -------------------
 
 Added trivia cancellation.

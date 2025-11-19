@@ -1,6 +1,6 @@
 # Maintainer: Stephen Brennan <stephen@brennan.io>
 pkgname=cbot
-pkgver=0.15.0
+pkgver=0.16.0
 pkgrel=0
 pkgdesc="IRC and Signal chatbot"
 url="https://github.com/brenns10/cbot"
