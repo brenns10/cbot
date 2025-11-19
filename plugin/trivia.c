@@ -58,7 +58,7 @@ static const char *sad_reacts[] = {
 	"😭",
 	"😔",
 	"😩",
-	"🇫🇷"
+	"🇫🇷",
 };
 
 static const char *plus_reacts[] = {
@@ -319,15 +319,15 @@ static void send_trivia_message(struct cbot_plugin *plugin, void *arg)
 	struct tm tm;
 	struct trivia_reactions *rxns = plugin->data;
 	sc_arr_init(&rxns->reactions, struct trivia_reaction, 1);
-	rxns->handle =
-	        cbot_sendr(plugin->bot, CHANNEL, &trivia_rxn_ops, rxns,
-	                   "Hello everyone 👋 it's trivia day! Please RSVP by "
-	                   "reacting to this message. Any reaction other than "
-	                   "😥, 😢, 😭, 😔, 😩, or 🇫🇷 will be recorded as a yes."
-					   "You can also react with a number emoji (like 2️⃣) "
-		               "to indicate you're bringing a +N!  Our emoji "
-	                   "(but not names) will be shared with Grace "
-	                   "automatically. I will send the RSVP at 2pm!");
+	rxns->handle = cbot_sendr(
+	        plugin->bot, CHANNEL, &trivia_rxn_ops, rxns,
+	        "Hello everyone 👋 it's trivia day! Please RSVP by "
+	        "reacting to this message. Any reaction other than "
+	        "😥, 😢, 😭, 😔, 😩, or 🇫🇷 will be recorded as a yes."
+	        "You can also react with a number emoji (like 2️⃣) "
+	        "to indicate you're bringing a +N!  Our emoji "
+	        "(but not names) will be shared with Grace "
+	        "automatically. I will send the RSVP at 2pm!");
 	if (!rxns->handle) {
 		CL_CRIT("trivia: could not get reaction handle for initial "
 		        "message\n");
