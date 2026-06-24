@@ -5,6 +5,7 @@
 #ifndef CBOT_PRIVATE_H
 #define CBOT_PRIVATE_H
 
+#include <curl/curl.h>
 #include <curl/multi.h>
 
 #include <libconfig.h>
